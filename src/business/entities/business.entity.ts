@@ -1,19 +1,12 @@
 
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
-
+import { AbstractBaseEntity } from '../../database/entities/base.entity';
 
 @Entity('businesses')
-export class Business {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class Business extends AbstractBaseEntity {
   @Column({ unique: true })
   name: string;
 
@@ -37,10 +30,4 @@ export class Business {
 
   @Column({ type: 'jsonb', nullable: true })
   socialMedia?: Record<string, string>;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }
