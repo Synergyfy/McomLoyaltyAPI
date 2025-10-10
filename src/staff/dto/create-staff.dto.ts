@@ -16,7 +16,7 @@ export class CreateStaffDto {
   @ApiProperty({ description: 'The password for the staff member.' })
   @IsString()
   @IsNotEmpty()
-  password;
+  password: string;
 
   @ApiProperty({ description: 'The URL of the avatar for the staff member.', required: false })
   @IsUrl()

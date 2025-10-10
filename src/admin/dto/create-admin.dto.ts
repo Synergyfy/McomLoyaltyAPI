@@ -8,5 +8,5 @@ export class CreateAdminDto {
 
   @IsString()
   @IsNotEmpty()
-  password;
+  password: string;
 }

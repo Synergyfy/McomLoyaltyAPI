@@ -18,7 +18,7 @@ export class Business extends AbstractBaseEntity {
   email: string;
 
   @Column()
-  password;
+  password: string;
 
   @Column()
   phone: string;

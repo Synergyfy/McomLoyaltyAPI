@@ -11,7 +11,7 @@ export class CreateBusinessDto {
 
   @IsString()
   @IsNotEmpty()
-  password;
+  password: string;
 
   @IsString()
   @IsNotEmpty()
