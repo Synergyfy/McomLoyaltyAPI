@@ -16,14 +16,30 @@ export class BusinessService {
 
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
     const hashedPassword = await this.hashService.hash(createBusinessDto.password);
+
+    let uniqueCode: string;
+    let isUnique = false;
+    while (!isUnique) {
+      uniqueCode = Math.floor(100000000 + Math.random() * 900000000).toString();
+      const existingBusiness = await this.findByUniqueCode(uniqueCode);
+      if (!existingBusiness) {
+        isUnique = true;
+      }
+    }
+
     const business = this.businessRepository.create({
       ...createBusinessDto,
       password: hashedPassword,
+      uniqueCode,
     });
     return this.businessRepository.save(business);
   }
 
   async findByEmail(email: string): Promise<Business | undefined> {
     return this.businessRepository.findOne({ where: { email } });
+  }
+
+  async findByUniqueCode(uniqueCode: string): Promise<Business | undefined> {
+    return this.businessRepository.findOne({ where: { uniqueCode } });
   }
 }

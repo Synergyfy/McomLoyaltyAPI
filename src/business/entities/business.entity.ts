@@ -30,4 +30,7 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   socialMedia?: Record<string, string>;
+
+  @Column({ unique: true })
+  uniqueCode: string;
 }

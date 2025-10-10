@@ -1,7 +1,7 @@
 
 export default () => ({
   jwt: {
-    secret: process.env.JWT_SECRET || 'yourSecretKey',
+    secret: process.env.JWT_SECRET,
     expiresIn: '60m',
   },
 });
