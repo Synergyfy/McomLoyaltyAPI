@@ -2,8 +2,10 @@
 import {
   Entity,
   Column,
+  ManyToOne,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../database/entities/base.entity';
+import { Sector } from '../../sector/entities/sector.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -22,8 +24,8 @@ export class Business extends AbstractBaseEntity {
   @Column()
   address: string;
 
-  @Column()
-  sector: string;
+  @ManyToOne(() => Sector, (sector) => sector.businesses)
+  sector: Sector;
 
   @Column({ nullable: true })
   website?: string;

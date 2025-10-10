@@ -16,6 +16,7 @@ export class BusinessService {
 
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
     const hashedPassword = await this.hashService.hash(createBusinessDto.password);
+    const { sectorId, ...rest } = createBusinessDto;
 
     let uniqueCode: string;
     let isUnique = false;
@@ -28,9 +29,10 @@ export class BusinessService {
     }
 
     const business = this.businessRepository.create({
-      ...createBusinessDto,
+      ...rest,
       password: hashedPassword,
       uniqueCode,
+      sector: { id: sectorId },
     });
     return this.businessRepository.save(business);
   }

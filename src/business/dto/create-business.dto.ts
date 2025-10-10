@@ -1,5 +1,5 @@
 
-import { IsEmail, IsNotEmpty, IsString, IsOptional, IsUrl } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsOptional, IsUrl, IsUUID } from 'class-validator';
 
 export class CreateBusinessDto {
   @IsString()
@@ -21,9 +21,9 @@ export class CreateBusinessDto {
   @IsNotEmpty()
   address: string;
 
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  sector: string;
+  sectorId: string;
 
   @IsOptional()
   @IsUrl()

@@ -10,10 +10,14 @@ import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
 import commissionConfig from './config/commission.config';
 import { BusinessModule } from './business/business.module';
+import { SectorModule } from './sector/sector.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
     BusinessModule,
+    SectorModule,
+    AdminModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],
