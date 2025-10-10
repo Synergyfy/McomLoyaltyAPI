@@ -16,7 +16,7 @@ export class StaffService {
   ) {}
 
   async create(createStaffDto: CreateStaffDto, businessId: string): Promise<Staff> {
-    const hashedPassword = await this.hashService.hash(createStaffDto.password);
+    const hashedPassword = await this.hashService.hashPassword(createStaffDto.password);
     const staff = this.staffRepository.create({
       ...createStaffDto,
       password: hashedPassword,
@@ -35,7 +35,7 @@ export class StaffService {
 
   async update(id: string, updateStaffDto: UpdateStaffDto, businessId: string): Promise<Staff> {
     if (updateStaffDto.password) {
-      updateStaffDto.password = await this.hashService.hash(updateStaffDto.password);
+      updateStaffDto.password = await this.hashService.hashPassword(updateStaffDto.password);
     }
     await this.staffRepository.update({ id, business: { id: businessId } }, updateStaffDto);
     return this.findOne(id, businessId);

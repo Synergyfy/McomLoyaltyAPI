@@ -15,7 +15,7 @@ export class BusinessService {
   ) {}
 
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
-    const hashedPassword = await this.hashService.hash(createBusinessDto.password);
+    const hashedPassword = await this.hashService.hashPassword(createBusinessDto.password);
     const { sectorId, ...rest } = createBusinessDto;
 
     let uniqueCode: string;

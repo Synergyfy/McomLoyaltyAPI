@@ -15,7 +15,7 @@ export class AdminService {
   ) {}
 
   async create(createAdminDto: CreateAdminDto): Promise<Admin> {
-    const hashedPassword = await this.hashService.hash(createAdminDto.password);
+    const hashedPassword = await this.hashService.hashPassword(createAdminDto.password);
     const admin = this.adminRepository.create({
       ...createAdminDto,
       password: hashedPassword,
