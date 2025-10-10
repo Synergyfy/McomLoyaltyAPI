@@ -9,10 +9,11 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
 import commissionConfig from './config/commission.config';
+import { BusinessModule } from './business/business.module';
 
 @Module({
   imports: [
-   
+    BusinessModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],
