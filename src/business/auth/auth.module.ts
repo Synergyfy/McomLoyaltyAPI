@@ -22,7 +22,7 @@ import { JwtRefreshStrategy } from './jwt-refresh.strategy';
       imports: [ConfigModule.forFeature(jwtConfig)],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('jwt.secret'),
-        signOptions: { expiresIn: configService.get<string>('jwt.expiresIn') },
+        signOptions: { expiresIn: configService.get<number>('jwt.expiresIn') },
       }),
       inject: [ConfigService],
     }),
