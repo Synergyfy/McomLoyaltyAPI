@@ -12,12 +12,14 @@ import commissionConfig from './config/commission.config';
 import { BusinessModule } from './business/business.module';
 import { SectorModule } from './sector/sector.module';
 import { AdminModule } from './admin/admin.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
     BusinessModule,
     SectorModule,
     AdminModule,
+    StaffModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],

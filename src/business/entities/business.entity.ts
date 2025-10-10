@@ -3,9 +3,11 @@ import {
   Entity,
   Column,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../database/entities/base.entity';
 import { Sector } from '../../sector/entities/sector.entity';
+import { Staff } from '../../staff/entities/staff.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -26,6 +28,9 @@ export class Business extends AbstractBaseEntity {
 
   @ManyToOne(() => Sector, (sector) => sector.businesses)
   sector: Sector;
+
+  @OneToMany(() => Staff, (staff) => staff.business)
+  staff: Staff[];
 
   @Column({ nullable: true })
   website?: string;
