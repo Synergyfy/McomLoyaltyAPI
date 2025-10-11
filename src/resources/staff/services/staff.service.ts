@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Staff } from '../entities/staff.entity';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateStaffDto } from '../dto/update-staff.dto';
-import { HashService } from '../../common/hash/hash.service';
+import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
 export class StaffService {

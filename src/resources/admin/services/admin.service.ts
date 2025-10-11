@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
 import { CreateAdminDto } from '../dto/create-admin.dto';
-import { HashService } from '../../common/hash/hash.service';
+import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
 export class AdminService {

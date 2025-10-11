@@ -5,7 +5,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { AbstractBaseEntity } from '../../database/entities/base.entity';
+import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Staff } from '../../staff/entities/staff.entity';
 

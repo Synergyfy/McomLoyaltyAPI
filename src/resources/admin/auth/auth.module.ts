@@ -4,18 +4,17 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
-import { BusinessService } from '../services/business.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Business } from '../entities/business.entity';
-import { HashModule } from '../../common/hash/hash.module';
 import { LocalStrategy } from './local.strategy';
+import { AdminService } from '../services/admin.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Admin } from '../entities/admin.entity';
+import { HashModule } from '../../../common/hash/hash.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import jwtConfig from '../../config/jwt.config';
-import { JwtRefreshStrategy } from './jwt-refresh.strategy';
+import jwtConfig from '../../../config/jwt.config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business]),
+    TypeOrmModule.forFeature([Admin]),
     PassportModule,
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync({
@@ -28,7 +27,7 @@ import { JwtRefreshStrategy } from './jwt-refresh.strategy';
     }),
     HashModule,
   ],
-  providers: [AuthService, JwtStrategy, BusinessService, LocalStrategy, JwtRefreshStrategy],
+  providers: [AuthService, JwtStrategy, LocalStrategy, AdminService],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -1,6 +1,6 @@
 
 import { Entity, Column, ManyToOne } from 'typeorm';
-import { AbstractBaseEntity } from '../../database/entities/base.entity';
+import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 
 @Entity('staff')
