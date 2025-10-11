@@ -17,6 +17,7 @@ export class StaffController {
     ) {}
 
   @UseGuards(LocalAuthGuard)
+  @Public()
   @Post('login')
   @ApiOperation({ summary: 'Log in as a staff member' })
   @ApiResponse({ status: 200, description: 'Successfully logged in.' })

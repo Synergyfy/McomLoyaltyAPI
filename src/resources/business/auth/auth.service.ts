@@ -1,7 +1,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { BusinessService } from '../services/business.service';
-import { HashService } from '../../common/hash/hash.service';
+import { HashService } from '../../../common/hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()

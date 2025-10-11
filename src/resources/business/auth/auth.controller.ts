@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { JwtRefreshGuard } from './jwt-refresh.guard';
 import { Public } from '../../../common/decorators/public.decorator';
 
 @ApiTags('auth')
