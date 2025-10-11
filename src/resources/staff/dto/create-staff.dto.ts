@@ -3,22 +3,22 @@ import { IsEmail, IsNotEmpty, IsString, IsOptional, IsUrl } from 'class-validato
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStaffDto {
-  @ApiProperty({ description: 'The name of the staff member.' })
+  @ApiProperty({ description: 'The name of the staff member.', example: 'John Doe' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'The email address of the staff member.' })
+  @ApiProperty({ description: 'The email address of the staff member.', example: 'john.doe@example.com' })
   @IsEmail()
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ description: 'The password for the staff member.' })
+  @ApiProperty({ description: 'The password for the staff member account.', example: 'staffPassword123' })
   @IsString()
   @IsNotEmpty()
   password: string;
 
-  @ApiProperty({ description: 'The URL of the avatar for the staff member.', required: false })
+  @ApiProperty({ description: 'The URL of the avatar for the staff member.', required: false, example: 'https://example.com/avatar.png' })
   @IsUrl()
   @IsOptional()
   avatar?: string;
