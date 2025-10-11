@@ -5,6 +5,7 @@ import { CreateAdminDto } from '../dto/create-admin.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { LocalAuthGuard } from '../auth/local-auth.guard';
 import { AuthService } from '../auth/auth.service';
+import { Public } from '../../../common/decorators/public.decorator';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -14,6 +15,7 @@ export class AdminController {
     private readonly authService: AuthService,
     ) {}
 
+  @Public()
   @Post('signup')
   @ApiOperation({ summary: 'Create a new admin user' })
   @ApiResponse({ status: 201, description: 'The admin user has been successfully created.' })
@@ -22,6 +24,7 @@ export class AdminController {
     return this.adminService.create(createAdminDto);
   }
 
+  @Public()
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @ApiOperation({ summary: 'Log in as an admin' })
