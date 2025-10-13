@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Reward } from './entities/reward.entity';
-import { CreateRewardDto } from './dto/create-reward.dto';
-import { BusinessReward } from './entities/business-reward.entity';
-import { CreateBusinessRewardDto } from './dto/create-business-reward.dto';
+import { Reward } from '../entities/reward.entity';
+import { CreateRewardDto } from '../dto/create-reward.dto';
+import { BusinessReward } from '../entities/business-reward.entity';
+import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
 
 @Injectable()
 export class RewardsService {
