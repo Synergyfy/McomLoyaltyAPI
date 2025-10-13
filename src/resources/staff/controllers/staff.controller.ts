@@ -1,0 +1,91 @@
+
+import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseGuards, Request, Query } from '@nestjs/common';
+import { StaffService } from '../services/staff.service';
+import { CreateStaffDto } from '../dto/create-staff.dto';
+import { UpdateStaffDto } from '../dto/update-staff.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthService } from '../auth/auth.service';
+import { LocalAuthGuard } from '../auth/local-auth.guard';
+import { Public } from '../../../common/decorators/public.decorator';
+
+@ApiTags('Staff Management')
+@Controller('staff')
+export class StaffController {
+  constructor(
+    private readonly staffService: StaffService,
+    private readonly authService: AuthService,
+    ) {}
+
+  @Public()
+  @UseGuards(LocalAuthGuard)
+  @Post('login')
+  @ApiOperation({ summary: 'Log in as a staff member' })
+  @ApiResponse({ status: 200, description: 'Successfully logged in, returns access token.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', example: 'john.doe@example.com' },
+        password: { type: 'string', example: 'staffPassword123' },
+      },
+      required: ['email', 'password'],
+    },
+  })
+  async login(@Request() req) {
+    return this.authService.login(req.user);
+  }
+
+  @Post()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new staff member (for logged-in business)' })
+  @ApiResponse({ status: 201, description: 'The staff member has been successfully created.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (Business not logged in).' })
+  @ApiBody({ type: CreateStaffDto })
+  create(@Body(new ValidationPipe()) createStaffDto: CreateStaffDto, @Request() req) {
+    return this.staffService.create(createStaffDto, req.user.id);
+  }
+
+  @Get()
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all staff members for the logged-in business' })
+  @ApiResponse({ status: 200, description: 'Returns an array of staff members.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (Business not logged in).' })
+  findAll(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+    return this.staffService.findAll(req.user.id, page, limit);
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a specific staff member by ID' })
+  @ApiResponse({ status: 200, description: 'Returns the staff member.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (Business not logged in).' })
+  @ApiResponse({ status: 404, description: 'Staff member not found.' })
+  @ApiParam({ name: 'id', description: 'The ID of the staff member.' })
+  findOne(@Param('id') id: string, @Request() req) {
+    return this.staffService.findOne(id, req.user.id);
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a staff member' })
+  @ApiResponse({ status: 200, description: 'The staff member has been successfully updated.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (Business not logged in).' })
+  @ApiResponse({ status: 404, description: 'Staff member not found.' })
+  @ApiParam({ name: 'id', description: 'The ID of the staff member to update.' })
+  @ApiBody({ type: UpdateStaffDto })
+  update(@Param('id') id: string, @Body(new ValidationPipe()) updateStaffDto: UpdateStaffDto, @Request() req) {
+    return this.staffService.update(id, updateStaffDto, req.user.id);
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a staff member' })
+  @ApiResponse({ status: 204, description: 'The staff member has been successfully deleted.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (Business not logged in).' })
+  @ApiResponse({ status: 404, description: 'Staff member not found.' })
+  @ApiParam({ name: 'id', description: 'The ID of the staff member to delete.' })
+  remove(@Param('id') id: string, @Request() req) {
+    return this.staffService.remove(id, req.user.id);
+  }
+}
