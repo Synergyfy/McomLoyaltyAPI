@@ -1,20 +1,18 @@
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
-import { AdminService } from '../services/admin.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Admin } from '../entities/admin.entity';
 import { HashModule } from '../../../common/hash/hash.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import jwtConfig from '../../../config/jwt.config';
+import { AdminModule } from '../admin.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin]),
+    forwardRef(() => AdminModule),
     PassportModule,
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync({
@@ -27,7 +25,7 @@ import jwtConfig from '../../../config/jwt.config';
     }),
     HashModule,
   ],
-  providers: [AuthService, JwtStrategy, LocalStrategy, AdminService],
+  providers: [AuthService, JwtStrategy, LocalStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
