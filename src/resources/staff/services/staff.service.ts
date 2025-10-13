@@ -25,13 +25,14 @@ export class StaffService {
     return this.staffRepository.save(staff);
   }
 
-  findAll(businessId: string, page: number, limit: number): Promise<{ data: Staff[], total: number }> {
-    return this.staffRepository.findAndCount({
+  async findAll(businessId: string, page: number, limit: number): Promise<{ data: Staff[], total: number }> {
+    const [data, total] = await this.staffRepository.findAndCount({
       where: { business: { id: businessId } },
-      order: { createdAt: 'DESC' },
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
+    return { data, total };
   }
 
   findOne(id: string, businessId: string): Promise<Staff> {

@@ -23,7 +23,7 @@ export class RewardsService {
 
   async getRewards(page: number, limit: number): Promise<{ data: Reward[], total: number }> {
     const [data, total] = await this.rewardRepository.findAndCount({
-      order: { createdAt: 'DESC' },
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CreateRewardDto } from './dto/create-reward.dto';
-import { AtGuard } from 'src/common/guards';
+import { AtGuard } from 'src/common/guards/at.guard';
 import { RewardsService } from './services/rewards.service';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CreateBusinessRewardDto } from './dto/create-business-reward.dto';

@@ -1,5 +1,5 @@
 
-import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseGuards, Request, Query } from '@nestjs/common';
 import { StaffService } from '../services/staff.service';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateStaffDto } from '../dto/update-staff.dto';
@@ -51,8 +51,8 @@ export class StaffController {
   @ApiOperation({ summary: 'Get all staff members for the logged-in business' })
   @ApiResponse({ status: 200, description: 'Returns an array of staff members.' })
   @ApiResponse({ status: 401, description: 'Unauthorized (Business not logged in).' })
-  findAll(@Request() req) {
-    return this.staffService.findAll(req.user.id);
+  findAll(@Request() req, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+    return this.staffService.findAll(req.user.id, page, limit);
   }
 
   @Get(':id')

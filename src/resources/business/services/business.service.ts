@@ -47,7 +47,7 @@ export class BusinessService {
 
   async findAll(page: number, limit: number): Promise<{ data: Business[], total: number }> {
     const [data, total] = await this.businessRepository.findAndCount({
-      order: { createdAt: 'DESC' },
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
