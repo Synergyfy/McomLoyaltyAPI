@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards, Request, ValidationPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { AtGuard } from 'src/common/guards/at.guard';
+import { AtGuard } from '../../common/guards/at.guard';
 import { AdminService } from '../services/admin.service';
 import { AuthService } from '../auth/auth.service';
-import { Public } from 'src/common/decorators/public.decorator';
-import { LocalAuthGuard } from '../auth/local-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
+import { LocalAuthGuard } from '../auth/local.auth.guard';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 
 @ApiTags('admin')
