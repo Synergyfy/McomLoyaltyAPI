@@ -44,4 +44,13 @@ export class BusinessService {
   async findByUniqueCode(uniqueCode: string): Promise<Business | undefined> {
     return this.businessRepository.findOne({ where: { uniqueCode } });
   }
+
+  async findAll(page: number, limit: number): Promise<{ data: Business[], total: number }> {
+    const [data, total] = await this.businessRepository.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
 }

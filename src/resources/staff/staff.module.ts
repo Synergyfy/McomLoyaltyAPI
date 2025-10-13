@@ -11,5 +11,6 @@ import { HashModule } from '../../common/hash/hash.module';
   imports: [TypeOrmModule.forFeature([Staff]), AuthModule, HashModule],
   providers: [StaffService],
   controllers: [StaffController],
+  exports: [StaffService],
 })
 export class StaffModule {}

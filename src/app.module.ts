@@ -14,6 +14,7 @@ import { SectorModule } from './resources/sector/sector.module';
 import { AdminModule } from './resources/admin/admin.module';
 import { StaffModule } from './resources/staff/staff.module';
 import { AtGuard } from './common/guards/at.guard';
+import { RewardsModule } from './resources/rewards/rewards.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AtGuard } from './common/guards/at.guard';
     SectorModule,
     AdminModule,
     StaffModule,
+    RewardsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],

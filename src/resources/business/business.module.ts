@@ -11,5 +11,6 @@ import { AuthController } from './auth/auth.controller';
   imports: [TypeOrmModule.forFeature([Business]), AuthModule, HashModule],
   providers: [BusinessService],
   controllers: [BusinessController, AuthController],
+  exports: [BusinessService],
 })
 export class BusinessModule {}
