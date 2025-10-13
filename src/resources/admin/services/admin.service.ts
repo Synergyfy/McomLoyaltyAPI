@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
-import { BusinessService } from 'src/resources/business/services/business.service';
-import { StaffService } from 'src/resources/staff/services/staff.service';
+import { BusinessService } from '../../business/services/business.service';
+import { StaffService } from '../../staff/services/staff.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
-import { HashService } from 'src/common/hash/hash.service';
+import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
 export class AdminService {
