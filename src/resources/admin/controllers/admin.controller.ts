@@ -6,9 +6,13 @@ import { AuthService } from '../auth/auth.service';
 import { Public } from '../../../common/decorators/public.decorator';
 import { LocalAuthGuard } from '../auth/local-auth.guard';
 import { CreateAdminDto } from '../dto/create-admin.dto';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { Role } from '../../../common/enums/role.enum';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 
 @ApiTags('admin')
 @Controller('admin')
+@UseGuards(RolesGuard)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
@@ -47,6 +51,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Admin: Get all businesses' })
   @ApiResponse({ status: 200, description: 'Return all businesses.' })
   @UseGuards(AtGuard)
+  @Roles(Role.Admin)
   @Get('businesses')
   async getBusinesses(@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
     return this.adminService.getBusinesses(page, limit);
@@ -55,6 +60,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Admin: Get all staffs by business ID' })
   @ApiResponse({ status: 200, description: 'Return all staffs for a business.' })
   @UseGuards(AtGuard)
+  @Roles(Role.Admin)
   @Get('staffs/:businessId')
   async getStaffs(@Param('businessId') businessId: string, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
     return this.adminService.getStaffs(businessId, page, limit);

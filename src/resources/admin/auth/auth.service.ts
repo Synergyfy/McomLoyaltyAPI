@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { AdminService } from '../services/admin.service';
 import { HashService } from '../../../common/hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
+import { Role } from '../../../common/enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -22,7 +23,11 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { username: user.email, sub: user.id };
+    const payload = {
+      username: user.email,
+      sub: user.id,
+      role: Role.Admin
+    };
     return {
       access_token: this.jwtService.sign(payload),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
