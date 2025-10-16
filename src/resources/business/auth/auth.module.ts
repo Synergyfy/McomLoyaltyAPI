@@ -3,15 +3,13 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
 import { BusinessService } from '../services/business.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Business } from '../entities/business.entity';
 import { HashModule } from '../../../common/hash/hash.module';
-import { LocalStrategy } from './local.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import jwtConfig from '../../../config/jwt.config';
-import { JwtRefreshStrategy } from './jwt-refresh.strategy';
+
 
 @Module({
   imports: [
@@ -28,7 +26,7 @@ import { JwtRefreshStrategy } from './jwt-refresh.strategy';
     }),
     HashModule,
   ],
-  providers: [AuthService, JwtStrategy, BusinessService, LocalStrategy, JwtRefreshStrategy],
+  providers: [AuthService, BusinessService],
   exports: [AuthService],
 })
 export class AuthModule {}

@@ -13,7 +13,6 @@ import { BusinessModule } from './resources/business/business.module';
 import { SectorModule } from './resources/sector/sector.module';
 import { AdminModule } from './resources/admin/admin.module';
 import { StaffModule } from './resources/staff/staff.module';
-import { AtGuard } from './common/guards/at.guard';
 import { RewardsModule } from './resources/rewards/rewards.module';
 
 @Module({
@@ -42,10 +41,7 @@ import { RewardsModule } from './resources/rewards/rewards.module';
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
-    {
-      provide: APP_GUARD,
-      useClass: AtGuard,
-    },
+  
   ],
 })
 export class AppModule implements NestModule {
