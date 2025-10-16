@@ -15,6 +15,7 @@ export class AdminController {
   ) {}
 
   @Public()
+  @UseGuards(LocalAuthGuard)
   @Post('login')
   @ApiOperation({ summary: 'Log in as an admin' })
   @ApiResponse({ status: 200, description: 'Successfully logged in, returns access token.' })
