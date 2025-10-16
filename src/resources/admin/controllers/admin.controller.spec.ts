@@ -2,17 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminController } from './admin.controller';
 import { AdminService } from '../services/admin.service';
 import { AuthService } from '../auth/auth.service';
-import { LocalAuthGuard } from '../auth/local-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Admin } from '../entities/admin.entity';
 import { HashService } from '../../../common/hash/hash.service';
 import { BusinessService } from '../../business/services/business.service';
 import { StaffService } from '../../staff/services/staff.service';
+import { LoginAdminDto } from '../dto/login-admin.dto';
+import { CreateAdminDto } from '../dto/create-admin.dto';
 
 describe('AdminController', () => {
   let controller: AdminController;
   let authService: AuthService;
+  let adminService: AdminService;
 
   const mockAdminRepository = {
     findOne: jest.fn(),
@@ -54,13 +56,11 @@ describe('AdminController', () => {
           useValue: mockStaffService,
         },
       ],
-    })
-    .overrideGuard(LocalAuthGuard)
-    .useValue({ canActivate: () => true })
-    .compile();
+    }).compile();
 
     controller = module.get<AdminController>(AdminController);
     authService = module.get<AuthService>(AuthService);
+    adminService = module.get<AdminService>(AdminService);
   });
 
   it('should be defined', () => {
@@ -68,14 +68,22 @@ describe('AdminController', () => {
   });
 
   describe('login', () => {
-    it('should return an access token when login is successful', async () => {
-      const user = { id: '1', email: 'admin@example.com' };
-      const req = { user };
+    it('should return an access token and refresh token when login is successful', async () => {
+      const loginDto: LoginAdminDto = { email: 'admin@example.com', password: 'password' };
+      const result = { access_token: 'test_token', refresh_token: 'test_token' };
+      jest.spyOn(authService, 'login').mockImplementation(async () => result);
 
-      const result = await controller.login(req);
+      expect(await controller.login(loginDto)).toBe(result);
+    });
+  });
 
-      expect(result).toHaveProperty('access_token');
-      expect(result.access_token).toBe('test_token');
+  describe('create', () => {
+    it('should create a new admin', async () => {
+      const createDto: CreateAdminDto = { email: 'new@admin.com', password: 'password', confirmPassword: 'password' };
+      const createdAdmin = new Admin();
+      jest.spyOn(adminService, 'create').mockImplementation(async () => createdAdmin);
+
+      expect(await controller.create(createDto)).toBe(createdAdmin);
     });
   });
 });

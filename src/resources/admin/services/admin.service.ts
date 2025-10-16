@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
@@ -18,6 +18,10 @@ export class AdminService {
   ) {}
 
   async create(createAdminDto: CreateAdminDto): Promise<Admin> {
+    const existingAdmin = await this.findByEmail(createAdminDto.email);
+    if (existingAdmin) {
+      throw new ConflictException('Admin with this email already exists');
+    }
     const hashedPassword = await this.hashService.hashPassword(createAdminDto.password);
     const admin = this.adminRepository.create({
       ...createAdminDto,

@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Request, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request, ValidationPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AdminService } from '../services/admin.service';
 import { AuthService } from '../auth/auth.service';
 import { Public } from '../../../common/decorators/public.decorator';
-import { LocalAuthGuard } from '../auth/local-auth.guard';
 import { CreateAdminDto } from '../dto/create-admin.dto';
+import { LoginAdminDto } from '../dto/login-admin.dto';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -15,23 +15,13 @@ export class AdminController {
   ) {}
 
   @Public()
-  @UseGuards(LocalAuthGuard)
   @Post('login')
   @ApiOperation({ summary: 'Log in as an admin' })
   @ApiResponse({ status: 200, description: 'Successfully logged in, returns access token.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'admin@example.com' },
-        password: { type: 'string', example: 'adminPassword123' },
-      },
-      required: ['email', 'password'],
-    },
-  })
-  async login(@Request() req) {
-    return this.authService.login(req.user);
+  @ApiBody({ type: LoginAdminDto })
+  async login(@Body(new ValidationPipe()) loginAdminDto: LoginAdminDto) {
+    return this.authService.login(loginAdminDto);
   }
 
   @Public()
