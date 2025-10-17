@@ -1,5 +1,5 @@
 
-import { Module, forwardRef } from '@nestjs/common';
+import { Global, Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -10,6 +10,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import jwtConfig from '../../../config/jwt.config';
 import { AdminModule } from '../admin.module';
 
+@Global()
 @Module({
   imports: [
     forwardRef(() => AdminModule),

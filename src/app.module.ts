@@ -7,6 +7,7 @@ import dataSource from './database/data-source';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggingMiddleware } from './middleware/logging.middleware';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { ConfigModule } from '@nestjs/config';
 import commissionConfig from './config/commission.config';
 import { BusinessModule } from './resources/business/business.module';
@@ -41,7 +42,10 @@ import { RewardsModule } from './resources/rewards/rewards.module';
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
-  
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {
