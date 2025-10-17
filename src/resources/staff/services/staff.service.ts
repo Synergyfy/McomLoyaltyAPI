@@ -1,5 +1,4 @@
-
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Staff } from '../entities/staff.entity';
@@ -16,9 +15,15 @@ export class StaffService {
   ) {}
 
   async create(createStaffDto: CreateStaffDto, businessId: string): Promise<Staff> {
+    const existingStaff = await this.findByEmail(createStaffDto.email);
+    if (existingStaff) {
+      throw new ConflictException('Email already exists');
+    }
+
     const hashedPassword = await this.hashService.hashPassword(createStaffDto.password);
+    const { confirmPassword, ...staffData } = createStaffDto;
     const staff = this.staffRepository.create({
-      ...createStaffDto,
+      ...staffData,
       password: hashedPassword,
       business: { id: businessId },
     });

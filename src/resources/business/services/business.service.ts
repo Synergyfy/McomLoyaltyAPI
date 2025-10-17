@@ -1,9 +1,9 @@
-
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../entities/business.entity';
 import { CreateBusinessDto } from '../dto/create-business.dto';
+import { UpdateBusinessDto } from '../dto/update-business.dto';
 import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
@@ -15,8 +15,13 @@ export class BusinessService {
   ) {}
 
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
+    const existingBusiness = await this.findByEmail(createBusinessDto.email);
+    if (existingBusiness) {
+      throw new ConflictException('Email already exists');
+    }
+
     const hashedPassword = await this.hashService.hashPassword(createBusinessDto.password);
-    const { sectorId, ...rest } = createBusinessDto;
+    const { sectorId, confirmPassword, ...rest } = createBusinessDto;
 
     let uniqueCode: string;
     let isUnique = false;
@@ -45,6 +50,10 @@ export class BusinessService {
     return this.businessRepository.findOne({ where: { uniqueCode } });
   }
 
+  async findById(id: string): Promise<Business | undefined> {
+    return this.businessRepository.findOne({ where: { id } });
+  }
+
   async findAll(page: number, limit: number): Promise<{ data: Business[], total: number }> {
     const [data, total] = await this.businessRepository.findAndCount({
       order: { created_at: 'DESC' },
@@ -52,5 +61,14 @@ export class BusinessService {
       take: limit,
     });
     return { data, total };
+  }
+
+  async update(id: string, updateBusinessDto: UpdateBusinessDto): Promise<Business> {
+    await this.businessRepository.update(id, updateBusinessDto);
+    return this.findById(id);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.businessRepository.delete(id);
   }
 }

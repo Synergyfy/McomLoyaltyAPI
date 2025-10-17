@@ -1,6 +1,6 @@
-
 import { IsEmail, IsNotEmpty, IsString, IsOptional, IsUrl, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsPasswordMatching } from '../../../common/decorators/validation/is-password-matching.decorator';
 
 export class CreateBusinessDto {
   @ApiProperty({ description: 'The legal name of the business.', example: 'The Gourmet Kitchen' })
@@ -16,6 +16,15 @@ export class CreateBusinessDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @ApiProperty({
+    description: 'The password confirmation.',
+    example: 'aStrongPassword123!',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsPasswordMatching('password', { message: 'Passwords do not match' })
+  confirmPassword: string;
 
   @ApiProperty({ description: 'The primary phone number for the business.', example: '+1234567890' })
   @IsString()

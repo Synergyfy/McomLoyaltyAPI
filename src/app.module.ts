@@ -13,8 +13,11 @@ import { BusinessModule } from './resources/business/business.module';
 import { SectorModule } from './resources/sector/sector.module';
 import { AdminModule } from './resources/admin/admin.module';
 import { StaffModule } from './resources/staff/staff.module';
-import { AtGuard } from './common/guards/at.guard';
 import { RewardsModule } from './resources/rewards/rewards.module';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
   imports: [
@@ -23,6 +26,8 @@ import { RewardsModule } from './resources/rewards/rewards.module';
     AdminModule,
     StaffModule,
     RewardsModule,
+    AuthModule,
+    UserModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],
@@ -44,7 +49,11 @@ import { RewardsModule } from './resources/rewards/rewards.module';
     },
     {
       provide: APP_GUARD,
-      useClass: AtGuard,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
