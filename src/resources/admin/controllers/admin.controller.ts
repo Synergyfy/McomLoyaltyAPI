@@ -18,7 +18,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Create a new admin account' })
   @ApiResponse({ status: 201, description: 'The admin has been successfully created.' })
   @ApiBody({ type: CreateAdminDto })
-  create(@Body(new ValidationPipe()) createAdminDto: CreateAdminDto) {
+  create(@Body() createAdminDto: CreateAdminDto) {
     return this.adminService.create(createAdminDto);
   }
 

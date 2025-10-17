@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
-import { AbstractBaseEntity } from 'src/database/entities/base.entity';
-import { Business } from 'src/resources/business/entities/business.entity';
+import { AbstractBaseEntity } from '../../../database/entities/base.entity';
+import { Business } from '../../business/entities/business.entity';
 import { Reward } from './reward.entity';
 
 @Entity()

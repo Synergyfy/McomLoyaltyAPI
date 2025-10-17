@@ -1,6 +1,6 @@
-
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsPasswordMatching } from '../../../common/decorators/validation/is-password-matching.decorator';
 
 export class CreateAdminDto {
   @ApiProperty({
@@ -18,4 +18,13 @@ export class CreateAdminDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @ApiProperty({
+    description: 'The password confirmation.',
+    example: 'strongPassword123!',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsPasswordMatching('password', { message: 'Passwords do not match' })
+  confirmPassword: string;
 }

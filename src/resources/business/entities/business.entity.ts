@@ -1,4 +1,3 @@
-
 import {
   Entity,
   Column,
@@ -8,6 +7,7 @@ import {
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Staff } from '../../staff/entities/staff.entity';
+import { Role } from '../../../common/role.enum';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -40,4 +40,7 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ unique: true })
   uniqueCode: string;
+
+  @Column({ type: 'enum', enum: Role, default: Role.Business })
+  role: Role;
 }

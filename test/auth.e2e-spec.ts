@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Admin } from '../src/resources/admin/entities/admin.entity';
 import { Repository } from 'typeorm';
+import { IsPasswordMatchingConstraint } from '../src/common/decorators/validation/is-password-matching.decorator';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
@@ -13,9 +14,11 @@ describe('AuthController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
+      providers: [IsPasswordMatchingConstraint],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     adminRepository = moduleFixture.get<Repository<Admin>>(getRepositoryToken(Admin));
     await app.init();
   });
@@ -25,10 +28,25 @@ describe('AuthController (e2e)', () => {
     await app.close();
   });
 
-  it('/auth/login (POST)', async () => {
+  it('/admin/signup (POST) - success', async () => {
+    return request(app.getHttpServer())
+      .post('/admin/signup')
+      .send({
+        email: 'admin@example.com',
+        password: 'adminPassword123',
+        confirmPassword: 'adminPassword123',
+      })
+      .expect(201);
+  });
+
+  it('/auth/login (POST) - success', async () => {
     await request(app.getHttpServer())
       .post('/admin/signup')
-      .send({ email: 'admin@example.com', password: 'adminPassword123' });
+      .send({
+        email: 'admin@example.com',
+        password: 'adminPassword123',
+        confirmPassword: 'adminPassword123',
+      });
 
     return request(app.getHttpServer())
       .post('/auth/login')
@@ -36,6 +54,62 @@ describe('AuthController (e2e)', () => {
       .expect(201)
       .then((res) => {
         expect(res.body).toHaveProperty('access_token');
+      });
+  });
+
+  it('/admin/signup (POST) - missing confirmPassword', async () => {
+    return request(app.getHttpServer())
+      .post('/admin/signup')
+      .send({
+        email: 'admin@example.com',
+        password: 'adminPassword123',
+      })
+      .expect(400);
+  });
+
+  it('/admin/signup (POST) - password mismatch', async () => {
+    return request(app.getHttpServer())
+      .post('/admin/signup')
+      .send({
+        email: 'admin@example.com',
+        password: 'adminPassword123',
+        confirmPassword: 'wrongPassword',
+      })
+      .expect(400)
+      .then((res) => {
+        expect(res.body.message[0]).toContain('Passwords do not match');
+      });
+  });
+
+  it('/admin/signup (POST) - duplicate email', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/signup')
+      .send({
+        email: 'admin@example.com',
+        password: 'adminPassword123',
+        confirmPassword: 'adminPassword123',
+      });
+
+    return request(app.getHttpServer())
+      .post('/admin/signup')
+      .send({
+        email: 'admin@example.com',
+        password: 'adminPassword123',
+        confirmPassword: 'adminPassword123',
+      })
+      .expect(409)
+      .then((res) => {
+        expect(res.body.message).toContain('Email already exists');
+      });
+  });
+
+  it('/auth/login (POST) - invalid credentials', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'admin@example.com', password: 'wrongPassword' })
+      .expect(401)
+      .then((res) => {
+        expect(res.body.message).toContain('Invalid login credentials');
       });
   });
 });

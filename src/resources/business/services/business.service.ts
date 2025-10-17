@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../entities/business.entity';
@@ -15,8 +15,13 @@ export class BusinessService {
   ) {}
 
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
+    const existingBusiness = await this.findByEmail(createBusinessDto.email);
+    if (existingBusiness) {
+      throw new ConflictException('Email already exists');
+    }
+
     const hashedPassword = await this.hashService.hashPassword(createBusinessDto.password);
-    const { sectorId, ...rest } = createBusinessDto;
+    const { sectorId, confirmPassword, ...rest } = createBusinessDto;
 
     let uniqueCode: string;
     let isUnique = false;
