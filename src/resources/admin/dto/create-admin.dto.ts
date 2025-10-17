@@ -4,6 +4,14 @@ import { IsPasswordMatching } from '../../../common/decorators/validation/is-pas
 
 export class CreateAdminDto {
   @ApiProperty({
+    description: 'The name of the admin user.',
+    example: 'John Doe',
+  })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({
     description: 'The email address of the admin user.',
     example: 'admin@example.com',
   })

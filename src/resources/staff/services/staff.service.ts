@@ -21,8 +21,9 @@ export class StaffService {
     }
 
     const hashedPassword = await this.hashService.hashPassword(createStaffDto.password);
+    const { confirmPassword, ...staffData } = createStaffDto;
     const staff = this.staffRepository.create({
-      ...createStaffDto,
+      ...staffData,
       password: hashedPassword,
       business: { id: businessId },
     });

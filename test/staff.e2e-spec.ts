@@ -64,6 +64,7 @@ describe('StaffController (e2e)', () => {
         name: 'Test Staff',
         email: 'staff@example.com',
         password: 'staffPassword123',
+        confirmPassword: 'staffPassword123',
       })
       .expect(201);
   });
@@ -76,6 +77,7 @@ describe('StaffController (e2e)', () => {
         name: 'Test Staff',
         email: 'staff@example.com',
         password: 'staffPassword123',
+        confirmPassword: 'staffPassword123',
       });
 
     return request(app.getHttpServer())
@@ -83,7 +85,11 @@ describe('StaffController (e2e)', () => {
       .send({ email: 'staff@example.com', password: 'staffPassword123' })
       .expect(201)
       .then((res) => {
+        expect(res.body).toHaveProperty('user');
+        expect(res.body.user).toHaveProperty('name', 'Test Staff');
+        expect(res.body.user).toHaveProperty('role', 'Staff');
         expect(res.body).toHaveProperty('access_token');
+        expect(res.body).toHaveProperty('refresh_token');
       });
   });
 });

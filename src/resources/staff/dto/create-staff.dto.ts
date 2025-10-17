@@ -1,6 +1,6 @@
-
 import { IsEmail, IsNotEmpty, IsString, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsPasswordMatching } from '../../../common/decorators/validation/is-password-matching.decorator';
 
 export class CreateStaffDto {
   @ApiProperty({ description: 'The name of the staff member.', example: 'John Doe' })
@@ -17,6 +17,15 @@ export class CreateStaffDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @ApiProperty({
+    description: 'The password confirmation.',
+    example: 'staffPassword123',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsPasswordMatching('password', { message: 'Passwords do not match' })
+  confirmPassword: string;
 
   @ApiProperty({ description: 'The URL of the avatar for the staff member.', required: false, example: 'https://example.com/avatar.png' })
   @IsUrl()

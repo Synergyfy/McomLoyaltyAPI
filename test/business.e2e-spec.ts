@@ -72,7 +72,11 @@ describe('BusinessController (e2e)', () => {
       .send({ email: 'business@example.com', password: 'businessPassword123' })
       .expect(201)
       .then((res) => {
+        expect(res.body).toHaveProperty('user');
+        expect(res.body.user).toHaveProperty('name', 'Test Business');
+        expect(res.body.user).toHaveProperty('role', 'Business');
         expect(res.body).toHaveProperty('access_token');
+        expect(res.body).toHaveProperty('refresh_token');
       });
   });
 

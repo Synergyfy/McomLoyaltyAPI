@@ -32,6 +32,7 @@ describe('AuthController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/admin/signup')
       .send({
+        name: 'Test Admin',
         email: 'admin@example.com',
         password: 'adminPassword123',
         confirmPassword: 'adminPassword123',
@@ -43,6 +44,7 @@ describe('AuthController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/signup')
       .send({
+        name: 'Test Admin',
         email: 'admin@example.com',
         password: 'adminPassword123',
         confirmPassword: 'adminPassword123',
@@ -53,7 +55,11 @@ describe('AuthController (e2e)', () => {
       .send({ email: 'admin@example.com', password: 'adminPassword123' })
       .expect(201)
       .then((res) => {
+        expect(res.body).toHaveProperty('user');
+        expect(res.body.user).toHaveProperty('name', 'Test Admin');
+        expect(res.body.user).toHaveProperty('role', 'Admin');
         expect(res.body).toHaveProperty('access_token');
+        expect(res.body).toHaveProperty('refresh_token');
       });
   });
 
@@ -61,6 +67,7 @@ describe('AuthController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/admin/signup')
       .send({
+        name: 'Test Admin',
         email: 'admin@example.com',
         password: 'adminPassword123',
       })
@@ -71,6 +78,7 @@ describe('AuthController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/admin/signup')
       .send({
+        name: 'Test Admin',
         email: 'admin@example.com',
         password: 'adminPassword123',
         confirmPassword: 'wrongPassword',
@@ -85,6 +93,7 @@ describe('AuthController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/admin/signup')
       .send({
+        name: 'Test Admin',
         email: 'admin@example.com',
         password: 'adminPassword123',
         confirmPassword: 'adminPassword123',
@@ -93,6 +102,7 @@ describe('AuthController (e2e)', () => {
     return request(app.getHttpServer())
       .post('/admin/signup')
       .send({
+        name: 'Another Admin',
         email: 'admin@example.com',
         password: 'adminPassword123',
         confirmPassword: 'adminPassword123',

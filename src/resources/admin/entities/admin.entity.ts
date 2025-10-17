@@ -4,6 +4,9 @@ import { Role } from '../../../common/role.enum';
 
 @Entity('admins')
 export class Admin extends AbstractBaseEntity {
+  @Column()
+  name: string;
+
   @Column({ unique: true })
   email: string;
 
