@@ -1,9 +1,9 @@
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../entities/business.entity';
 import { CreateBusinessDto } from '../dto/create-business.dto';
+import { UpdateBusinessDto } from '../dto/update-business.dto';
 import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
@@ -45,6 +45,10 @@ export class BusinessService {
     return this.businessRepository.findOne({ where: { uniqueCode } });
   }
 
+  async findById(id: string): Promise<Business | undefined> {
+    return this.businessRepository.findOne({ where: { id } });
+  }
+
   async findAll(page: number, limit: number): Promise<{ data: Business[], total: number }> {
     const [data, total] = await this.businessRepository.findAndCount({
       order: { created_at: 'DESC' },
@@ -52,5 +56,14 @@ export class BusinessService {
       take: limit,
     });
     return { data, total };
+  }
+
+  async update(id: string, updateBusinessDto: UpdateBusinessDto): Promise<Business> {
+    await this.businessRepository.update(id, updateBusinessDto);
+    return this.findById(id);
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.businessRepository.delete(id);
   }
 }

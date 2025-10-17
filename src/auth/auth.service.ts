@@ -1,19 +1,18 @@
-
 import { Injectable } from '@nestjs/common';
-import { AdminService } from '../services/admin.service';
-import { HashService } from '../../../common/hash/hash.service';
+import { UserService } from '../user/user.service';
+import { HashService } from '../common/hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly adminService: AdminService,
+    private readonly userService: UserService,
     private readonly hashService: HashService,
     private readonly jwtService: JwtService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.adminService.findByEmail(email);
+    const user = await this.userService.findOne(email);
     if (user && await this.hashService.comparePassword(pass, user.password)) {
       const { password, ...result } = user;
       return result;
@@ -22,10 +21,9 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { username: user.email, sub: user.id };
+    const payload = { username: user.email, sub: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
     };
   }
 }

@@ -1,41 +1,19 @@
-
 import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, UseGuards, Request, Query } from '@nestjs/common';
 import { StaffService } from '../services/staff.service';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateStaffDto } from '../dto/update-staff.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthService } from '../auth/auth.service';
-import { LocalAuthGuard } from '../auth/local-auth.guard';
-import { Public } from '../../../common/decorators/public.decorator';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { Role } from '../../../common/role.enum';
 
 @ApiTags('Staff Management')
 @Controller('staff')
 export class StaffController {
   constructor(
     private readonly staffService: StaffService,
-    private readonly authService: AuthService,
     ) {}
 
-  @Public()
-  @UseGuards(LocalAuthGuard)
-  @Post('login')
-  @ApiOperation({ summary: 'Log in as a staff member' })
-  @ApiResponse({ status: 200, description: 'Successfully logged in, returns access token.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'john.doe@example.com' },
-        password: { type: 'string', example: 'staffPassword123' },
-      },
-      required: ['email', 'password'],
-    },
-  })
-  async login(@Request() req) {
-    return this.authService.login(req.user);
-  }
-
+  @Roles(Role.Business)
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new staff member (for logged-in business)' })
@@ -46,6 +24,7 @@ export class StaffController {
     return this.staffService.create(createStaffDto, req.user.id);
   }
 
+  @Roles(Role.Business, Role.Staff)
   @Get()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all staff members for the logged-in business' })
@@ -55,6 +34,7 @@ export class StaffController {
     return this.staffService.findAll(req.user.id, page, limit);
   }
 
+  @Roles(Role.Business, Role.Staff)
   @Get(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a specific staff member by ID' })
@@ -66,6 +46,7 @@ export class StaffController {
     return this.staffService.findOne(id, req.user.id);
   }
 
+  @Roles(Role.Business)
   @Patch(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a staff member' })
@@ -78,6 +59,7 @@ export class StaffController {
     return this.staffService.update(id, updateStaffDto, req.user.id);
   }
 
+  @Roles(Role.Business)
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a staff member' })

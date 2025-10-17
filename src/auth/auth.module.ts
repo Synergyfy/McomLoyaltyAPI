@@ -1,18 +1,19 @@
-
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
-import { HashModule } from '../../../common/hash/hash.module';
+import { HashModule } from '../common/hash/hash.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import jwtConfig from '../../../config/jwt.config';
-import { AdminModule } from '../admin.module';
+import jwtConfig from '../config/jwt.config';
+import { UserModule } from '../user/user.module';
+import { AuthController } from './auth.controller';
 
 @Module({
+  controllers: [AuthController],
   imports: [
-    forwardRef(() => AdminModule),
+    UserModule,
     PassportModule,
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync({
