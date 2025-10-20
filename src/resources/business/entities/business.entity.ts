@@ -20,10 +20,10 @@ export class Business extends AbstractBaseEntity {
   @Column()
   password: string;
 
-  @Column()
+  @Column({ nullable: true })
   phone: string;
 
-  @Column()
+  @Column({ nullable: true })
   address: string;
 
   @ManyToOne(() => Sector, (sector) => sector.businesses)
@@ -43,4 +43,7 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: Role, default: Role.Business })
   role: Role;
+
+  @Column({ nullable: true })
+  referralCapacity?: number;
 }

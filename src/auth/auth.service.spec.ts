@@ -65,17 +65,25 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should return an access token', async () => {
-      const user = { email: 'test@test.com', id: 'someId', role: Role.Admin };
-      const token = 'someAccessToken';
-      mockJwtService.sign.mockReturnValue(token);
+    it('should return user, access token, and refresh token', async () => {
+      const user = { name: 'Test User', email: 'test@test.com', id: 'someId', role: Role.Admin };
+      const accessToken = 'someAccessToken';
+      const refreshToken = 'someRefreshToken';
+      mockJwtService.sign.mockImplementation((payload, options) => {
+        if (options?.expiresIn === '7d') {
+          return refreshToken;
+        }
+        return accessToken;
+      });
 
       const result = await service.login(user);
-      expect(result).toEqual({ access_token: token });
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        username: user.email,
-        sub: user.id,
-        role: user.role,
+      expect(result).toEqual({
+        user: {
+          name: user.name,
+          role: user.role,
+        },
+        access_token: accessToken,
+        refresh_token: refreshToken,
       });
     });
   });

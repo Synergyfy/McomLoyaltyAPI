@@ -1,9 +1,10 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../entities/business.entity';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
+import { OnboardingDto } from '../dto/onboarding.dto';
 import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
@@ -21,7 +22,7 @@ export class BusinessService {
     }
 
     const hashedPassword = await this.hashService.hashPassword(createBusinessDto.password);
-    const { sectorId, confirmPassword, ...rest } = createBusinessDto;
+    const { confirmPassword, ...rest } = createBusinessDto;
 
     let uniqueCode: string;
     let isUnique = false;
@@ -37,9 +38,24 @@ export class BusinessService {
       ...rest,
       password: hashedPassword,
       uniqueCode,
-      sector: { id: sectorId },
     });
     return this.businessRepository.save(business);
+  }
+
+  async onboarding(id: string, onboardingDto: OnboardingDto): Promise<Business> {
+    const business = await this.findById(id);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const { sectorId, ...rest } = onboardingDto;
+    const updatedBusiness = {
+      ...business,
+      ...rest,
+      sector: { id: sectorId },
+    };
+
+    return this.businessRepository.save(updatedBusiness);
   }
 
   async findByEmail(email: string): Promise<Business | undefined> {
