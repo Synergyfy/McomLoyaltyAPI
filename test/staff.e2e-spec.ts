@@ -31,6 +31,7 @@ describe('StaffController (e2e)', () => {
     await app.init();
 
     sector = await sectorRepository.save({ name: 'Technology' });
+
     await request(app.getHttpServer())
       .post('/business/signup')
       .send({
@@ -38,15 +39,23 @@ describe('StaffController (e2e)', () => {
         email: 'business@example.com',
         password: 'businessPassword123',
         confirmPassword: 'businessPassword123',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
       });
 
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'business@example.com', password: 'businessPassword123' });
+
     businessToken = loginResponse.body.access_token;
+
+    await request(app.getHttpServer())
+      .post('/business/onboarding')
+      .set('Authorization', `Bearer ${businessToken}`)
+      .send({
+        phone: '1234567890',
+        address: '123 Test St',
+        sectorId: sector.id,
+        referralCapacity: 10,
+      });
   });
 
   afterEach(async () => {
