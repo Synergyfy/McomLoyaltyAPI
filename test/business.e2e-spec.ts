@@ -15,6 +15,8 @@ describe('BusinessController (e2e)', () => {
   let staffRepository: Repository<Staff>;
   let sectorRepository: Repository<Sector>;
   let sector: Sector;
+  let businessToken: string;
+  let business: Business;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -47,37 +49,8 @@ describe('BusinessController (e2e)', () => {
         email: 'business@example.com',
         password: 'businessPassword123',
         confirmPassword: 'businessPassword123',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
       })
       .expect(201);
-  });
-
-  it('/auth/login (POST) - success', async () => {
-    await request(app.getHttpServer())
-      .post('/business/signup')
-      .send({
-        name: 'Test Business',
-        email: 'business@example.com',
-        password: 'businessPassword123',
-        confirmPassword: 'businessPassword123',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
-      });
-
-    return request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: 'business@example.com', password: 'businessPassword123' })
-      .expect(201)
-      .then((res) => {
-        expect(res.body).toHaveProperty('user');
-        expect(res.body.user).toHaveProperty('name', 'Test Business');
-        expect(res.body.user).toHaveProperty('role', 'Business');
-        expect(res.body).toHaveProperty('access_token');
-        expect(res.body).toHaveProperty('refresh_token');
-      });
   });
 
   it('/business/signup (POST) - password mismatch', async () => {
@@ -88,9 +61,6 @@ describe('BusinessController (e2e)', () => {
         email: 'business@example.com',
         password: 'businessPassword123',
         confirmPassword: 'wrongPassword',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
       })
       .expect(400)
       .then((res) => {
@@ -106,9 +76,6 @@ describe('BusinessController (e2e)', () => {
         email: 'business@example.com',
         password: 'businessPassword123',
         confirmPassword: 'businessPassword123',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
       });
 
     return request(app.getHttpServer())
@@ -118,13 +85,55 @@ describe('BusinessController (e2e)', () => {
         email: 'business@example.com',
         password: 'businessPassword123',
         confirmPassword: 'businessPassword123',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
       })
       .expect(409)
       .then((res) => {
         expect(res.body.message).toContain('Email already exists');
       });
+  });
+
+  describe('Onboarding', () => {
+    beforeEach(async () => {
+        await request(app.getHttpServer())
+        .post('/business/signup')
+        .send({
+          name: 'Test Business',
+          email: 'business@example.com',
+          password: 'businessPassword123',
+          confirmPassword: 'businessPassword123',
+        });
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'business@example.com', password: 'businessPassword123' });
+
+      businessToken = loginResponse.body.access_token;
+      business = loginResponse.body.user;
+    });
+
+    it('/business/onboarding (POST) - success', async () => {
+      return request(app.getHttpServer())
+        .post('/business/onboarding')
+        .set('Authorization', `Bearer ${businessToken}`)
+        .send({
+          phone: '1234567890',
+          address: '123 Test St',
+          sectorId: sector.id,
+          referralCapacity: 10,
+        })
+        .expect(201);
+    });
+
+    it('/business/onboarding (POST) - unauthorized', async () => {
+      return request(app.getHttpServer())
+        .post('/business/onboarding')
+        .send({
+          phone: '1234567890',
+          address: '123 Test St',
+          sectorId: sector.id,
+          referralCapacity: 10,
+        })
+        .expect(401);
+    });
   });
 });

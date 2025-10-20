@@ -1,8 +1,9 @@
-import { Controller, Post, Body, ValidationPipe, Get, Patch, Delete, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, Get, Patch, Delete, Request } from '@nestjs/common';
 import { BusinessService } from '../services/business.service';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { OnboardingDto } from '../dto/onboarding.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
@@ -18,8 +19,19 @@ export class BusinessController {
   @ApiResponse({ status: 201, description: 'The business profile has been successfully created.' })
   @ApiResponse({ status: 400, description: 'Invalid input or email/name already exists.' })
   @ApiBody({ type: CreateBusinessDto })
-  async signup(@Body(new ValidationPipe()) createBusinessDto: CreateBusinessDto) {
+  async create(@Body(new ValidationPipe()) createBusinessDto: CreateBusinessDto) {
     return this.businessService.create(createBusinessDto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.Business)
+  @Post('onboarding')
+  @ApiOperation({ summary: 'Onboard a new business with additional details' })
+  @ApiResponse({ status: 201, description: 'The business has been successfully onboarded.' })
+  @ApiResponse({ status: 400, description: 'Invalid input.' })
+  @ApiBody({ type: OnboardingDto })
+  async onboarding(@Request() req, @Body(new ValidationPipe()) onboardingDto: OnboardingDto) {
+    return this.businessService.onboarding(req.user.id, onboardingDto);
   }
 
   @Roles(Role.Business)
