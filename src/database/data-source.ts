@@ -41,7 +41,7 @@ export async function initializeDataSource() {
 export default dataSource;
 
 // TO MIGRATE
-// npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate src/database/migrations/NewOfferStructure -d src/database/data-source.ts
+// npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate src/database/migrations/NotUniqueBusinessName -d src/database/data-source.ts
 
 // TO APPLY MIGRATION
 // npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts

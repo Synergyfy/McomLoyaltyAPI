@@ -11,7 +11,7 @@ import { Role } from '../../../common/role.enum';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
-  @Column({ unique: true })
+  @Column()
   name: string;
 
   @Column({ unique: true })
