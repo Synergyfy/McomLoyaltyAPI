@@ -18,6 +18,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { CampaignModule } from './resources/campaign/campaign.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RolesGuard } from './common/guards/roles.guard';
       }),
       dataSourceFactory: async () => dataSource,
     }),
+    CampaignModule,
 
   ],
   controllers: [AppController],
