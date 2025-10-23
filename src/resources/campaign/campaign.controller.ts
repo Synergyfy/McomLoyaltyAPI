@@ -9,6 +9,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -25,6 +26,7 @@ export class CampaignController {
   constructor(private readonly campaignService: CampaignService) {}
 
   @Post()
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
   create(
@@ -35,6 +37,7 @@ export class CampaignController {
   }
 
   @Get()
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
   findAll(@CurrentUser() currentUser: Business | Admin) {
@@ -48,6 +51,7 @@ export class CampaignController {
   }
 
   @Get(':id')
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
   findOne(
@@ -58,6 +62,7 @@ export class CampaignController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
   update(
@@ -69,6 +74,7 @@ export class CampaignController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
   remove(
@@ -79,6 +85,7 @@ export class CampaignController {
   }
 
   @Patch(':id/toggle')
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
   toggleCampaignStatus(
