@@ -5,6 +5,7 @@ import { Reward } from '../entities/reward.entity';
 import { CreateRewardDto } from '../dto/create-reward.dto';
 import { BusinessReward } from '../entities/business-reward.entity';
 import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
+import { UpdateRewardDto } from '../dto/update-reward.dto';
 
 @Injectable()
 export class RewardsService {
@@ -30,11 +31,53 @@ export class RewardsService {
     return { data, total };
   }
 
+  async updateReward(id: string, updateRewardDto: UpdateRewardDto): Promise<Reward> {
+    const reward = await this.rewardRepository.findOne({ where: { id } });
+    if (!reward) {
+      throw new NotFoundException('Reward not found');
+    }
+    Object.assign(reward, updateRewardDto);
+    return this.rewardRepository.save(reward);
+  }
+
+  async deleteReward(id: string): Promise<void> {
+    const reward = await this.rewardRepository.findOne({ where: { id } });
+    if (!reward) {
+      throw new NotFoundException('Reward not found');
+    }
+    const businessReward = await this.businessRewardRepository.findOne({ where: { reward: { id } } });
+    if (businessReward) {
+      throw new ConflictException('Reward is in use by a business');
+    }
+    await this.rewardRepository.delete(id);
+  }
+
+  async disableReward(id: string): Promise<Reward> {
+    const reward = await this.rewardRepository.findOne({ where: { id } });
+    if (!reward) {
+      throw new NotFoundException('Reward not found');
+    }
+    reward.disabled = true;
+    return this.rewardRepository.save(reward);
+  }
+
+  async enableReward(id: string): Promise<Reward> {
+    const reward = await this.rewardRepository.findOne({ where: { id } });
+    if (!reward) {
+      throw new NotFoundException('Reward not found');
+    }
+    reward.disabled = false;
+    return this.rewardRepository.save(reward);
+  }
+
   // Business methods
   async addRewardToBusiness(rewardId: string, businessId: string, createBusinessRewardDto: CreateBusinessRewardDto): Promise<BusinessReward> {
     const reward = await this.rewardRepository.findOne({ where: { id: rewardId } });
     if (!reward) {
       throw new NotFoundException('Reward not found');
+    }
+    if (reward.disabled) {
+      throw new ConflictException('Reward is disabled');
     }
 
     const existingBusinessReward = await this.businessRewardRepository.findOne({

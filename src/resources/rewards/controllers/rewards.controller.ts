@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Put } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateRewardDto } from '../dto/create-reward.dto';
 import { RewardsService } from '../services/rewards.service';
+import { UpdateRewardDto } from '../dto/update-reward.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -29,6 +30,42 @@ export class RewardsController {
   @Get('admin/rewards')
   async getRewards(@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
     return this.rewardsService.getRewards(page, limit);
+  }
+
+  @ApiOperation({ summary: 'Admin: Update a reward' })
+  @ApiResponse({ status: 200, description: 'The reward has been successfully updated.' })
+  @Roles(Role.Admin)
+  @ApiBearerAuth()
+  @Put('admin/rewards/:id')
+  async updateReward(@Param('id') id: string, @Body() updateRewardDto: UpdateRewardDto) {
+    return this.rewardsService.updateReward(id, updateRewardDto);
+  }
+
+  @ApiOperation({ summary: 'Admin: Delete a reward' })
+  @ApiResponse({ status: 200, description: 'The reward has been successfully deleted.' })
+  @Roles(Role.Admin)
+  @ApiBearerAuth()
+  @Delete('admin/rewards/:id')
+  async deleteReward(@Param('id') id: string) {
+    return this.rewardsService.deleteReward(id);
+  }
+
+  @ApiOperation({ summary: 'Admin: Disable a reward' })
+  @ApiResponse({ status: 200, description: 'The reward has been successfully disabled.' })
+  @Roles(Role.Admin)
+  @ApiBearerAuth()
+  @Post('admin/rewards/:id/disable')
+  async disableReward(@Param('id') id: string) {
+    return this.rewardsService.disableReward(id);
+  }
+
+  @ApiOperation({ summary: 'Admin: Enable a reward' })
+  @ApiResponse({ status: 200, description: 'The reward has been successfully enabled.' })
+  @Roles(Role.Admin)
+  @ApiBearerAuth()
+  @Post('admin/rewards/:id/enable')
+  async enableReward(@Param('id') id: string) {
+    return this.rewardsService.enableReward(id);
   }
 
   // Business endpoints

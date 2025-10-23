@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateRewardDto {
   @ApiProperty({
@@ -44,4 +44,12 @@ export class CreateRewardDto {
   @IsNumber()
   @IsOptional()
   quantity?: number;
+
+  @ApiProperty({
+    description: 'Indicates whether the reward is disabled',
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  disabled?: boolean;
 }
