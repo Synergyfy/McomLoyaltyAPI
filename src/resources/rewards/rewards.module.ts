@@ -9,5 +9,6 @@ import { BusinessReward } from './entities/business-reward.entity';
   imports: [TypeOrmModule.forFeature([Reward, BusinessReward])],
   controllers: [RewardsController],
   providers: [RewardsService],
+  exports: [RewardsService],
 })
 export class RewardsModule {}
