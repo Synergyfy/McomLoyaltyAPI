@@ -6,6 +6,7 @@ import { CreateRewardDto } from '../dto/create-reward.dto';
 import { BusinessReward } from '../entities/business-reward.entity';
 import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
 import { UpdateRewardDto } from '../dto/update-reward.dto';
+import { RewardImage } from '../entities/reward-image.entity';
 
 @Injectable()
 export class RewardsService {
@@ -14,11 +15,17 @@ export class RewardsService {
     private readonly rewardRepository: Repository<Reward>,
     @InjectRepository(BusinessReward)
     private readonly businessRewardRepository: Repository<BusinessReward>,
+    @InjectRepository(RewardImage)
+    private readonly rewardImageRepository: Repository<RewardImage>,
   ) {}
 
   // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
-    const reward = this.rewardRepository.create(createRewardDto);
+    const { images, ...rest } = createRewardDto;
+    const reward = this.rewardRepository.create(rest);
+    if (images && images.length > 0) {
+      reward.images = images.map((url) => this.rewardImageRepository.create({ url }));
+    }
     return this.rewardRepository.save(reward);
   }
 
@@ -32,11 +39,22 @@ export class RewardsService {
   }
 
   async updateReward(id: string, updateRewardDto: UpdateRewardDto): Promise<Reward> {
-    const reward = await this.rewardRepository.findOne({ where: { id } });
+    const { images, ...rest } = updateRewardDto;
+    const reward = await this.rewardRepository.findOne({ where: { id }, relations: ['images'] });
+
     if (!reward) {
       throw new NotFoundException('Reward not found');
     }
-    Object.assign(reward, updateRewardDto);
+
+    Object.assign(reward, rest);
+
+    if (images) {
+      if (reward.images && reward.images.length > 0) {
+        await this.rewardImageRepository.remove(reward.images);
+      }
+      reward.images = images.map((url) => this.rewardImageRepository.create({ url }));
+    }
+
     return this.rewardRepository.save(reward);
   }
 

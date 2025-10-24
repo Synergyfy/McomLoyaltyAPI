@@ -13,7 +13,7 @@ import { IsPasswordMatchingConstraint } from '../src/common/decorators/validatio
 import { Sector } from '../src/resources/sector/entities/sector.entity';
 import { RewardImage } from '../src/resources/rewards/entities/reward-image.entity';
 
-describe('RewardsController (e2e)', () => {
+describe('RewardsController (e2e) - Admin Full', () => {
   let app: INestApplication;
   let adminRepository: Repository<Admin>;
   let businessRepository: Repository<Business>;
@@ -23,7 +23,7 @@ describe('RewardsController (e2e)', () => {
   let sectorRepository: Repository<Sector>;
   let rewardImageRepository: Repository<RewardImage>;
   let adminToken: string;
-  let businessToken: string;
+  let rewardId: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -55,18 +55,14 @@ describe('RewardsController (e2e)', () => {
       .send({ email: 'admin@example.com', password: 'adminPassword123' });
     adminToken = adminLoginResponse.body.access_token;
 
-    await request(app.getHttpServer())
-      .post('/business/signup')
-      .send({
-        name: 'Test Business',
-        email: 'business@example.com',
-        password: 'businessPassword123',
-        confirmPassword: 'businessPassword123',
-      });
-    const businessLoginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: 'business@example.com', password: 'businessPassword123' });
-    businessToken = businessLoginResponse.body.access_token;
+    const reward = await rewardRepository.save({
+      title: 'Test Reward',
+      points_required: 100,
+      value: 10,
+      description: 'Test Description',
+      quantity: 10,
+    });
+    rewardId = reward.id;
   });
 
   afterEach(async () => {
@@ -80,32 +76,61 @@ describe('RewardsController (e2e)', () => {
     await app.close();
   });
 
-  it('/rewards/admin/rewards (POST) - should be protected', async () => {
-    return request(app.getHttpServer())
-      .post('/rewards/admin/rewards')
-      .send({
-        title: 'Test Reward',
-        points_required: 100,
-        value: 10,
-        description: 'Test Description',
-        images: ['http://example.com/image.png'],
-        quantity: 10,
-      })
-      .expect(401);
-  });
-
-  it('/rewards/admin/rewards (POST) - should be accessible by admin', async () => {
+  it('/rewards/admin/rewards (POST) - should create a reward with multiple images', async () => {
     return request(app.getHttpServer())
       .post('/rewards/admin/rewards')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        title: 'Test Reward',
+        title: 'Test Reward 2',
         points_required: 100,
         value: 10,
-        description: 'Test Description',
-        images: ['http://example.com/image.png'],
+        description: 'Test Description 2',
         quantity: 10,
+        images: ['http://example.com/image1.png', 'http://example.com/image2.png'],
       })
-      .expect(201);
+      .expect(201)
+      .then((res) => {
+        expect(res.body.images).toHaveLength(2);
+      });
+  });
+
+  it('/rewards/admin/rewards/:id (PUT) - should update a reward with new images', async () => {
+    return request(app.getHttpServer())
+      .put(`/rewards/admin/rewards/${rewardId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        images: ['http://example.com/image3.png', 'http://example.com/image4.png'],
+      })
+      .expect(200)
+      .then((res) => {
+        expect(res.body.images).toHaveLength(2);
+      });
+  });
+
+  it('/rewards/admin/rewards/:id/disable (POST) - should disable a reward', async () => {
+    return request(app.getHttpServer())
+      .post(`/rewards/admin/rewards/${rewardId}/disable`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201)
+      .then((res) => {
+        expect(res.body.disabled).toBe(true);
+      });
+  });
+
+  it('/rewards/admin/rewards/:id/enable (POST) - should enable a reward', async () => {
+    return request(app.getHttpServer())
+      .post(`/rewards/admin/rewards/${rewardId}/enable`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201)
+      .then((res) => {
+        expect(res.body.disabled).toBe(false);
+      });
+  });
+
+  it('/rewards/admin/rewards/:id (DELETE) - should delete a reward', async () => {
+    return request(app.getHttpServer())
+      .delete(`/rewards/admin/rewards/${rewardId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
   });
 });

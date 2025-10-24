@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  IsUrl,
+} from 'class-validator';
 
 export class CreateRewardDto {
   @ApiProperty({
@@ -31,11 +38,13 @@ export class CreateRewardDto {
   description: string;
 
   @ApiProperty({
-    description: 'The URL of the reward image',
-    example: 'https://example.com/coffee.jpg',
+    description: 'The URLs of the reward images',
+    example: ['https://example.com/coffee.jpg'],
+    type: [String],
   })
-  @IsString()
-  image: string;
+  @IsArray()
+  @IsUrl({}, { each: true })
+  images: string[];
 
   @ApiProperty({
     description: 'The quantity of the reward available',
