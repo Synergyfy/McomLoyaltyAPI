@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Admin } from '../resources/admin/entities/admin.entity';
 import { Business } from '../resources/business/entities/business.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
+import { Participant } from '../resources/participant/entities/participant.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -14,6 +15,8 @@ export class UserService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(Participant)
+    private readonly participantRepository: Repository<Participant>,
   ) {}
 
   async findOne(email: string): Promise<any> {
@@ -25,6 +28,11 @@ export class UserService {
 
     const staff = await this.staffRepository.findOne({ where: { email } });
     if (staff) return staff;
+
+    const participant = await this.participantRepository.findOne({
+      where: { email },
+    });
+    if (participant) return participant;
 
     return null;
   }

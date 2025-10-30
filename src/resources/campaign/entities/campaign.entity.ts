@@ -9,6 +9,7 @@ import {
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
+import { Participant } from '../../participant/entities/participant.entity';
 
 export enum CampaignType {
   QR_CODE = 'qr_code',
@@ -77,4 +78,10 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column()
   background_color: string;
+
+  @Column({ nullable: true })
+  signUpPoint: number;
+
+  @ManyToMany(() => Participant, (participant) => participant.campaigns)
+  participants: Participant[];
 }
