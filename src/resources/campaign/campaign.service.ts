@@ -121,4 +121,23 @@ export class CampaignService {
     campaign.disabled = !campaign.disabled;
     return this.campaignRepository.save(campaign);
   }
+
+  async findAllPublic(query: any): Promise<any> {
+    const page = parseInt(query.page, 10) || 1;
+    const limit = parseInt(query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.campaignRepository.findAndCount({
+      where: { disabled: false },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
 }

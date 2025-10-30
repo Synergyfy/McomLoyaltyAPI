@@ -8,8 +8,14 @@ import {
   IsOptional,
   IsUUID,
   IsHexColor,
+  IsEnum,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  CampaignType,
+  AudienceType,
+} from '../entities/campaign.entity';
 
 export class CreateCampaignDto {
   @ApiProperty({ description: 'The name of the campaign.' })
@@ -17,10 +23,18 @@ export class CreateCampaignDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'A long description of the campaign.' })
+  @ApiProperty({
+    description: 'The type of the campaign.',
+    enum: CampaignType,
+    default: CampaignType.QR_CODE,
+  })
+  @IsEnum(CampaignType)
+  campaign_type: CampaignType;
+
+  @ApiProperty({ description: 'The message for the campaign.' })
   @IsString()
   @IsNotEmpty()
-  description: string;
+  campaign_message: string;
 
   @ApiProperty({ description: 'The start date of the campaign.' })
   @Type(() => Date)
@@ -32,17 +46,49 @@ export class CreateCampaignDto {
   @IsDate()
   end_date: Date;
 
-  @ApiProperty({ description: 'The main image URL for the campaign.' })
-  @IsUrl()
-  main_image: string;
+  @ApiProperty({ description: 'The quantity of rewards available.' })
+  @IsInt()
+  quantity: number;
 
   @ApiProperty({
-    description: 'A gallery of image URLs for the campaign.',
-    type: [String],
+    description: 'The audience type for the campaign.',
+    enum: AudienceType,
   })
-  @IsArray()
-  @IsUrl({}, { each: true })
-  gallery: string[];
+  @IsEnum(AudienceType)
+  audience_type: AudienceType;
+
+  @ApiProperty({ description: 'The banner URL for the campaign.' })
+  @IsUrl()
+  banner_url: string;
+
+  @ApiProperty({
+    description: 'The logo URL for the campaign.',
+    required: false,
+  })
+  @IsOptional()
+  @IsUrl()
+  logo_url?: string;
+
+  @ApiProperty({ description: 'The text on the CTA button.' })
+  @IsString()
+  @IsNotEmpty()
+  cta_text: string;
+
+  @ApiProperty({ description: 'The background color of the CTA button.' })
+  @IsHexColor()
+  cta_background_color: string;
+
+  @ApiProperty({ description: 'The text color of the CTA button.' })
+  @IsHexColor()
+  cta_text_color: string;
+
+  @ApiProperty({ description: 'The text color for the campaign.' })
+  @IsHexColor()
+  text_color: string;
+
+  @ApiProperty({ description: 'The background color for the campaign.' })
+  @IsHexColor()
+  background_color: string;
 
   @ApiProperty({
     description: 'The IDs of the rewards attached to the campaign.',
@@ -58,11 +104,4 @@ export class CreateCampaignDto {
   @IsUUID()
   business_id: string;
 
-  @ApiProperty({ description: 'The text color for the campaign.' })
-  @IsHexColor()
-  text_color: string;
-
-  @ApiProperty({ description: 'The background color for the campaign.' })
-  @IsHexColor()
-  background_color: string;
 }
