@@ -19,6 +19,7 @@ import { UserModule } from './user/user.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { CampaignModule } from './resources/campaign/campaign.module';
+import { ParticipantModule } from './resources/participant/participant.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { CampaignModule } from './resources/campaign/campaign.module';
       dataSourceFactory: async () => dataSource,
     }),
     CampaignModule,
+    ParticipantModule,
 
   ],
   controllers: [AppController],

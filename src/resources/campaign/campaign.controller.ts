@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CampaignService } from './campaign.service';
@@ -48,6 +49,12 @@ export class CampaignController {
   @Public()
   findOngoingCampaigns() {
     return this.campaignService.findOngoingCampaigns();
+  }
+
+  @Get('all/public')
+  @Public()
+  findAllPublic(@Query() query: any) {
+    return this.campaignService.findAllPublic(query);
   }
 
   @Get(':id')

@@ -9,14 +9,31 @@ import {
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
+import { Participant } from '../../participant/entities/participant.entity';
+
+export enum CampaignType {
+  QR_CODE = 'qr_code',
+  REFERRAL = 'referral',
+  SOCIAL_OR_EMAIL = 'social_or_email',
+  SPECIAL_OCCASION = 'special_occasion',
+}
+
+export enum AudienceType {
+  MEMBERS = 'members',
+  BADGE_LEVEL = 'badge_level',
+  TARGET_WISHLIST = 'target_wishlist',
+}
 
 @Entity('campaigns')
 export class Campaign extends AbstractBaseEntity {
   @Column()
   name: string;
 
+  @Column({ type: 'enum', enum: CampaignType, default: CampaignType.QR_CODE })
+  campaign_type: CampaignType;
+
   @Column('text')
-  description: string;
+  campaign_message: string;
 
   @Column()
   start_date: Date;
@@ -25,10 +42,25 @@ export class Campaign extends AbstractBaseEntity {
   end_date: Date;
 
   @Column()
-  main_image: string;
+  quantity: number;
 
-  @Column('simple-array')
-  gallery: string[];
+  @Column({ type: 'enum', enum: AudienceType })
+  audience_type: AudienceType;
+
+  @Column()
+  banner_url: string;
+
+  @Column({ nullable: true })
+  logo_url: string;
+
+  @Column()
+  cta_text: string;
+
+  @Column()
+  cta_background_color: string;
+
+  @Column()
+  cta_text_color: string;
 
   @ManyToMany(() => Reward)
   @JoinTable()
@@ -46,4 +78,10 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column()
   background_color: string;
+
+  @Column({ nullable: true })
+  signUpPoint: number;
+
+  @ManyToMany(() => Participant, (participant) => participant.campaigns)
+  participants: Participant[];
 }

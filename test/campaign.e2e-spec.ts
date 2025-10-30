@@ -4,6 +4,10 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { clearDatabase } from './test-utils';
 import { CreateCampaignDto } from '../src/resources/campaign/dto/create-campaign.dto';
+import {
+  CampaignType,
+  AudienceType,
+} from '../src/resources/campaign/entities/campaign.entity';
 import { Role } from '../src/common/role.enum';
 import { CreateBusinessDto } from 'src/resources/business/dto/create-business.dto';
 
@@ -75,15 +79,20 @@ describe('CampaignController (e2e)', () => {
   it('/campaigns (POST)', async () => {
     const createCampaignDto: CreateCampaignDto = {
       name: 'Test Campaign',
-      description: 'Test Description',
+      campaign_type: CampaignType.QR_CODE,
+      campaign_message: 'Test Message',
       start_date: new Date(),
       end_date: new Date(),
-      main_image: 'test.jpg',
-      gallery: ['test.jpg'],
+      quantity: 10,
+      audience_type: AudienceType.MEMBERS,
+      banner_url: 'http://example.com/banner.jpg',
+      cta_text: 'Click Me',
+      cta_background_color: '#FFFFFF',
+      cta_text_color: '#000000',
+      text_color: '#000000',
+      background_color: '#FFFFFF',
       reward_ids: [rewardId],
       business_id: businessId,
-      text_color: '#000000',
-      background_color: '#ffffff',
     };
 
     return request(app.getHttpServer())
@@ -106,18 +115,29 @@ describe('CampaignController (e2e)', () => {
       .expect(200);
   });
 
+  it('/campaigns/all/public (GET)', async () => {
+    return request(app.getHttpServer())
+      .get('/campaigns/all/public')
+      .expect(200);
+  });
+
   it('/campaigns/:id (GET)', async () => {
     const createCampaignDto: CreateCampaignDto = {
       name: 'Test Campaign',
-      description: 'Test Description',
+      campaign_type: CampaignType.QR_CODE,
+      campaign_message: 'Test Message',
       start_date: new Date(),
       end_date: new Date(),
-      main_image: 'test.jpg',
-      gallery: ['test.jpg'],
+      quantity: 10,
+      audience_type: AudienceType.MEMBERS,
+      banner_url: 'http://example.com/banner.jpg',
+      cta_text: 'Click Me',
+      cta_background_color: '#FFFFFF',
+      cta_text_color: '#000000',
+      text_color: '#000000',
+      background_color: '#FFFFFF',
       reward_ids: [rewardId],
       business_id: businessId,
-      text_color: '#000000',
-      background_color: '#ffffff',
     };
 
     const response = await request(app.getHttpServer())
@@ -134,15 +154,20 @@ describe('CampaignController (e2e)', () => {
   it('/campaigns/:id (PATCH)', async () => {
     const createCampaignDto: CreateCampaignDto = {
       name: 'Test Campaign',
-      description: 'Test Description',
+      campaign_type: CampaignType.QR_CODE,
+      campaign_message: 'Test Message',
       start_date: new Date(),
       end_date: new Date(),
-      main_image: 'test.jpg',
-      gallery: ['test.jpg'],
+      quantity: 10,
+      audience_type: AudienceType.MEMBERS,
+      banner_url: 'http://example.com/banner.jpg',
+      cta_text: 'Click Me',
+      cta_background_color: '#FFFFFF',
+      cta_text_color: '#000000',
+      text_color: '#000000',
+      background_color: '#FFFFFF',
       reward_ids: [rewardId],
       business_id: businessId,
-      text_color: '#000000',
-      background_color: '#ffffff',
     };
 
     const response = await request(app.getHttpServer())
@@ -160,15 +185,20 @@ describe('CampaignController (e2e)', () => {
   it('/campaigns/:id (DELETE)', async () => {
     const createCampaignDto: CreateCampaignDto = {
       name: 'Test Campaign',
-      description: 'Test Description',
+      campaign_type: CampaignType.QR_CODE,
+      campaign_message: 'Test Message',
       start_date: new Date(),
       end_date: new Date(),
-      main_image: 'test.jpg',
-      gallery: ['test.jpg'],
+      quantity: 10,
+      audience_type: AudienceType.MEMBERS,
+      banner_url: 'http://example.com/banner.jpg',
+      cta_text: 'Click Me',
+      cta_background_color: '#FFFFFF',
+      cta_text_color: '#000000',
+      text_color: '#000000',
+      background_color: '#FFFFFF',
       reward_ids: [rewardId],
       business_id: businessId,
-      text_color: '#000000',
-      background_color: '#ffffff',
     };
 
     const response = await request(app.getHttpServer())
@@ -185,15 +215,20 @@ describe('CampaignController (e2e)', () => {
   it('/campaigns/:id/toggle (PATCH)', async () => {
     const createCampaignDto: CreateCampaignDto = {
       name: 'Test Campaign',
-      description: 'Test Description',
+      campaign_type: CampaignType.QR_CODE,
+      campaign_message: 'Test Message',
       start_date: new Date(),
       end_date: new Date(),
-      main_image: 'test.jpg',
-      gallery: ['test.jpg'],
+      quantity: 10,
+      audience_type: AudienceType.MEMBERS,
+      banner_url: 'http://example.com/banner.jpg',
+      cta_text: 'Click Me',
+      cta_background_color: '#FFFFFF',
+      cta_text_color: '#000000',
+      text_color: '#000000',
+      background_color: '#FFFFFF',
       reward_ids: [rewardId],
       business_id: businessId,
-      text_color: '#000000',
-      background_color: '#ffffff',
     };
 
     const response = await request(app.getHttpServer())
