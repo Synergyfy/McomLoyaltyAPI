@@ -5,7 +5,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Sector } from '../../sector/entities/sector.entity';
+import { SubCategory } from '../../subcategory/entities/subcategory.entity';
 import { Staff } from '../../staff/entities/staff.entity';
 import { Role } from '../../../common/role.enum';
 
@@ -26,8 +26,8 @@ export class Business extends AbstractBaseEntity {
   @Column({ nullable: true })
   address: string;
 
-  @ManyToOne(() => Sector, (sector) => sector.businesses)
-  sector: Sector;
+  @ManyToOne(() => SubCategory, (subCategory) => subCategory.businesses)
+  subCategory: SubCategory;
 
   @OneToMany(() => Staff, (staff) => staff.business)
   staff: Staff[];

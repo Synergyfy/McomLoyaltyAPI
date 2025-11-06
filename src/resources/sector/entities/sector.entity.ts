@@ -1,7 +1,7 @@
 
 import { Entity, Column, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
+import { Category } from '../../category/entities/category.entity';
 
 @Entity('sectors')
 export class Sector extends AbstractBaseEntity {
@@ -11,6 +11,6 @@ export class Sector extends AbstractBaseEntity {
   @Column({ nullable: true })
   imageUrl: string;
 
-  @OneToMany(() => Business, (business) => business.sector)
-  businesses: Business[];
+  @OneToMany(() => Category, (category) => category.sector)
+  categories: Category[];
 }

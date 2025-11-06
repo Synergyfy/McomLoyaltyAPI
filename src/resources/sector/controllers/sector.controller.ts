@@ -1,10 +1,29 @@
 
-import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { SectorService } from '../services/sector.service';
 import { CreateSectorDto } from '../dto/create-sector.dto';
 import { UpdateSectorDto } from '../dto/update-sector.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { Role } from 'src/common/role.enum';
 
 @ApiTags('Sector Management')
 @Controller('sectors')
@@ -14,9 +33,13 @@ export class SectorController {
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new sector (Admin only)' })
-  @ApiResponse({ status: 201, description: 'The sector has been successfully created.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized (Admin not logged in).' })
+  @ApiResponse({
+    status: 201,
+    description: 'The sector has been successfully created.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiBody({ type: CreateSectorDto })
+  @Roles(Role.Admin)
   create(@Body(new ValidationPipe()) createSectorDto: CreateSectorDto) {
     return this.sectorService.create(createSectorDto);
   }
@@ -42,22 +65,33 @@ export class SectorController {
   @Patch(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a sector (Admin only)' })
-  @ApiResponse({ status: 200, description: 'The sector has been successfully updated.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized (Admin not logged in).' })
+  @ApiResponse({
+    status: 200,
+    description: 'The sector has been successfully updated.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Sector not found.' })
   @ApiParam({ name: 'id', description: 'The ID of the sector to update.' })
   @ApiBody({ type: UpdateSectorDto })
-  update(@Param('id') id: string, @Body(new ValidationPipe()) updateSectorDto: UpdateSectorDto) {
+  @Roles(Role.Admin)
+  update(
+    @Param('id') id: string,
+    @Body(new ValidationPipe()) updateSectorDto: UpdateSectorDto,
+  ) {
     return this.sectorService.update(id, updateSectorDto);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a sector (Admin only)' })
-  @ApiResponse({ status: 204, description: 'The sector has been successfully deleted.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized (Admin not logged in).' })
+  @ApiResponse({
+    status: 204,
+    description: 'The sector has been successfully deleted.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Sector not found.' })
   @ApiParam({ name: 'id', description: 'The ID of the sector to delete.' })
+  @Roles(Role.Admin)
   remove(@Param('id') id: string) {
     return this.sectorService.remove(id);
   }
