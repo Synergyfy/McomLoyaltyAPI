@@ -10,5 +10,6 @@ import { SectorModule } from '../sector/sector.module';
   imports: [TypeOrmModule.forFeature([Category]), SectorModule],
   controllers: [CategoryController],
   providers: [CategoryService],
+  exports: [CategoryService],
 })
 export class CategoryModule {}
