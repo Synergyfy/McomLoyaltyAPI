@@ -12,10 +12,20 @@ export class OnboardingDto {
   @IsNotEmpty()
   address: string;
 
-  @ApiProperty({ description: 'The UUID of the sector/industry the business belongs to.', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
+  @ApiProperty({ description: 'The UUID of the sector the business belongs to.', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
   @IsUUID()
   @IsNotEmpty()
   sectorId: string;
+
+  @ApiProperty({ description: 'The UUID of the category the business belongs to.', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', required: false })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiProperty({ description: 'The UUID of the subcategory the business belongs to.', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef', required: false })
+  @IsOptional()
+  @IsUUID()
+  subCategoryId?: string;
 
   @ApiProperty({ description: "The URL of the business's official website.", example: 'https://gourmetkitchen.com', required: false })
   @IsOptional()

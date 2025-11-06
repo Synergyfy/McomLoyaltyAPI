@@ -5,9 +5,11 @@ import {
   OneToMany,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { SubCategory } from '../../subcategory/entities/subcategory.entity';
 import { Staff } from '../../staff/entities/staff.entity';
 import { Role } from '../../../common/role.enum';
+import { Sector } from '../../sector/entities/sector.entity';
+import { Category } from '../../category/entities/category.entity';
+import { SubCategory } from '../../subcategory/entities/subcategory.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -25,6 +27,12 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   address: string;
+
+  @ManyToOne(() => Sector, (sector) => sector.businesses)
+  sector: Sector;
+
+  @ManyToOne(() => Category, (category) => category.businesses)
+  category: Category;
 
   @ManyToOne(() => SubCategory, (subCategory) => subCategory.businesses)
   subCategory: SubCategory;

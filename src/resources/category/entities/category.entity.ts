@@ -3,6 +3,7 @@ import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { SubCategory } from '../../subcategory/entities/subcategory.entity';
+import { Business } from '../../business/entities/business.entity';
 
 @Entity('categories')
 export class Category extends AbstractBaseEntity {
@@ -17,4 +18,7 @@ export class Category extends AbstractBaseEntity {
 
   @OneToMany(() => SubCategory, (subCategory) => subCategory.category)
   subCategories: SubCategory[];
+
+  @OneToMany(() => Business, (business) => business.category)
+  businesses: Business[];
 }
