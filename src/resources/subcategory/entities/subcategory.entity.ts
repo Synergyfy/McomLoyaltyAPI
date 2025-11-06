@@ -1,20 +1,20 @@
 
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Category } from '../../category/entities/category.entity';
 import { Business } from '../../business/entities/business.entity';
 
-@Entity('sectors')
-export class Sector extends AbstractBaseEntity {
+@Entity('subcategories')
+export class SubCategory extends AbstractBaseEntity {
   @Column({ unique: true })
   name: string;
 
   @Column({ nullable: true })
   imageUrl: string;
 
-  @OneToMany(() => Category, (category) => category.sector)
-  categories: Category[];
+  @ManyToOne(() => Category, (category) => category.subCategories, { onDelete: 'CASCADE' })
+  category: Category;
 
-  @OneToMany(() => Business, (business) => business.sector)
+  @OneToMany(() => Business, (business) => business.subCategory)
   businesses: Business[];
 }

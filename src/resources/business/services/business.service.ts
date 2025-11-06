@@ -6,6 +6,9 @@ import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
 import { OnboardingDto } from '../dto/onboarding.dto';
 import { HashService } from '../../../common/hash/hash.service';
+import { SectorService } from '../../sector/services/sector.service';
+import { CategoryService } from '../../category/category.service';
+import { SubcategoryService } from '../../subcategory/subcategory.service';
 
 @Injectable()
 export class BusinessService {
@@ -13,6 +16,9 @@ export class BusinessService {
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     private readonly hashService: HashService,
+    private readonly sectorService: SectorService,
+    private readonly categoryService: CategoryService,
+    private readonly subcategoryService: SubcategoryService,
   ) {}
 
   async create(createBusinessDto: CreateBusinessDto): Promise<Business> {
@@ -48,11 +54,41 @@ export class BusinessService {
       throw new NotFoundException('Business not found');
     }
 
-    const { sectorId, ...rest } = onboardingDto;
+    const { sectorId, categoryId, subCategoryId, ...rest } = onboardingDto;
+
+    const sector = await this.sectorService.findOne(sectorId);
+    if (!sector) {
+      throw new NotFoundException('Sector not found');
+    }
+
+    let category = null;
+    if (categoryId) {
+      category = await this.categoryService.findOne(categoryId);
+      if (!category) {
+        throw new NotFoundException('Category not found');
+      }
+      if (category.sector.id !== sectorId) {
+        throw new ConflictException('Category does not belong to the selected sector');
+      }
+    }
+
+    let subCategory = null;
+    if (subCategoryId) {
+      subCategory = await this.subcategoryService.findOne(subCategoryId);
+      if (!subCategory) {
+        throw new NotFoundException('Subcategory not found');
+      }
+      if (subCategory.category.id !== categoryId) {
+        throw new ConflictException('Subcategory does not belong to the selected category');
+      }
+    }
+
     const updatedBusiness = {
       ...business,
       ...rest,
-      sector: { id: sectorId },
+      sector,
+      category,
+      subCategory,
     };
 
     return this.businessRepository.save(updatedBusiness);

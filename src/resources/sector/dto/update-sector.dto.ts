@@ -1,15 +1,5 @@
 
-import { IsString, IsOptional, IsUrl } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/swagger';
+import { CreateSectorDto } from './create-sector.dto';
 
-export class UpdateSectorDto {
-  @ApiProperty({ description: 'The new name of the sector.', required: false, example: 'Fine Dining' })
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @ApiProperty({ description: 'A new URL for the sector image.', required: false, example: 'https://example.com/images/fine-dining.png' })
-  @IsUrl()
-  @IsOptional()
-  imageUrl?: string;
-}
+export class UpdateSectorDto extends PartialType(CreateSectorDto) {}
