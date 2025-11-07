@@ -25,6 +25,7 @@ import { SubcategoryModule } from './resources/subcategory/subcategory.module';
 import { PointModule } from './resources/point/point.module';
 import { MailModule } from './mail/mail.module';
 import { OtpModule } from './resources/otp/otp.module';
+import { DealModule } from './resources/deal/deal.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { OtpModule } from './resources/otp/otp.module';
     ParticipantModule,
     PointModule,
     OtpModule,
+    DealModule,
   ],
   controllers: [AppController],
   providers: [

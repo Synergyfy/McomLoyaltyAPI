@@ -12,6 +12,7 @@ import { Sector } from '../../sector/entities/sector.entity';
 import { Category } from '../../category/entities/category.entity';
 import { SubCategory } from '../../subcategory/entities/subcategory.entity';
 import { Referral } from '../../referral/entities/referral.entity';
+import { Deal } from '../../deal/entities/deal.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -71,4 +72,7 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ type: 'numeric', default: 0 })
   referralPoints: number;
+
+  @OneToMany(() => Deal, (deal) => deal.business)
+  deals: Deal[];
 }
