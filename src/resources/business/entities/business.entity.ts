@@ -68,4 +68,7 @@ export class Business extends AbstractBaseEntity {
 
   @OneToMany(() => Referral, (referral) => referral.referrer)
   referrals: Referral[];
+
+  @Column({ type: 'numeric', default: 0 })
+  referralPoints: number;
 }

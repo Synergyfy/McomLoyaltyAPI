@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Business } from '../entities/business.entity';
 import { Referral, ReferralStatus } from '../../referral/entities/referral.entity';
-import { PointHistory } from '../../point/entities/point-history.entity';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
 import { OnboardingDto } from '../dto/onboarding.dto';
@@ -19,8 +18,6 @@ export class BusinessService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Referral)
     private readonly referralRepository: Repository<Referral>,
-    @InjectRepository(PointHistory)
-    private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly hashService: HashService,
     private readonly sectorService: SectorService,
     private readonly categoryService: CategoryService,
@@ -151,20 +148,8 @@ export class BusinessService {
       referral.status = ReferralStatus.COMPLETED;
       await this.referralRepository.save(referral);
 
-      const referrer = await this.businessRepository.findOne({
-        where: { id: referral.referrer.id },
-        relations: ['pointHistories'],
-      });
-
-      const pointHistory = this.pointHistoryRepository.create({
-        points: 100,
-        type: 'credit',
-        awardedByBusiness: business,
-        code: 'REFERRAL_BONUS',
-      });
-      await this.pointHistoryRepository.save(pointHistory);
-
-      referrer.pointHistories.push(pointHistory);
+      const referrer = referral.referrer;
+      referrer.referralPoints = (referrer.referralPoints || 0) + 100;
       await this.businessRepository.save(referrer);
     }
   }
