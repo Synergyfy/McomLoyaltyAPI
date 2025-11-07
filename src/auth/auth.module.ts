@@ -9,6 +9,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import jwtConfig from '../config/jwt.config';
 import { UserModule } from '../user/user.module';
 import { AuthController } from './auth.controller';
+import { OtpModule } from '../resources/otp/otp.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   controllers: [AuthController],
