@@ -5,6 +5,8 @@ import { HashService } from '../common/hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import { Role } from '../common/role.enum';
+import { OtpService } from '../resources/otp/otp.service';
+import { MailService } from '../mail/mail.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -21,6 +23,16 @@ describe('AuthService', () => {
     sign: jest.fn(),
   };
 
+  const mockOtpService = {
+    create: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  const mockMailService = {
+    sendOtp: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -28,6 +40,8 @@ describe('AuthService', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: HashService, useValue: mockHashService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: OtpService, useValue: mockOtpService },
+        { provide: MailService, useValue: mockMailService },
       ],
     }).compile();
 

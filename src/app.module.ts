@@ -23,9 +23,12 @@ import { ParticipantModule } from './resources/participant/participant.module';
 import { CategoryModule } from './resources/category/category.module';
 import { SubcategoryModule } from './resources/subcategory/subcategory.module';
 import { PointModule } from './resources/point/point.module';
+import { MailModule } from './mail/mail.module';
+import { OtpModule } from './resources/otp/otp.module';
 
 @Module({
   imports: [
+    MailModule,
     BusinessModule,
     SectorModule,
     CategoryModule,
@@ -48,7 +51,7 @@ import { PointModule } from './resources/point/point.module';
     CampaignModule,
     ParticipantModule,
     PointModule,
-
+    OtpModule,
   ],
   controllers: [AppController],
   providers: [

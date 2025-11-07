@@ -25,6 +25,8 @@ import { AuthController } from './auth.controller';
       inject: [ConfigService],
     }),
     HashModule,
+    OtpModule,
+    MailModule,
   ],
   providers: [AuthService, JwtStrategy, LocalStrategy],
   exports: [AuthService],

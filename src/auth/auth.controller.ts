@@ -4,6 +4,8 @@ import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './local-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -31,5 +33,23 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async login(@Request() req, @Body() loginDto: LoginDto) {
     return this.authService.login(req.user);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }

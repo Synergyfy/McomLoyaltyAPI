@@ -36,4 +36,20 @@ export class UserService {
 
     return null;
   }
+
+  async save(user: any): Promise<any> {
+    if (user instanceof Admin) {
+      return this.adminRepository.save(user);
+    }
+    if (user instanceof Business) {
+      return this.businessRepository.save(user);
+    }
+    if (user instanceof Staff) {
+      return this.staffRepository.save(user);
+    }
+    if (user instanceof Participant) {
+      return this.participantRepository.save(user);
+    }
+    return null;
+  }
 }
