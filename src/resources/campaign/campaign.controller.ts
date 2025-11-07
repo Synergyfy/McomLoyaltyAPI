@@ -30,7 +30,7 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Campaign, CampaignType, AudienceType } from './entities/campaign.entity';
 
 @ApiTags('Campaigns')
