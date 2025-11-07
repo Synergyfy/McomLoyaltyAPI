@@ -18,13 +18,17 @@ describe('AuthController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
-    adminRepository = moduleFixture.get<Repository<Admin>>(getRepositoryToken(Admin));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
+    adminRepository = moduleFixture.get<Repository<Admin>>(
+      getRepositoryToken(Admin),
+    );
     await app.init();
   });
 
   afterEach(async () => {
-    await adminRepository.clear();
+    await adminRepository.delete({});
     await app.close();
   });
 
@@ -41,14 +45,12 @@ describe('AuthController (e2e)', () => {
   });
 
   it('/auth/login (POST) - success', async () => {
-    await request(app.getHttpServer())
-      .post('/admin/signup')
-      .send({
-        name: 'Test Admin',
-        email: 'admin@example.com',
-        password: 'adminPassword123',
-        confirmPassword: 'adminPassword123',
-      });
+    await request(app.getHttpServer()).post('/admin/signup').send({
+      name: 'Test Admin',
+      email: 'admin@example.com',
+      password: 'adminPassword123',
+      confirmPassword: 'adminPassword123',
+    });
 
     return request(app.getHttpServer())
       .post('/auth/login')
@@ -90,14 +92,12 @@ describe('AuthController (e2e)', () => {
   });
 
   it('/admin/signup (POST) - duplicate email', async () => {
-    await request(app.getHttpServer())
-      .post('/admin/signup')
-      .send({
-        name: 'Test Admin',
-        email: 'admin@example.com',
-        password: 'adminPassword123',
-        confirmPassword: 'adminPassword123',
-      });
+    await request(app.getHttpServer()).post('/admin/signup').send({
+      name: 'Test Admin',
+      email: 'admin@example.com',
+      password: 'adminPassword123',
+      confirmPassword: 'adminPassword123',
+    });
 
     return request(app.getHttpServer())
       .post('/admin/signup')

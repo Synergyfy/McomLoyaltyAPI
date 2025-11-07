@@ -69,7 +69,7 @@ export class Campaign extends AbstractBaseEntity {
   @JoinTable()
   rewards: Reward[];
 
-  @ManyToOne(() => Business)
+  @ManyToOne(() => Business, { nullable: true })
   @JoinColumn({ name: 'business_id' })
   business: Business;
 

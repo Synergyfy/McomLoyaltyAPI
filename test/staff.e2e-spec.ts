@@ -32,30 +32,47 @@ describe('StaffController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
-    businessRepository = moduleFixture.get<Repository<Business>>(getRepositoryToken(Business));
-    staffRepository = moduleFixture.get<Repository<Staff>>(getRepositoryToken(Staff));
-    sectorRepository = moduleFixture.get<Repository<Sector>>(getRepositoryToken(Sector));
-    campaignRepository = moduleFixture.get<Repository<Campaign>>(getRepositoryToken(Campaign));
-    participantRepository = moduleFixture.get<Repository<Participant>>(getRepositoryToken(Participant));
-    pointRepository = moduleFixture.get<Repository<Point>>(getRepositoryToken(Point));
-    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(getRepositoryToken(PointHistory));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
+    businessRepository = moduleFixture.get<Repository<Business>>(
+      getRepositoryToken(Business),
+    );
+    staffRepository = moduleFixture.get<Repository<Staff>>(
+      getRepositoryToken(Staff),
+    );
+    sectorRepository = moduleFixture.get<Repository<Sector>>(
+      getRepositoryToken(Sector),
+    );
+    campaignRepository = moduleFixture.get<Repository<Campaign>>(
+      getRepositoryToken(Campaign),
+    );
+    participantRepository = moduleFixture.get<Repository<Participant>>(
+      getRepositoryToken(Participant),
+    );
+    pointRepository = moduleFixture.get<Repository<Point>>(
+      getRepositoryToken(Point),
+    );
+    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(
+      getRepositoryToken(PointHistory),
+    );
     await app.init();
 
     sector = await sectorRepository.save({ name: 'Technology' });
 
-    await request(app.getHttpServer())
-      .post('/business/signup')
-      .send({
-        name: 'Test Business',
-        email: 'business@example.com',
-        password: 'businessPassword123',
-        confirmPassword: 'businessPassword123',
-      });
+    await request(app.getHttpServer()).post('/business/signup').send({
+      name: 'Test Business',
+      email: 'business@example.com',
+      password: 'businessPassword123',
+      confirmPassword: 'businessPassword123',
+    });
 
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'business@example.com', password: 'businessPassword123' });
+      .send({
+        email: 'business@example.com',
+        password: 'businessPassword123',
+      });
 
     businessToken = loginResponse.body.access_token;
 
@@ -71,13 +88,13 @@ describe('StaffController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await pointHistoryRepository.query('DELETE FROM point_histories;');
-    await pointRepository.query('DELETE FROM points;');
-    await participantRepository.query('DELETE FROM participants;');
-    await campaignRepository.query('DELETE FROM campaigns;');
-    await staffRepository.query('DELETE FROM staff;');
-    await businessRepository.query('DELETE FROM businesses;');
-    await sectorRepository.query('DELETE FROM sectors;');
+    await pointHistoryRepository.delete({});
+    await pointRepository.delete({});
+    await participantRepository.delete({});
+    await campaignRepository.delete({});
+    await staffRepository.delete({});
+    await businessRepository.delete({});
+    await sectorRepository.delete({});
     await app.close();
   });
 

@@ -4,7 +4,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import {
+  In,
+  Repository,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  IsNull,
+} from 'typeorm';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { Campaign } from './entities/campaign.entity';
@@ -16,6 +22,8 @@ import { PointHistory } from '../point/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
+import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class CampaignService {
@@ -33,43 +41,101 @@ export class CampaignService {
   ) {}
 
   async create(
-    createCampaignDto: CreateCampaignDto,
+    createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
     currentUser: Business | Admin,
   ): Promise<Campaign> {
-    const { reward_ids, business_id, ...campaignData } = createCampaignDto;
+    const { reward_ids, ...campaignData } = createCampaignDto;
     const rewards = await this.rewardRepository.findBy({ id: In(reward_ids) });
-
-    let business: Business;
-    if (currentUser.role === Role.Admin) {
-      business = await this.businessRepository.findOneBy({ id: business_id });
-    } else {
-      business = await this.businessRepository.findOneBy({
-        id: currentUser.id,
-      });
-    }
-
-    if (!business) {
-      throw new NotFoundException('Business not found');
-    }
 
     const campaign = this.campaignRepository.create({
       ...campaignData,
-      business,
       rewards,
     });
+
+    if (currentUser.role === Role.Admin) {
+      const { business_id } = createCampaignDto as CreateCampaignAdminDto;
+      if (business_id) {
+        const business = await this.businessRepository.findOneBy({
+          id: business_id,
+        });
+        if (!business) {
+          throw new NotFoundException('Business not found');
+        }
+        campaign.business = business;
+      }
+    } else {
+      campaign.business = currentUser as Business;
+    }
 
     return this.campaignRepository.save(campaign);
   }
 
-  async findAll(currentUser: Business | Admin): Promise<Campaign[]> {
-    if (currentUser.role === Role.Admin) {
-      return this.campaignRepository.find({ relations: ['business', 'rewards'] });
-    } else {
-      return this.campaignRepository.find({
-        where: { business: { id: currentUser.id } },
-        relations: ['business', 'rewards'],
-      });
+  async findAll(
+    currentUser: Business | Admin,
+    paginationDto: PaginationDto,
+  ): Promise<any> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    let where: any = {};
+    if (currentUser.role === Role.Business) {
+      where = { business: { id: currentUser.id } };
     }
+
+    const [data, total] = await this.campaignRepository.findAndCount({
+      where,
+      relations: ['business', 'rewards'],
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findAllByBusiness(
+    businessId: string,
+    paginationDto: PaginationDto,
+  ): Promise<any> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.campaignRepository.findAndCount({
+      where: { business: { id: businessId } },
+      relations: ['business', 'rewards'],
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findAllByAdmin(paginationDto: PaginationDto): Promise<any> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.campaignRepository.findAndCount({
+      where: { business: IsNull() },
+      relations: ['business', 'rewards'],
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
   async findOne(id: string, currentUser: Business | Admin): Promise<Campaign> {
@@ -101,7 +167,9 @@ export class CampaignService {
     const { reward_ids, ...campaignData } = updateCampaignDto;
 
     if (reward_ids) {
-      campaign.rewards = await this.rewardRepository.findBy({ id: In(reward_ids) });
+      campaign.rewards = await this.rewardRepository.findBy({
+        id: In(reward_ids),
+      });
     }
 
     Object.assign(campaign, campaignData);
@@ -124,7 +192,10 @@ export class CampaignService {
     });
   }
 
-  async toggleCampaignStatus(id: string, currentUser: Business | Admin): Promise<Campaign> {
+  async toggleCampaignStatus(
+    id: string,
+    currentUser: Business | Admin,
+  ): Promise<Campaign> {
     const campaign = await this.findOne(id, currentUser);
     campaign.disabled = !campaign.disabled;
     return this.campaignRepository.save(campaign);
@@ -149,10 +220,7 @@ export class CampaignService {
     };
   }
 
-  async getAnalytics(
-    currentUser: User,
-    query: CampaignAnalyticsQueryDto,
-  ) {
+  async getAnalytics(currentUser: User, query: CampaignAnalyticsQueryDto) {
     const { campaignId } = query;
     const businessId = currentUser.id;
 
@@ -173,7 +241,9 @@ export class CampaignService {
     );
     const totalActivities = pointHistories.length;
 
-    const participantIds = [...new Set(pointHistories.map((ph) => ph.participant.id))];
+    const participantIds = [
+      ...new Set(pointHistories.map((ph) => ph.participant.id)),
+    ];
     const participants = await this.participantRepository.findBy({
       id: In(participantIds),
     });

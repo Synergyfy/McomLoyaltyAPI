@@ -39,61 +39,82 @@ describe('RewardsController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
-    adminRepository = moduleFixture.get<Repository<Admin>>(getRepositoryToken(Admin));
-    businessRepository = moduleFixture.get<Repository<Business>>(getRepositoryToken(Business));
-    rewardRepository = moduleFixture.get<Repository<Reward>>(getRepositoryToken(Reward));
-    businessRewardRepository = moduleFixture.get<Repository<BusinessReward>>(getRepositoryToken(BusinessReward));
-    staffRepository = moduleFixture.get<Repository<Staff>>(getRepositoryToken(Staff));
-    sectorRepository = moduleFixture.get<Repository<Sector>>(getRepositoryToken(Sector));
-    campaignRepository = moduleFixture.get<Repository<Campaign>>(getRepositoryToken(Campaign));
-    participantRepository = moduleFixture.get<Repository<Participant>>(getRepositoryToken(Participant));
-    pointRepository = moduleFixture.get<Repository<Point>>(getRepositoryToken(Point));
-    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(getRepositoryToken(PointHistory));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
+    adminRepository = moduleFixture.get<Repository<Admin>>(
+      getRepositoryToken(Admin),
+    );
+    businessRepository = moduleFixture.get<Repository<Business>>(
+      getRepositoryToken(Business),
+    );
+    rewardRepository = moduleFixture.get<Repository<Reward>>(
+      getRepositoryToken(Reward),
+    );
+    businessRewardRepository = moduleFixture.get<Repository<BusinessReward>>(
+      getRepositoryToken(BusinessReward),
+    );
+    staffRepository = moduleFixture.get<Repository<Staff>>(
+      getRepositoryToken(Staff),
+    );
+    sectorRepository = moduleFixture.get<Repository<Sector>>(
+      getRepositoryToken(Sector),
+    );
+    campaignRepository = moduleFixture.get<Repository<Campaign>>(
+      getRepositoryToken(Campaign),
+    );
+    participantRepository = moduleFixture.get<Repository<Participant>>(
+      getRepositoryToken(Participant),
+    );
+    pointRepository = moduleFixture.get<Repository<Point>>(
+      getRepositoryToken(Point),
+    );
+    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(
+      getRepositoryToken(PointHistory),
+    );
     await app.init();
 
-    await request(app.getHttpServer())
-      .post('/admin/signup')
-      .send({
-        name: 'Test Admin',
-        email: 'admin@example.com',
-        password: 'adminPassword123',
-        confirmPassword: 'adminPassword123',
-      });
+    await request(app.getHttpServer()).post('/admin/signup').send({
+      name: 'Test Admin',
+      email: 'admin@example.com',
+      password: 'adminPassword123',
+      confirmPassword: 'adminPassword123',
+    });
     const adminLoginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'admin@example.com', password: 'adminPassword123' });
     adminToken = adminLoginResponse.body.access_token;
 
     sector = await sectorRepository.save({ name: 'Technology' });
-    await request(app.getHttpServer())
-      .post('/business/signup')
-      .send({
-        name: 'Test Business',
-        email: 'business@example.com',
-        password: 'businessPassword123',
-        confirmPassword: 'businessPassword123',
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
-      });
+    await request(app.getHttpServer()).post('/business/signup').send({
+      name: 'Test Business',
+      email: 'business@example.com',
+      password: 'businessPassword123',
+      confirmPassword: 'businessPassword123',
+      phone: '1234567890',
+      address: '123 Test St',
+      sectorId: sector.id,
+    });
     const businessLoginResponse = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'business@example.com', password: 'businessPassword123' });
+      .send({
+        email: 'business@example.com',
+        password: 'businessPassword123',
+      });
     businessToken = businessLoginResponse.body.access_token;
   });
 
   afterEach(async () => {
-    await pointHistoryRepository.query('DELETE FROM point_histories;');
-    await pointRepository.query('DELETE FROM points;');
-    await participantRepository.query('DELETE FROM participants;');
-    await campaignRepository.query('DELETE FROM campaigns;');
-    await businessRewardRepository.query('DELETE FROM business_reward;');
-    await rewardRepository.query('DELETE FROM reward;');
-    await staffRepository.query('DELETE FROM staff;');
-    await businessRepository.query('DELETE FROM businesses;');
-    await sectorRepository.query('DELETE FROM sectors;');
-    await adminRepository.query('DELETE FROM admins;');
+    await pointHistoryRepository.delete({});
+    await pointRepository.delete({});
+    await participantRepository.delete({});
+    await campaignRepository.delete({});
+    await businessRewardRepository.delete({});
+    await rewardRepository.delete({});
+    await staffRepository.delete({});
+    await businessRepository.delete({});
+    await sectorRepository.delete({});
+    await adminRepository.delete({});
     await app.close();
   });
 
