@@ -10,7 +10,7 @@ import {
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -21,7 +21,10 @@ import { Business } from '../business/entities/business.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Public } from 'src/common/decorators/public.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
+import { User } from 'src/common/interfaces/user.interface';
 
+@ApiTags('Campaigns')
 @Controller('campaigns')
 export class CampaignController {
   constructor(private readonly campaignService: CampaignService) {}
@@ -55,6 +58,23 @@ export class CampaignController {
   @Public()
   findAllPublic(@Query() query: any) {
     return this.campaignService.findAllPublic(query);
+  }
+
+  @Get('analytics')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Business)
+  @ApiOperation({
+    summary: 'Get campaign analytics for the business.',
+    description: 'Accessible by Business Owners. Can be filtered by campaign.',
+  })
+  @ApiResponse({ status: 200, description: 'Returns the campaign analytics.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  getAnalytics(
+    @CurrentUser() currentUser: User,
+    @Query() query: CampaignAnalyticsQueryDto,
+  ) {
+    return this.campaignService.getAnalytics(currentUser, query);
   }
 
   @Get(':id')
