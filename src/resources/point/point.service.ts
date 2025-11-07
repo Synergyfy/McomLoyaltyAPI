@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Point } from './entities/point.entity';
 import { PointHistory } from './entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
@@ -11,6 +11,8 @@ import { AwardPointDto } from './dto/award-point.dto';
 import { PointLogDto } from './dto/point-log.dto';
 import { User } from '../../common/interfaces/user.interface';
 import { Role } from '../../common/role.enum';
+import { ParticipantQueryDto } from './dto/participant-query.dto';
+import { ParticipantDetailQueryDto } from './dto/participant-detail-query.dto';
 
 @Injectable()
 export class PointService {
@@ -27,12 +29,43 @@ export class PointService {
     private readonly staffRepository: Repository<Staff>,
   ) {}
 
+  private async _generateUniqueCode(): Promise<string> {
+    let code: string;
+    let isUnique = false;
+
+    while (!isUnique) {
+      code = Math.random().toString().slice(2, 11);
+      const existingCode = await this.pointHistoryRepository.findOne({ where: { code } });
+      if (!existingCode) {
+        isUnique = true;
+      }
+    }
+    return code;
+  }
+
+  async getParticipantCode(currentUser: User) {
+    const participant = await this.participantRepository.findOne({ where: { id: currentUser.id } });
+    if (!participant.uniqueCode) {
+      participant.uniqueCode = await this._generateUniqueCode();
+      await this.participantRepository.save(participant);
+    }
+    return participant.uniqueCode;
+  }
+
+  async generateBusinessCode() {
+    return this._generateUniqueCode();
+  }
+
   async awardPoint(awardPointDto: AwardPointDto, currentUser: User) {
     const { code, points, campaignId } = awardPointDto;
 
-    const participant = await this.participantRepository.findOne({ where: { uniqueCode: code } });
+    let participant = await this.participantRepository.findOne({ where: { uniqueCode: code } });
     if (!participant) {
-      throw new NotFoundException('Participant not found');
+      const pointHistory = await this.pointHistoryRepository.findOne({ where: { code }, relations: ['participant'] });
+      if (!pointHistory) {
+        throw new NotFoundException('Code not found');
+      }
+      participant = pointHistory.participant;
     }
 
     const campaign = await this.campaignRepository.findOne({ where: { id: campaignId }, relations: ['business'] });
@@ -85,10 +118,10 @@ export class PointService {
 
   async getParticipantBalance(participantId: string, campaignId?: string) {
     const query = this.pointRepository.createQueryBuilder('point')
-      .where('point.participant.id = :participantId', { participantId });
+      .where('point.participantId = :participantId', { participantId });
 
     if (campaignId) {
-      query.andWhere('point.campaign.id = :campaignId', { campaignId });
+      query.andWhere('point.campaignId = :campaignId', { campaignId });
       const result = await query.getOne();
       return result ? result.balance : 0;
     }
@@ -99,10 +132,10 @@ export class PointService {
 
   async getParticipantHistory(participantId: string, campaignId?: string) {
     const query = this.pointHistoryRepository.createQueryBuilder('pointHistory')
-      .where('pointHistory.participant.id = :participantId', { participantId });
+      .where('pointHistory.participantId = :participantId', { participantId });
 
     if (campaignId) {
-      query.andWhere('pointHistory.campaign.id = :campaignId', { campaignId });
+      query.andWhere('pointHistory.campaignId = :campaignId', { campaignId });
     }
 
     return query.getMany();
@@ -116,12 +149,66 @@ export class PointService {
       .leftJoinAndSelect('pointHistory.campaign', 'campaign')
       .leftJoinAndSelect('pointHistory.awardedByBusiness', 'awardedByBusiness')
       .leftJoinAndSelect('pointHistory.awardedByStaff', 'awardedByStaff')
-      .where('campaign.business.id = :businessId', { businessId: currentUser.id });
+      .where('campaign.businessId = :businessId', { businessId: currentUser.id });
 
     if (campaignId) {
       query.andWhere('campaign.id = :campaignId', { campaignId });
     }
 
     return query.getMany();
+  }
+
+  async getBusinessParticipants(
+    currentUser: User,
+    query: ParticipantQueryDto,
+  ) {
+    const { campaignId, page = 1, limit = 10 } = query;
+    const businessId = currentUser.id;
+
+    const qb = this.participantRepository
+      .createQueryBuilder('p')
+      .leftJoin('p.campaigns', 'c')
+      .where('c.business_id = :businessId', { businessId })
+      .select('p')
+      .addSelect(
+        (subQuery) =>
+          subQuery
+            .select('SUM(points.balance)', 'totalPoints')
+            .from(Point, 'points')
+            .where('points.participantId = p.id'),
+        'totalPoints',
+      )
+      .groupBy('p.id');
+
+    if (campaignId) {
+      qb.andWhere('c.id = :campaignId', { campaignId });
+    }
+
+    const [participants, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: participants,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getParticipantDetails(
+    participantId: string,
+    query: ParticipantDetailQueryDto,
+  ) {
+    const { campaignId } = query;
+
+    const balance = await this.getParticipantBalance(participantId, campaignId);
+    const history = await this.getParticipantHistory(participantId, campaignId);
+
+    return {
+      balance,
+      history,
+    };
   }
 }
