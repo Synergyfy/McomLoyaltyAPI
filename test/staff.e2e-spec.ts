@@ -8,12 +8,20 @@ import { Staff } from '../src/resources/staff/entities/staff.entity';
 import { Repository } from 'typeorm';
 import { Sector } from '../src/resources/sector/entities/sector.entity';
 import { IsPasswordMatchingConstraint } from '../src/common/decorators/validation/is-password-matching.decorator';
+import { Campaign } from '../src/resources/campaign/entities/campaign.entity';
+import { Participant } from '../src/resources/participant/entities/participant.entity';
+import { Point } from '../src/resources/point/entities/point.entity';
+import { PointHistory } from '../src/resources/point/entities/point-history.entity';
 
 describe('StaffController (e2e)', () => {
   let app: INestApplication;
   let businessRepository: Repository<Business>;
   let staffRepository: Repository<Staff>;
   let sectorRepository: Repository<Sector>;
+  let campaignRepository: Repository<Campaign>;
+  let participantRepository: Repository<Participant>;
+  let pointRepository: Repository<Point>;
+  let pointHistoryRepository: Repository<PointHistory>;
   let sector: Sector;
   let businessToken: string;
 
@@ -28,6 +36,10 @@ describe('StaffController (e2e)', () => {
     businessRepository = moduleFixture.get<Repository<Business>>(getRepositoryToken(Business));
     staffRepository = moduleFixture.get<Repository<Staff>>(getRepositoryToken(Staff));
     sectorRepository = moduleFixture.get<Repository<Sector>>(getRepositoryToken(Sector));
+    campaignRepository = moduleFixture.get<Repository<Campaign>>(getRepositoryToken(Campaign));
+    participantRepository = moduleFixture.get<Repository<Participant>>(getRepositoryToken(Participant));
+    pointRepository = moduleFixture.get<Repository<Point>>(getRepositoryToken(Point));
+    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(getRepositoryToken(PointHistory));
     await app.init();
 
     sector = await sectorRepository.save({ name: 'Technology' });
@@ -59,6 +71,10 @@ describe('StaffController (e2e)', () => {
   });
 
   afterEach(async () => {
+    await pointHistoryRepository.query('DELETE FROM point_histories;');
+    await pointRepository.query('DELETE FROM points;');
+    await participantRepository.query('DELETE FROM participants;');
+    await campaignRepository.query('DELETE FROM campaigns;');
     await staffRepository.query('DELETE FROM staff;');
     await businessRepository.query('DELETE FROM businesses;');
     await sectorRepository.query('DELETE FROM sectors;');

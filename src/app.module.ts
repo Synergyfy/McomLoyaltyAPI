@@ -22,6 +22,7 @@ import { CampaignModule } from './resources/campaign/campaign.module';
 import { ParticipantModule } from './resources/participant/participant.module';
 import { CategoryModule } from './resources/category/category.module';
 import { SubcategoryModule } from './resources/subcategory/subcategory.module';
+import { PointModule } from './resources/point/point.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SubcategoryModule } from './resources/subcategory/subcategory.module';
     }),
     CampaignModule,
     ParticipantModule,
+    PointModule,
 
   ],
   controllers: [AppController],

@@ -4,6 +4,7 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
+import { PointHistory } from '../../point/entities/point-history.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Staff } from '../../staff/entities/staff.entity';
 import { Role } from '../../../common/role.enum';
@@ -54,4 +55,7 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   referralCapacity?: number;
+
+  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.awardedByBusiness)
+  pointHistories: PointHistory[];
 }
