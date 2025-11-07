@@ -8,12 +8,13 @@ import { Staff } from '../src/resources/staff/entities/staff.entity';
 import { Repository } from 'typeorm';
 import { Sector } from '../src/resources/sector/entities/sector.entity';
 import { IsPasswordMatchingConstraint } from '../src/common/decorators/validation/is-password-matching.decorator';
-import { Campaign } from '../src/resources/campaign/entities/campaign.entity';
+import { Campaign, CampaignType, AudienceType } from '../src/resources/campaign/entities/campaign.entity';
 import { Participant } from '../src/resources/participant/entities/participant.entity';
 import { Point } from '../src/resources/point/entities/point.entity';
 import { PointHistory } from '../src/resources/point/entities/point-history.entity';
+import { CreateCampaignDto } from 'src/resources/campaign/dto/create-campaign.dto';
 
-describe('StaffController (e2e)', () => {
+describe('PointController (e2e)', () => {
   let app: INestApplication;
   let businessRepository: Repository<Business>;
   let staffRepository: Repository<Staff>;
@@ -23,7 +24,11 @@ describe('StaffController (e2e)', () => {
   let pointRepository: Repository<Point>;
   let pointHistoryRepository: Repository<PointHistory>;
   let sector: Sector;
+  let business: Business;
+  let campaign: Campaign;
+  let participant: Participant;
   let businessToken: string;
+  let participantToken: string;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -52,27 +57,53 @@ describe('StaffController (e2e)', () => {
         password: 'businessPassword123',
         confirmPassword: 'businessPassword123',
       });
-
-    const loginResponse = await request(app.getHttpServer())
+    const businessLoginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'business@example.com', password: 'businessPassword123' });
+    businessToken = businessLoginResponse.body.access_token;
+    business = businessLoginResponse.body.user;
 
-    businessToken = loginResponse.body.access_token;
-
-    await request(app.getHttpServer())
-      .post('/business/onboarding')
+    const createCampaignDto: CreateCampaignDto = {
+      name: 'Test Campaign',
+      campaign_type: CampaignType.QR_CODE,
+      campaign_message: 'Test Message',
+      start_date: new Date(),
+      end_date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      quantity: 100,
+      audience_type: AudienceType.MEMBERS,
+      banner_url: 'http://example.com/banner.png',
+      logo_url: 'http://example.com/logo.png',
+      cta_text: 'Click Me',
+      cta_background_color: '#FFFFFF',
+      cta_text_color: '#000000',
+      text_color: '#000000',
+      background_color: '#FFFFFF',
+      business_id: business.id,
+      reward_ids: [],
+    };
+    const campaignResponse = await request(app.getHttpServer())
+      .post('/campaigns')
       .set('Authorization', `Bearer ${businessToken}`)
+      .send(createCampaignDto);
+    campaign = campaignResponse.body;
+
+    const participantSignupResponse = await request(app.getHttpServer())
+      .post('/participant/signup')
       .send({
-        phone: '1234567890',
-        address: '123 Test St',
-        sectorId: sector.id,
-        referralCapacity: 10,
+        name: 'Test Participant',
+        email: 'participant@example.com',
+        password: 'participantPassword123',
+        confirmPassword: 'participantPassword123',
+        campaignId: campaign.id,
       });
+    participantToken = participantSignupResponse.body.access_token;
+    participant = await participantRepository.findOne({ where: { email: 'participant@example.com' } });
   });
 
   afterEach(async () => {
     await pointHistoryRepository.query('DELETE FROM point_histories;');
     await pointRepository.query('DELETE FROM points;');
+    await participantRepository.query('DELETE FROM participants_campaigns_campaigns;');
     await participantRepository.query('DELETE FROM participants;');
     await campaignRepository.query('DELETE FROM campaigns;');
     await staffRepository.query('DELETE FROM staff;');
@@ -81,40 +112,65 @@ describe('StaffController (e2e)', () => {
     await app.close();
   });
 
-  it('/staff (POST) - success', async () => {
+  it('/point/participant/code (GET) - success', async () => {
     return request(app.getHttpServer())
-      .post('/staff')
+      .get('/point/participant/code')
+      .set('Authorization', `Bearer ${participantToken}`)
+      .expect(200)
+      .then((res) => {
+        expect(res.text).toHaveLength(9);
+      });
+  });
+
+  it('/point/business/generate-code (POST) - success', async () => {
+    return request(app.getHttpServer())
+      .post('/point/business/generate-code')
+      .set('Authorization', `Bearer ${businessToken}`)
+      .expect(201)
+      .then((res) => {
+        expect(res.text).toHaveLength(9);
+      });
+  });
+
+  it('/point/award (POST) - success', async () => {
+    return request(app.getHttpServer())
+      .post('/point/award')
       .set('Authorization', `Bearer ${businessToken}`)
       .send({
-        name: 'Test Staff',
-        email: 'staff@example.com',
-        password: 'staffPassword123',
-        confirmPassword: 'staffPassword123',
+        code: participant.uniqueCode,
+        points: 100,
+        campaignId: campaign.id,
       })
       .expect(201);
   });
 
-  it('/auth/login (POST) - staff login success', async () => {
+  it('/point/business/participants (GET) - success', async () => {
+    return request(app.getHttpServer())
+      .get('/point/business/participants')
+      .set('Authorization', `Bearer ${businessToken}`)
+      .expect(200)
+      .then((res) => {
+        expect(res.body.data[0].id).toBe(participant.id);
+      });
+  });
+
+  it('/point/business/participants/:participantId (GET) - success', async () => {
     await request(app.getHttpServer())
-      .post('/staff')
+      .post('/point/award')
       .set('Authorization', `Bearer ${businessToken}`)
       .send({
-        name: 'Test Staff',
-        email: 'staff@example.com',
-        password: 'staffPassword123',
-        confirmPassword: 'staffPassword123',
+        code: participant.uniqueCode,
+        points: 100,
+        campaignId: campaign.id,
       });
 
     return request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: 'staff@example.com', password: 'staffPassword123' })
-      .expect(201)
+      .get(`/point/business/participants/${participant.id}`)
+      .set('Authorization', `Bearer ${businessToken}`)
+      .expect(200)
       .then((res) => {
-        expect(res.body).toHaveProperty('user');
-        expect(res.body.user).toHaveProperty('name', 'Test Staff');
-        expect(res.body.user).toHaveProperty('role', 'Staff');
-        expect(res.body).toHaveProperty('access_token');
-        expect(res.body).toHaveProperty('refresh_token');
+        expect(res.body.balance).toBe(100);
+        expect(res.body.history[0].points).toBe(100);
       });
   });
 });

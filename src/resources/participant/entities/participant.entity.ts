@@ -3,12 +3,13 @@ import {
   Column,
   ManyToMany,
   JoinTable,
-  OneToOne,
+  OneToMany,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
 import { UserRole } from '../../../common/enums/user-role.enum';
-import { Wallet } from './wallet.entity';
+import { Point } from '../../point/entities/point.entity';
+import { PointHistory } from '../../point/entities/point-history.entity';
 
 @Entity('participants')
 export class Participant extends AbstractBaseEntity {
@@ -24,10 +25,16 @@ export class Participant extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.PARTICIPANT })
   role: UserRole;
 
+  @Column({ unique: true })
+  uniqueCode: string;
+
   @ManyToMany(() => Campaign, (campaign) => campaign.participants)
   @JoinTable()
   campaigns: Campaign[];
 
-  @OneToOne(() => Wallet, (wallet) => wallet.participant)
-  wallet: Wallet;
+  @OneToMany(() => Point, (point) => point.participant)
+  points: Point[];
+
+  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.participant)
+  pointHistories: PointHistory[];
 }

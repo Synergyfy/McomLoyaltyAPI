@@ -5,7 +5,10 @@ import {
   ManyToMany,
   JoinTable,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
+import { Point } from '../../point/entities/point.entity';
+import { PointHistory } from '../../point/entities/point-history.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
@@ -84,4 +87,10 @@ export class Campaign extends AbstractBaseEntity {
 
   @ManyToMany(() => Participant, (participant) => participant.campaigns)
   participants: Participant[];
+
+  @OneToMany(() => Point, (point) => point.campaign)
+  points: Point[];
+
+  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.campaign)
+  pointHistories: PointHistory[];
 }

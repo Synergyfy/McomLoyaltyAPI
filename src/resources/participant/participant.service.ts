@@ -12,7 +12,8 @@ import { CreateParticipantDto } from './dto/create-participant.dto';
 import { LoginParticipantDto } from './dto/login-participant.dto';
 import { Participant } from './entities/participant.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
-import { Wallet } from './entities/wallet.entity';
+import { Point } from '../point/entities/point.entity';
+import { PointHistory } from '../point/entities/point-history.entity';
 import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
@@ -22,10 +23,24 @@ export class ParticipantService {
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
-    @InjectRepository(Wallet)
-    private readonly walletRepository: Repository<Wallet>,
+    @InjectRepository(Point)
+    private readonly pointRepository: Repository<Point>,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly authService: AuthService,
   ) {}
+
+  private generateUniqueCode(): string {
+    const characters =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 9; i++) {
+      result += characters.charAt(
+        Math.floor(Math.random() * characters.length),
+      );
+    }
+    return result;
+  }
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
@@ -49,16 +64,12 @@ export class ParticipantService {
       name,
       email,
       password: hashedPassword,
+      uniqueCode: this.generateUniqueCode(),
     });
 
     const savedParticipant = await this.participantRepository.save(
       newParticipant,
     );
-
-    const wallet = this.walletRepository.create({
-      participant: savedParticipant,
-    });
-    await this.walletRepository.save(wallet);
 
     if (campaignId) {
       await this.joinCampaign(savedParticipant.id, campaignId);
@@ -115,11 +126,32 @@ export class ParticipantService {
     await this.participantRepository.save(participant);
 
     if (campaign.signUpPoint) {
-      const wallet = await this.walletRepository.findOne({
-        where: { participant: { id: participantId } },
+      let point = await this.pointRepository.findOne({
+        where: {
+          participant: { id: participant.id },
+          campaign: { id: campaign.id },
+        },
       });
-      wallet.points += campaign.signUpPoint;
-      await this.walletRepository.save(wallet);
+
+      if (!point) {
+        point = this.pointRepository.create({
+          participant,
+          campaign,
+          balance: 0,
+        });
+      }
+
+      point.balance += campaign.signUpPoint;
+      await this.pointRepository.save(point);
+
+      const pointHistory = this.pointHistoryRepository.create({
+        participant,
+        campaign,
+        points: campaign.signUpPoint,
+        code: 'SIGNUP',
+      });
+
+      await this.pointHistoryRepository.save(pointHistory);
     }
 
     return { message: 'Successfully joined campaign' };

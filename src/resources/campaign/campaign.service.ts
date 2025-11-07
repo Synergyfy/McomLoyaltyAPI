@@ -12,6 +12,10 @@ import { Business } from '../business/entities/business.entity';
 import { Reward } from '../rewards/entities/reward.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Role } from '../../common/role.enum';
+import { PointHistory } from '../point/entities/point-history.entity';
+import { Participant } from '../participant/entities/participant.entity';
+import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
+import { User } from 'src/common/interfaces/user.interface';
 
 @Injectable()
 export class CampaignService {
@@ -22,6 +26,10 @@ export class CampaignService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Reward)
     private readonly rewardRepository: Repository<Reward>,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
+    @InjectRepository(Participant)
+    private readonly participantRepository: Repository<Participant>,
   ) {}
 
   async create(
@@ -138,6 +146,42 @@ export class CampaignService {
       total,
       page,
       limit,
+    };
+  }
+
+  async getAnalytics(
+    currentUser: User,
+    query: CampaignAnalyticsQueryDto,
+  ) {
+    const { campaignId } = query;
+    const businessId = currentUser.id;
+
+    const qb = this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .leftJoin('ph.campaign', 'c')
+      .where('c.business_id = :businessId', { businessId });
+
+    if (campaignId) {
+      qb.andWhere('c.id = :campaignId', { campaignId });
+    }
+
+    const pointHistories = await qb.getMany();
+
+    const totalPointsEarned = pointHistories.reduce(
+      (acc, ph) => acc + ph.points,
+      0,
+    );
+    const totalActivities = pointHistories.length;
+
+    const participantIds = [...new Set(pointHistories.map((ph) => ph.participant.id))];
+    const participants = await this.participantRepository.findBy({
+      id: In(participantIds),
+    });
+
+    return {
+      totalPointsEarned,
+      totalActivities,
+      participants,
     };
   }
 }
