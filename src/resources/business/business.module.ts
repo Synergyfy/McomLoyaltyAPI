@@ -1,23 +1,28 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Business } from './entities/business.entity';
+import { Referral } from '../referral/entities/referral.entity';
+import { PointHistory } from '../point/entities/point-history.entity';
 import { BusinessService } from './services/business.service';
 import { BusinessController } from './controllers/business.controller';
+import { AffiliateController } from './controllers/affiliate.controller';
 import { HashModule } from '../../common/hash/hash.module';
 import { SectorModule } from '../sector/sector.module';
 import { CategoryModule } from '../category/category.module';
 import { SubcategoryModule } from '../subcategory/subcategory.module';
+import { ReferralModule } from '../referral/referral.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business]),
+    TypeOrmModule.forFeature([Business, Referral, PointHistory]),
     HashModule,
     SectorModule,
     CategoryModule,
     SubcategoryModule,
+    ReferralModule,
   ],
   providers: [BusinessService],
-  controllers: [BusinessController],
+  controllers: [BusinessController, AffiliateController],
   exports: [BusinessService],
 })
 export class BusinessModule {}

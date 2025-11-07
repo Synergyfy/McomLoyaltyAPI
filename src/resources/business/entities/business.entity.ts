@@ -11,6 +11,7 @@ import { Role } from '../../../common/role.enum';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Category } from '../../category/entities/category.entity';
 import { SubCategory } from '../../subcategory/entities/subcategory.entity';
+import { Referral } from '../../referral/entities/referral.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -58,4 +59,13 @@ export class Business extends AbstractBaseEntity {
 
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.awardedByBusiness)
   pointHistories: PointHistory[];
+
+  @Column({ unique: true, nullable: true })
+  affiliateCode: string;
+
+  @ManyToOne(() => Business, (business) => business.referrals)
+  referredBy: Business;
+
+  @OneToMany(() => Referral, (referral) => referral.referrer)
+  referrals: Referral[];
 }

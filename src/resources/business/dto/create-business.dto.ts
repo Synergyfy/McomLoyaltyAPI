@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsPasswordMatching } from '../../../common/decorators/validation/is-password-matching.decorator';
 
@@ -25,4 +25,13 @@ export class CreateBusinessDto {
   @IsNotEmpty()
   @IsPasswordMatching('password', { message: 'Passwords do not match' })
   confirmPassword: string;
+
+  @ApiProperty({
+    description: 'The referral code of the business that referred this business.',
+    example: 'a1b2c3d4e',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }
