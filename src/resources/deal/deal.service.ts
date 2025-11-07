@@ -10,7 +10,7 @@ import { CreateDealDto } from './dto/create-deal.dto';
 import { UpdateDealDto } from './dto/update-deal.dto';
 import { Deal } from './entities/deal.entity';
 import { Business } from '../business/entities/business.entity';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Category } from '../category/entities/category.entity';
 
 @Injectable()

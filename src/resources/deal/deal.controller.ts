@@ -23,12 +23,12 @@ import { CreateDealDto } from './dto/create-deal.dto';
 import { UpdateDealDto } from './dto/update-deal.dto';
 import { Deal } from './entities/deal.entity';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
-import { Roles } from 'src/common/decorators/roles.decorator';
-import { Role } from 'src/common/role.enum';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/role.enum';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Business } from '../business/entities/business.entity';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('Deal')
 @Controller('deals')
