@@ -98,10 +98,4 @@ export class CreateCampaignDto {
   @IsUUID('all', { each: true })
   reward_ids: string[];
 
-  @ApiProperty({
-    description: 'The ID of the business this campaign belongs to.',
-  })
-  @IsUUID()
-  business_id: string;
-
 }

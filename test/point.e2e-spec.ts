@@ -8,7 +8,11 @@ import { Staff } from '../src/resources/staff/entities/staff.entity';
 import { Repository } from 'typeorm';
 import { Sector } from '../src/resources/sector/entities/sector.entity';
 import { IsPasswordMatchingConstraint } from '../src/common/decorators/validation/is-password-matching.decorator';
-import { Campaign, CampaignType, AudienceType } from '../src/resources/campaign/entities/campaign.entity';
+import {
+  Campaign,
+  CampaignType,
+  AudienceType,
+} from '../src/resources/campaign/entities/campaign.entity';
 import { Participant } from '../src/resources/participant/entities/participant.entity';
 import { Point } from '../src/resources/point/entities/point.entity';
 import { PointHistory } from '../src/resources/point/entities/point-history.entity';
@@ -37,29 +41,46 @@ describe('PointController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
-    businessRepository = moduleFixture.get<Repository<Business>>(getRepositoryToken(Business));
-    staffRepository = moduleFixture.get<Repository<Staff>>(getRepositoryToken(Staff));
-    sectorRepository = moduleFixture.get<Repository<Sector>>(getRepositoryToken(Sector));
-    campaignRepository = moduleFixture.get<Repository<Campaign>>(getRepositoryToken(Campaign));
-    participantRepository = moduleFixture.get<Repository<Participant>>(getRepositoryToken(Participant));
-    pointRepository = moduleFixture.get<Repository<Point>>(getRepositoryToken(Point));
-    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(getRepositoryToken(PointHistory));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
+    businessRepository = moduleFixture.get<Repository<Business>>(
+      getRepositoryToken(Business),
+    );
+    staffRepository = moduleFixture.get<Repository<Staff>>(
+      getRepositoryToken(Staff),
+    );
+    sectorRepository = moduleFixture.get<Repository<Sector>>(
+      getRepositoryToken(Sector),
+    );
+    campaignRepository = moduleFixture.get<Repository<Campaign>>(
+      getRepositoryToken(Campaign),
+    );
+    participantRepository = moduleFixture.get<Repository<Participant>>(
+      getRepositoryToken(Participant),
+    );
+    pointRepository = moduleFixture.get<Repository<Point>>(
+      getRepositoryToken(Point),
+    );
+    pointHistoryRepository = moduleFixture.get<Repository<PointHistory>>(
+      getRepositoryToken(PointHistory),
+    );
     await app.init();
 
     sector = await sectorRepository.save({ name: 'Technology' });
 
-    await request(app.getHttpServer())
-      .post('/business/signup')
-      .send({
-        name: 'Test Business',
-        email: 'business@example.com',
-        password: 'businessPassword123',
-        confirmPassword: 'businessPassword123',
-      });
+    await request(app.getHttpServer()).post('/business/signup').send({
+      name: 'Test Business',
+      email: 'business@example.com',
+      password: 'businessPassword123',
+      confirmPassword: 'businessPassword123',
+    });
     const businessLoginResponse = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email: 'business@example.com', password: 'businessPassword123' });
+      .send({
+        email: 'business@example.com',
+        password: 'businessPassword123',
+      });
     businessToken = businessLoginResponse.body.access_token;
     business = businessLoginResponse.body.user;
 
@@ -78,7 +99,6 @@ describe('PointController (e2e)', () => {
       cta_text_color: '#000000',
       text_color: '#000000',
       background_color: '#FFFFFF',
-      business_id: business.id,
       reward_ids: [],
     };
     const campaignResponse = await request(app.getHttpServer())
@@ -97,18 +117,22 @@ describe('PointController (e2e)', () => {
         campaignId: campaign.id,
       });
     participantToken = participantSignupResponse.body.access_token;
-    participant = await participantRepository.findOne({ where: { email: 'participant@example.com' } });
+    participant = await participantRepository.findOne({
+      where: { email: 'participant@example.com' },
+    });
   });
 
   afterEach(async () => {
-    await pointHistoryRepository.query('DELETE FROM point_histories;');
-    await pointRepository.query('DELETE FROM points;');
-    await participantRepository.query('DELETE FROM participants_campaigns_campaigns;');
-    await participantRepository.query('DELETE FROM participants;');
-    await campaignRepository.query('DELETE FROM campaigns;');
-    await staffRepository.query('DELETE FROM staff;');
-    await businessRepository.query('DELETE FROM businesses;');
-    await sectorRepository.query('DELETE FROM sectors;');
+    await pointHistoryRepository.delete({});
+    await pointRepository.delete({});
+    await participantRepository.query(
+      'DELETE FROM participants_campaigns_campaigns;',
+    );
+    await participantRepository.delete({});
+    await campaignRepository.delete({});
+    await staffRepository.delete({});
+    await businessRepository.delete({});
+    await sectorRepository.delete({});
     await app.close();
   });
 
