@@ -9,6 +9,7 @@ import { Staff } from '../staff/entities/staff.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { ParticipantCampaignBalanceService } from './services/participant-campaign-balance.service';
 
 @Module({
   imports: [
@@ -21,7 +22,11 @@ import { Campaign } from '../campaign/entities/campaign.entity';
       Campaign,
     ]),
   ],
-  providers: [RedemptionService, PointEarningService],
+  providers: [
+    RedemptionService,
+    PointEarningService,
+    ParticipantCampaignBalanceService,
+  ],
   controllers: [ParticipantCampaignBalanceController],
 })
 export class ParticipantCampaignBalanceModule {}

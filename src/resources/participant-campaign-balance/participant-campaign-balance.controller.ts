@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { RedemptionService } from './services/redemption.service';
 import { PointEarningService } from './services/point-earning.service';
 import { AwardPointsDto } from './dto/award-points.dto';
@@ -13,6 +13,10 @@ import {
 import { Role } from '../../common/role.enum';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ParticipantCampaignBalance } from './entities/participant-campaign-balance.entity';
+import { ParticipantCampaignBalanceService } from './services/participant-campaign-balance.service';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { User } from 'src/common/interfaces/user.interface';
+import { GetParticipantBalanceDto } from './dto/get-participant-balance.dto';
 
 @ApiTags('Participant Campaign Balance')
 @ApiBearerAuth()
@@ -21,7 +25,25 @@ export class ParticipantCampaignBalanceController {
   constructor(
     private readonly redemptionService: RedemptionService,
     private readonly pointEarningService: PointEarningService,
+    private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
   ) {}
+
+  @Get('my-balance')
+  @ApiOperation({
+    summary: 'Get the current participant`s point balance',
+    description:
+      'Allows a participant to view their global point balance and their balance for each campaign. Accessible only by the Participant role.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The participant`s point balance.',
+    type: GetParticipantBalanceDto,
+  })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Participant)
+  getParticipantBalance(@CurrentUser() user: User) {
+    return this.participantCampaignBalanceService.getParticipantBalance(user.id);
+  }
 
   @Post('award-points')
   @ApiOperation({
