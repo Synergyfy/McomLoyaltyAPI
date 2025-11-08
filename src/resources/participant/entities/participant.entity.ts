@@ -1,15 +1,9 @@
-import {
-  Entity,
-  Column,
-  ManyToMany,
-  JoinTable,
-  OneToMany,
-} from 'typeorm';
+import { Entity, Column, ManyToMany, JoinTable, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
 import { UserRole } from '../../../common/enums/user-role.enum';
-import { Point } from '../../point/entities/point.entity';
-import { PointHistory } from '../../point/entities/point-history.entity';
+import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
+import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 
 @Entity('participants')
 export class Participant extends AbstractBaseEntity {
@@ -32,9 +26,15 @@ export class Participant extends AbstractBaseEntity {
   @JoinTable()
   campaigns: Campaign[];
 
-  @OneToMany(() => Point, (point) => point.participant)
-  points: Point[];
+  @OneToMany(
+    () => ParticipantCampaignBalance,
+    (participantCampaignBalance) => participantCampaignBalance.participant,
+  )
+  participantCampaignBalances: ParticipantCampaignBalance[];
 
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.participant)
   pointHistories: PointHistory[];
+
+  @Column({ default: 0 })
+  global_total_points: number;
 }

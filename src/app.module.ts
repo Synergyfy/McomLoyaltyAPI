@@ -22,10 +22,10 @@ import { CampaignModule } from './resources/campaign/campaign.module';
 import { ParticipantModule } from './resources/participant/participant.module';
 import { CategoryModule } from './resources/category/category.module';
 import { SubcategoryModule } from './resources/subcategory/subcategory.module';
-import { PointModule } from './resources/point/point.module';
 import { MailModule } from './mail/mail.module';
 import { OtpModule } from './resources/otp/otp.module';
 import { DealModule } from './resources/deal/deal.module';
+import { ParticipantCampaignBalanceModule } from './resources/participant-campaign-balance/participant-campaign-balance.module';
 
 @Module({
   imports: [
@@ -51,9 +51,9 @@ import { DealModule } from './resources/deal/deal.module';
     }),
     CampaignModule,
     ParticipantModule,
-    PointModule,
     OtpModule,
     DealModule,
+    ParticipantCampaignBalanceModule,
   ],
   controllers: [AppController],
   providers: [

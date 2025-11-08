@@ -18,7 +18,7 @@ import { Business } from '../business/entities/business.entity';
 import { Reward } from '../rewards/entities/reward.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Role } from '../../common/role.enum';
-import { PointHistory } from '../point/entities/point-history.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';

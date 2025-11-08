@@ -1,0 +1,122 @@
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { RedemptionService } from './services/redemption.service';
+import { PointEarningService } from './services/point-earning.service';
+import { AwardPointsDto } from './dto/award-points.dto';
+import { RedeemRewardDto } from './dto/redeem-reward.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { Role } from '../../common/role.enum';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { ParticipantCampaignBalance } from './entities/participant-campaign-balance.entity';
+import { ParticipantCampaignBalanceService } from './services/participant-campaign-balance.service';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { User } from 'src/common/interfaces/user.interface';
+import { GetParticipantBalanceDto } from './dto/get-participant-balance.dto';
+import { GetParticipantBalanceForCampaignDto } from './dto/get-participant-balance-for-campaign.dto';
+
+@ApiTags('Participant Campaign Balance')
+@ApiBearerAuth()
+@Controller('participant-campaign-balance')
+export class ParticipantCampaignBalanceController {
+  constructor(
+    private readonly redemptionService: RedemptionService,
+    private readonly pointEarningService: PointEarningService,
+    private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
+  ) {}
+
+  @Get('my-balance')
+  @ApiOperation({
+    summary: 'Get the current participant`s point balance',
+    description:
+      'Allows a participant to view their global point balance and their balance for each campaign. Accessible only by the Participant role.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The participant`s point balance.',
+    type: GetParticipantBalanceDto,
+  })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Participant)
+  getParticipantBalance(@CurrentUser() user: User) {
+    return this.participantCampaignBalanceService.getParticipantBalance(user.id);
+  }
+
+  @Get('my-balance/:campaignId')
+  @ApiOperation({
+    summary: 'Get the current participant`s point balance for a specific campaign',
+    description:
+      'Allows a participant to view their point balance for a specific campaign. Accessible only by the Participant role.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The participant`s point balance for the specified campaign.',
+    type: GetParticipantBalanceForCampaignDto,
+  })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Participant)
+  getParticipantBalanceForCampaign(
+    @CurrentUser() user: User,
+    @Param('campaignId') campaignId: string,
+  ) {
+    return this.participantCampaignBalanceService.getParticipantBalanceForCampaign(
+      user.id,
+      campaignId,
+    );
+  }
+
+  @Post('award-points')
+  @ApiOperation({
+    summary: 'Award points to a participant',
+    description:
+      'Allows a staff member to award points to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.',
+  })
+  @ApiBody({ type: AwardPointsDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The points have been successfully awarded.',
+    type: ParticipantCampaignBalance,
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Admin, Role.Business, Role.Staff)
+  awardPoints(@Body() awardPointsDto: AwardPointsDto) {
+    return this.pointEarningService.awardPoints(
+      awardPointsDto.staffId,
+      awardPointsDto.participantId,
+      awardPointsDto.campaignId,
+      awardPointsDto.points,
+    );
+  }
+
+  @Post('redeem-reward')
+  @ApiOperation({
+    summary: 'Redeem a reward for a participant',
+    description:
+      'Allows a staff member to process a reward redemption for a participant. Accessible by Admin, Business, and Staff roles.',
+  })
+  @ApiBody({ type: RedeemRewardDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The reward has been successfully redeemed.',
+    type: ParticipantCampaignBalance,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. For example, not enough points.',
+  })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Admin, Role.Business, Role.Staff)
+  redeemReward(@Body() redeemRewardDto: RedeemRewardDto) {
+    return this.redemptionService.redeemReward(
+      redeemRewardDto.staffId,
+      redeemRewardDto.participantId,
+      redeemRewardDto.rewardId,
+      redeemRewardDto.redemptionCode,
+    );
+  }
+}

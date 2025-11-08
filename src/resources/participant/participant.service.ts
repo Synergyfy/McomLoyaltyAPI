@@ -12,9 +12,10 @@ import { CreateParticipantDto } from './dto/create-participant.dto';
 import { LoginParticipantDto } from './dto/login-participant.dto';
 import { Participant } from './entities/participant.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
-import { Point } from '../point/entities/point.entity';
-import { PointHistory } from '../point/entities/point-history.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { AuthService } from 'src/auth/auth.service';
+import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
+import { PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 
 @Injectable()
 export class ParticipantService {
@@ -23,8 +24,8 @@ export class ParticipantService {
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
-    @InjectRepository(Point)
-    private readonly pointRepository: Repository<Point>,
+    @InjectRepository(ParticipantCampaignBalance)
+    private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly authService: AuthService,
@@ -126,29 +127,33 @@ export class ParticipantService {
     await this.participantRepository.save(participant);
 
     if (campaign.signUpPoint) {
-      let point = await this.pointRepository.findOne({
+      let participantCampaignBalance = await this.participantCampaignBalanceRepository.findOne({
         where: {
           participant: { id: participant.id },
           campaign: { id: campaign.id },
         },
       });
 
-      if (!point) {
-        point = this.pointRepository.create({
+      if (!participantCampaignBalance) {
+        participantCampaignBalance = this.participantCampaignBalanceRepository.create({
           participant,
           campaign,
-          balance: 0,
+          campaign_balance: 0,
         });
       }
 
-      point.balance += campaign.signUpPoint;
-      await this.pointRepository.save(point);
+      participantCampaignBalance.campaign_balance += campaign.signUpPoint;
+      participant.global_total_points += campaign.signUpPoint;
+      campaign.total_points_earned += campaign.signUpPoint;
+      await this.participantCampaignBalanceRepository.save(participantCampaignBalance);
+      await this.participantRepository.save(participant);
+      await this.campaignRepository.save(campaign);
 
       const pointHistory = this.pointHistoryRepository.create({
+        type: PointHistoryType.EARN,
+        points: campaign.signUpPoint,
         participant,
         campaign,
-        points: campaign.signUpPoint,
-        code: 'SIGNUP',
       });
 
       await this.pointHistoryRepository.save(pointHistory);
