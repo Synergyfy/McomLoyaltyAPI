@@ -1,5 +1,4 @@
 import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
-import { PointHistory } from '../../point/entities/point-history.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Role } from '../../../common/role.enum';
@@ -23,7 +22,4 @@ export class Staff extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: Role, default: Role.Staff })
   role: Role;
-
-  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.awardedByStaff)
-  pointHistories: PointHistory[];
 }

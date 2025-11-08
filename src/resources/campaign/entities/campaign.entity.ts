@@ -7,12 +7,12 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Point } from '../../point/entities/point.entity';
-import { PointHistory } from '../../point/entities/point-history.entity';
+import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
 import { Participant } from '../../participant/entities/participant.entity';
+import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 
 export enum CampaignType {
   QR_CODE = 'qr_code',
@@ -88,9 +88,18 @@ export class Campaign extends AbstractBaseEntity {
   @ManyToMany(() => Participant, (participant) => participant.campaigns)
   participants: Participant[];
 
-  @OneToMany(() => Point, (point) => point.campaign)
-  points: Point[];
+  @OneToMany(
+    () => ParticipantCampaignBalance,
+    (participantCampaignBalance) => participantCampaignBalance.campaign,
+  )
+  participantCampaignBalances: ParticipantCampaignBalance[];
 
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.campaign)
   pointHistories: PointHistory[];
+
+  @Column({ default: 0 })
+  total_points_earned: number;
+
+  @Column({ default: 0 })
+  total_points_redeemed: number;
 }
