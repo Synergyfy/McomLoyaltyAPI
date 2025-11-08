@@ -36,4 +36,23 @@ export class ParticipantCampaignBalanceService {
       })),
     };
   }
+
+  async getParticipantBalanceForCampaign(participantId: string, campaignId: string) {
+    const campaignBalance = await this.participantCampaignBalanceRepository.findOne({
+      where: { participant: { id: participantId }, campaign: { id: campaignId } },
+      relations: ['campaign'],
+    });
+
+    if (!campaignBalance) {
+      throw new NotFoundException(
+        'Participant is not enrolled in this campaign or campaign does not exist.',
+      );
+    }
+
+    return {
+      campaign_id: campaignBalance.campaign.id,
+      campaign_name: campaignBalance.campaign.name,
+      balance: campaignBalance.campaign_balance,
+    };
+  }
 }
