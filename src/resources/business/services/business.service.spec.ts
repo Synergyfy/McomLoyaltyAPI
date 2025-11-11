@@ -6,6 +6,10 @@ import { Business } from '../entities/business.entity';
 import { OnboardingDto } from '../dto/onboarding.dto';
 import { HashService } from '../../../common/hash/hash.service';
 import { NotFoundException } from '@nestjs/common';
+import { Referral } from '../../referral/entities/referral.entity';
+import { SectorService } from '../../sector/services/sector.service';
+import { CategoryService } from '../../category/category.service';
+import { SubcategoryService } from '../../subcategory/subcategory.service';
 
 describe('BusinessService', () => {
   let service: BusinessService;
@@ -21,6 +25,24 @@ describe('BusinessService', () => {
     hashPassword: jest.fn(),
   };
 
+  const mockReferralRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+    create: jest.fn(),
+  };
+
+  const mockSectorService = {
+    findOne: jest.fn(),
+  };
+
+  const mockCategoryService = {
+    findOne: jest.fn(),
+  };
+
+  const mockSubcategoryService = {
+    findOne: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -30,8 +52,24 @@ describe('BusinessService', () => {
           useValue: mockBusinessRepository,
         },
         {
+          provide: getRepositoryToken(Referral),
+          useValue: mockReferralRepository,
+        },
+        {
           provide: HashService,
           useValue: mockHashService,
+        },
+        {
+          provide: SectorService,
+          useValue: mockSectorService,
+        },
+        {
+          provide: CategoryService,
+          useValue: mockCategoryService,
+        },
+        {
+          provide: SubcategoryService,
+          useValue: mockSubcategoryService,
         },
       ],
     }).compile();
@@ -52,14 +90,21 @@ describe('BusinessService', () => {
 
       const existingBusiness = new Business();
       mockBusinessRepository.findOne.mockResolvedValue(existingBusiness);
+      mockSectorService.findOne.mockResolvedValue({ id: onboardingDto.sectorId });
 
       const { sectorId, ...rest } = onboardingDto;
-      const expectedSaveObject = { ...existingBusiness, ...rest, sector: { id: sectorId } };
+      const expectedSaveObject = {
+        ...existingBusiness,
+        ...rest,
+        sector: { id: sectorId },
+        category: null,
+        subCategory: null,
+      };
       mockBusinessRepository.save.mockResolvedValue(expectedSaveObject);
 
       const result = await service.onboarding(businessId, onboardingDto);
 
-      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: businessId } });
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: businessId }, relations: [] });
       expect(repository.save).toHaveBeenCalledWith(expectedSaveObject);
       expect(result).toBeDefined();
     });

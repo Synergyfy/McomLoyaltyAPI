@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ParticipantService } from './participant.service';
 import { ParticipantController } from './participant.controller';
+import { AdminParticipantController } from './admin.participant.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Participant } from './entities/participant.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
@@ -18,7 +19,7 @@ import { ParticipantCampaignBalance } from '../participant-campaign-balance/enti
     ]),
     AuthModule,
   ],
-  controllers: [ParticipantController],
+  controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],
 })
 export class ParticipantModule {}

@@ -161,4 +161,59 @@ export class ParticipantService {
 
     return { message: 'Successfully joined campaign' };
   }
+
+  async findAll(page: number, limit: number): Promise<{ data: Participant[], total: number }> {
+    const [data, total] = await this.participantRepository.findAndCount({
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
+
+  async findById(id: string, relations: string[] = []): Promise<Participant | undefined> {
+    return this.participantRepository.findOne({ where: { id }, relations });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.participantRepository.delete(id);
+  }
+
+  async update(id: string, attrs: Partial<Participant>): Promise<Participant> {
+    const participant = await this.findById(id);
+    if (!participant) {
+      throw new NotFoundException('Participant not found');
+    }
+    Object.assign(participant, attrs);
+    return this.participantRepository.save(participant);
+  }
+
+  async removeFromCampaign(participantId: string, campaignId: string): Promise<void> {
+    const participant = await this.participantRepository.findOne({
+      where: { id: participantId },
+      relations: ['campaigns'],
+    });
+    if (!participant) {
+      throw new NotFoundException('Participant not found');
+    }
+
+    participant.campaigns = participant.campaigns.filter(
+      (campaign) => campaign.id !== campaignId,
+    );
+    await this.participantRepository.save(participant);
+  }
+
+  async getHistory(
+    participantId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: PointHistory[]; total: number }> {
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: { participant: { id: participantId } },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
 }
