@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { LessThanOrEqual, MoreThanOrEqual, Repository, In } from 'typeorm';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { GeneralAnalyticsDto } from './dto/general-analytics.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { ChartResponseDto, ChartData } from './dto/chart-analytics.dto';
+import { Business } from '../business/entities/business.entity';
+import { SystemOverviewDto, TopBusinessDto, CustomerActivityGrowthDto } from './dto/admin-analytics.dto';
 
 @Injectable()
 export class AnalyticsService {
@@ -17,7 +19,89 @@ export class AnalyticsService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
   ) {}
+
+  async getSystemOverview(): Promise<SystemOverviewDto> {
+    const totalBusinesses = await this.businessRepository.count();
+    const totalCustomers = await this.participantRepository.count();
+    const now = new Date();
+    const totalActiveCampaigns = await this.campaignRepository.count({
+        where: {
+            disabled: false,
+            start_date: LessThanOrEqual(now),
+            end_date: MoreThanOrEqual(now),
+        }
+    });
+    const totalRewardsClaimed = await this.pointHistoryRepository.count({
+        where: { type: PointHistoryType.REDEEM }
+    });
+
+    return {
+        totalBusinesses,
+        totalCustomers,
+        totalActiveCampaigns,
+        totalRewardsClaimed
+    }
+  }
+
+  async getCustomerActivityAndGrowth(days: number): Promise<CustomerActivityGrowthDto> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const activity = await this.pointHistoryRepository
+        .createQueryBuilder('ph')
+        .select('DATE(ph.created_at) as date')
+        .addSelect(`SUM(CASE WHEN ph.type = 'earn' THEN ph.points ELSE 0 END)`, 'pointsEarned')
+        .addSelect(`SUM(CASE WHEN ph.type = 'redeem' THEN ph.points ELSE 0 END)`, 'pointsRedeemed')
+        .where('ph.created_at >= :startDate', { startDate })
+        .groupBy('DATE(ph.created_at)')
+        .orderBy('DATE(ph.created_at)', 'ASC')
+        .getRawMany();
+
+    const growth = await this.participantRepository
+        .createQueryBuilder('p')
+        .select('DATE(p.created_at) as date, COUNT(p.id) as newCustomers')
+        .where('p.created_at >= :startDate', { startDate })
+        .groupBy('DATE(p.created_at)')
+        .orderBy('DATE(p.created_at)', 'ASC')
+        .getRawMany();
+
+    return {
+        activity: activity.map(a => ({
+            date: a.date,
+            pointsEarned: parseInt(a.pointsEarned, 10),
+            pointsRedeemed: parseInt(a.pointsRedeemed, 10)
+        })),
+        growth: growth.map(g => ({
+            date: g.date,
+            newCustomers: parseInt(g.newCustomers, 10)
+        }))
+    }
+  }
+
+  async getTopBusinesses(): Promise<TopBusinessDto[]> {
+    const businesses = await this.businessRepository
+        .createQueryBuilder('business')
+        .leftJoin('business.campaigns', 'campaign')
+        .leftJoin('campaign.pointHistories', 'pointHistory')
+        .select('business.id', 'businessId')
+        .addSelect('business.name', 'businessName')
+        .addSelect(`SUM(CASE WHEN pointHistory.type = 'redeem' THEN 1 ELSE 0 END)`, 'totalRewardsRedeemed')
+        .addSelect(`SUM(CASE WHEN pointHistory.type = 'earn' THEN pointHistory.points ELSE 0 END)`, 'totalPointsIssued')
+        .groupBy('business.id, business.name')
+        .orderBy('totalRewardsRedeemed', 'DESC')
+        .addOrderBy('totalPointsIssued', 'DESC')
+        .limit(10)
+        .getRawMany();
+
+    return businesses.map(b => ({
+        ...b,
+        totalRewardsRedeemed: parseInt(b.totalRewardsRedeemed, 10),
+        totalPointsIssued: parseInt(b.totalPointsIssued, 10)
+    }));
+  }
 
   async getGeneralAnalytics(user: User): Promise<GeneralAnalyticsDto> {
     const businessId = user.id;

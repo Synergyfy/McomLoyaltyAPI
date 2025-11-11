@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { Business } from '../business/entities/business.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Campaign, PointHistory, Participant]),
+    TypeOrmModule.forFeature([Campaign, PointHistory, Participant, Business]),
   ],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
