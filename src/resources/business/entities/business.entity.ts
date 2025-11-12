@@ -12,6 +12,7 @@ import { Category } from '../../category/entities/category.entity';
 import { SubCategory } from '../../subcategory/entities/subcategory.entity';
 import { Referral } from '../../referral/entities/referral.entity';
 import { Deal } from '../../deal/entities/deal.entity';
+import { Campaign } from '../../campaign/entities/campaign.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -71,4 +72,10 @@ export class Business extends AbstractBaseEntity {
 
   @OneToMany(() => Deal, (deal) => deal.business)
   deals: Deal[];
+
+  @Column({ default: false })
+  isDisabled: boolean;
+
+  @OneToMany(() => Campaign, (campaign) => campaign.business)
+  campaigns: Campaign[];
 }

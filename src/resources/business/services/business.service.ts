@@ -179,8 +179,8 @@ export class BusinessService {
     return affiliateCode;
   }
 
-  async findById(id: string): Promise<Business | undefined> {
-    return this.businessRepository.findOne({ where: { id } });
+  async findById(id: string, relations: string[] = []): Promise<Business | undefined> {
+    return this.businessRepository.findOne({ where: { id }, relations });
   }
 
   async findAll(page: number, limit: number): Promise<{ data: Business[], total: number }> {
@@ -199,5 +199,29 @@ export class BusinessService {
 
   async delete(id: string): Promise<void> {
     await this.businessRepository.delete(id);
+  }
+
+  async findAllParticipants(
+    businessId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: any[]; total: number }> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['campaigns', 'campaigns.participants'],
+    });
+
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const allParticipants = business.campaigns.flatMap((campaign) => campaign.participants);
+    const uniqueParticipants = [...new Map(allParticipants.map((item) => [item['id'], item])).values()];
+    const paginatedParticipants = uniqueParticipants.slice((page - 1) * limit, page * limit);
+
+    return {
+      data: paginatedParticipants,
+      total: uniqueParticipants.length,
+    };
   }
 }

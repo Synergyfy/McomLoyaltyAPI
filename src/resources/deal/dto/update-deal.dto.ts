@@ -1,3 +1,4 @@
+
 import { PartialType } from '@nestjs/swagger';
 import { CreateDealDto } from './create-deal.dto';
 

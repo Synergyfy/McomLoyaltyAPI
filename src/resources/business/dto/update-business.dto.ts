@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsBoolean } from 'class-validator';
 
 export class UpdateBusinessDto {
   @IsString()
@@ -8,4 +8,8 @@ export class UpdateBusinessDto {
   @IsString()
   @IsOptional()
   address?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isDisabled?: boolean;
 }
