@@ -1,7 +1,10 @@
 
-import { Controller, Post, Body, UseGuards, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Query, Param, Patch, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { DealService } from './deal.service';
 import { CreateDealDto } from './dto/create-deal.dto';
+import { UpdateDealDto } from './dto/update-deal.dto';
+import { UpdateDealStatusDto } from './dto/update-deal-status.dto';
+import { DeactivateDealDto } from './dto/deactivate-deal.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
@@ -42,7 +45,7 @@ export class DealController {
   @ApiOperation({ summary: 'Get a deal by ID' })
   @ApiResponse({ status: 200, description: 'Return the deal.' })
   @ApiResponse({ status: 404, description: 'Deal not found.' })
-  findOne(@Param('id') id: string, @CurrentUser() user: User) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: User) {
     return this.dealService.findOne(id, user);
   }
 
@@ -52,7 +55,7 @@ export class DealController {
   @ApiOperation({ summary: 'Update a deal' })
   @ApiResponse({ status: 200, description: 'The deal has been successfully updated.' })
   @ApiResponse({ status: 404, description: 'Deal not found.' })
-  update(@Param('id') id: string, @Body() updateDealDto: UpdateDealDto, @CurrentUser() user: User) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateDealDto: UpdateDealDto, @CurrentUser() user: User) {
     return this.dealService.update(id, updateDealDto, user);
   }
 
@@ -62,7 +65,7 @@ export class DealController {
   @ApiOperation({ summary: 'Delete a deal' })
   @ApiResponse({ status: 200, description: 'The deal has been successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Deal not found.' })
-  remove(@Param('id') id: string, @CurrentUser() user: User) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: User) {
     return this.dealService.remove(id, user);
   }
 
@@ -72,7 +75,7 @@ export class DealController {
   @ApiOperation({ summary: 'Update a deal status (Admin only)' })
   @ApiResponse({ status: 200, description: 'The deal status has been successfully updated.' })
   @ApiResponse({ status: 404, description: 'Deal not found.' })
-  updateStatus(@Param('id') id: string, @Body() updateDealStatusDto: UpdateDealStatusDto) {
+  updateStatus(@Param('id', ParseUUIDPipe) id: string, @Body() updateDealStatusDto: UpdateDealStatusDto) {
     return this.dealService.updateStatus(id, updateDealStatusDto.status);
   }
 
@@ -82,7 +85,7 @@ export class DealController {
   @ApiOperation({ summary: 'Deactivate a deal' })
   @ApiResponse({ status: 200, description: 'The deal has been successfully deactivated.' })
   @ApiResponse({ status: 404, description: 'Deal not found.' })
-  deactivate(@Param('id') id: string, @Body() deactivateDealDto: DeactivateDealDto, @CurrentUser() user: User) {
+  deactivate(@Param('id', ParseUUIDPipe) id: string, @Body() deactivateDealDto: DeactivateDealDto, @CurrentUser() user: User) {
     return this.dealService.deactivate(id, deactivateDealDto.isActive, user);
   }
 }

@@ -9,6 +9,7 @@ import { Role } from '../../common/role.enum';
 import { DealStatus } from './enums/deal-status.enum';
 import { CategoryService } from '../category/category.service';
 import { FilterDealDto } from './dto/filter-deal.dto';
+import { UpdateDealDto } from './dto/update-deal.dto';
 
 @Injectable()
 export class DealService {

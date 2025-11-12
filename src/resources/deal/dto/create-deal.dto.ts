@@ -1,6 +1,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsUrl, IsDateString, IsNumber, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUrl, IsDateString, IsNumber, Min, Validate } from 'class-validator';
+import { IsDateAfter } from '../validators/is-date-after.validator';
 
 export class CreateDealDto {
   @ApiProperty({ example: 'Summer Sale', description: 'The title of the deal' })
@@ -34,6 +35,7 @@ export class CreateDealDto {
 
   @ApiProperty({ example: '2025-01-31', description: 'The end date of the deal' })
   @IsDateString()
+  @Validate(IsDateAfter, ['startDate'])
   endDate: Date;
 
   @ApiProperty({ example: 'This offer is valid for a limited time only.', description: 'The terms and conditions of the deal' })
