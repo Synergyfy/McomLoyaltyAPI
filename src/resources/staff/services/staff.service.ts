@@ -40,15 +40,23 @@ export class StaffService {
     return { data, total };
   }
 
-  findOne(id: string, businessId: string): Promise<Staff> {
-    return this.staffRepository.findOne({ where: { id, business: { id: businessId } } });
+  findOne(id: string, businessId?: string): Promise<Staff> {
+    const where: any = { id };
+    if (businessId) {
+      where.business = { id: businessId };
+    }
+    return this.staffRepository.findOne({ where });
   }
 
-  async update(id: string, updateStaffDto: UpdateStaffDto, businessId: string): Promise<Staff> {
+  async update(id: string, updateStaffDto: UpdateStaffDto, businessId?: string): Promise<Staff> {
     if (updateStaffDto.password) {
       updateStaffDto.password = await this.hashService.hashPassword(updateStaffDto.password);
     }
-    await this.staffRepository.update({ id, business: { id: businessId } }, updateStaffDto);
+    const where: any = { id };
+    if (businessId) {
+      where.business = { id: businessId };
+    }
+    await this.staffRepository.update(where, updateStaffDto);
     return this.findOne(id, businessId);
   }
 

@@ -37,4 +37,7 @@ export class Participant extends AbstractBaseEntity {
 
   @Column({ default: 0 })
   global_total_points: number;
+
+  @Column({ default: false })
+  isDisabled: boolean;
 }
