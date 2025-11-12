@@ -9,7 +9,7 @@ import {
   PointHistory,
   PointHistoryType,
 } from '../../participant-campaign-balance/entities/point-history.entity';
-import { Reward } from '../../reward/entities/reward.entity';
+import { Reward } from '../../rewards/entities/reward.entity';
 import {
   SystemOverviewDto,
   TopBusinessDto,

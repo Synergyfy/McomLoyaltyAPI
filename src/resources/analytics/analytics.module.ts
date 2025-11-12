@@ -5,7 +5,7 @@ import { Business } from '../business/entities/business.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
-import { Reward } from '../reward/entities/reward.entity';
+import { Reward } from '../rewards/entities/reward.entity';
 
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
