@@ -3,34 +3,20 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Category } from '../../category/entities/category.entity';
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
+import { DealStatus } from '../enums/deal-status.enum';
 
-export enum DealType {
-  DISCOUNT = 'Discount',
-  CASHBACK = 'Cashback',
-  BOGO = 'BOGO',
-}
-
-export enum DealAudience {
-  ALL = 'All',
-  STUDENTS = 'Students',
-  SENIORS = 'Seniors',
-}
-
-@Entity()
+@Entity('deals')
 export class Deal extends AbstractBaseEntity {
   @Column()
   title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text' })
   description: string;
 
   @Column({ nullable: true })
   imageUrl: string;
 
-  @Column({ type: 'enum', enum: DealType })
-  type: DealType;
-
-  @Column({ type: 'decimal' })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
   value: number;
 
   @Index()
@@ -41,19 +27,19 @@ export class Deal extends AbstractBaseEntity {
   @Column()
   endDate: Date;
 
-  @Column({ type: 'enum', enum: DealAudience })
-  audience: DealAudience;
+  @Column({ type: 'text' })
+  termsAndConditions: string;
 
-  @Index()
-  @ManyToOne(() => Category, (category) => category.deals)
-  category: Category;
-
-  @Column({ type: 'text', nullable: true })
-  terms: string;
+  @Column({ type: 'enum', enum: DealStatus, default: DealStatus.PENDING })
+  status: DealStatus;
 
   @Column({ default: true })
   isActive: boolean;
 
-  @ManyToOne(() => Business, (business) => business.deals)
+  @Index()
+  @ManyToOne(() => Category, (category) => category.deals, { onDelete: 'CASCADE' })
+  category: Category;
+
+  @ManyToOne(() => Business, (business) => business.deals, { onDelete: 'CASCADE' })
   business: Business;
 }

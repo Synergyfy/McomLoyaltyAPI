@@ -1,73 +1,43 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsEnum,
-  IsNumber,
-  IsDateString,
-  IsUUID,
-} from 'class-validator';
-import { DealType, DealAudience } from '../entities/deal.entity';
+import { IsString, IsNotEmpty, IsOptional, IsUrl, IsDateString, IsNumber, Min } from 'class-validator';
 
 export class CreateDealDto {
-  @ApiProperty({ example: 'Summer Sale' })
+  @ApiProperty({ example: 'Summer Sale', description: 'The title of the deal' })
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({
-    example: 'Get 20% off on all products',
-    required: false,
-  })
+  @ApiProperty({ example: 'Get 50% off on all items', description: 'A short description of the deal' })
   @IsString()
-  @IsOptional()
-  description?: string;
+  @IsNotEmpty()
+  description: string;
 
-  @ApiProperty({
-    example: 'https://example.com/deal.jpg',
-    required: false,
-  })
-  @IsString()
+  @ApiProperty({ example: 'https://example.com/deal.jpg', description: 'The URL of the deal image' })
+  @IsUrl()
   @IsOptional()
   imageUrl?: string;
 
-  @ApiProperty({ enum: DealType, example: DealType.DISCOUNT })
-  @IsEnum(DealType)
-  @IsNotEmpty()
-  type: DealType;
-
-  @ApiProperty({ example: 20.0 })
-  @IsNumber()
-  @IsNotEmpty()
-  value: number;
-
-  @ApiProperty({ example: '2024-07-20T00:00:00.000Z' })
-  @IsDateString()
-  @IsNotEmpty()
-  startDate: Date;
-
-  @ApiProperty({ example: '2024-08-20T00:00:00.000Z' })
-  @IsDateString()
-  @IsNotEmpty()
-  endDate: Date;
-
-  @ApiProperty({ enum: DealAudience, example: DealAudience.ALL })
-  @IsEnum(DealAudience)
-  @IsNotEmpty()
-  audience: DealAudience;
-
-  @ApiProperty({ example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' })
-  @IsUUID()
+  @ApiProperty({ example: 'f8b5a8a0-7b3b-4e4a-8b0a-3a7f6b2b6b5e', description: 'The ID of the deal category' })
+  @IsString()
   @IsNotEmpty()
   categoryId: string;
 
-  @ApiProperty({
-    example: 'This offer is valid for a limited time.',
-    required: false,
-  })
+  @ApiProperty({ example: 20.0, description: 'The monetary value of the deal' })
+  @IsNumber()
+  @Min(0)
+  value: number;
+
+  @ApiProperty({ example: '2024-12-31', description: 'The start date of the deal' })
+  @IsDateString()
+  startDate: Date;
+
+  @ApiProperty({ example: '2025-01-31', description: 'The end date of the deal' })
+  @IsDateString()
+  endDate: Date;
+
+  @ApiProperty({ example: 'This offer is valid for a limited time only.', description: 'The terms and conditions of the deal' })
   @IsString()
-  @IsOptional()
-  terms?: string;
+  @IsNotEmpty()
+  termsAndConditions: string;
 }
