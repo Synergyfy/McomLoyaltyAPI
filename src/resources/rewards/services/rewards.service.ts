@@ -40,6 +40,8 @@ export class RewardsService {
     return this.rewardRepository.save(reward);
   }
 
+
+  //TODO: Soft delete
   async deleteReward(id: string): Promise<void> {
     const reward = await this.rewardRepository.findOne({ where: { id } });
     if (!reward) {
