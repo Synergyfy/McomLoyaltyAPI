@@ -107,4 +107,20 @@ export class CreateCampaignDto {
   @IsEnum(RewardType)
   @IsOptional()
   reward_type: RewardType;
+
+  @ApiProperty({
+    description: 'The threshold for regular points.',
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  regular_points_threshold?: number;
+
+  @ApiProperty({
+    description: 'The threshold for matching points.',
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  matching_points_threshold?: number;
 }

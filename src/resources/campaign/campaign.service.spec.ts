@@ -109,6 +109,8 @@ describe('CampaignService', () => {
         background_color: '#ffffff',
         reward_ids: ['reward-id'],
         reward_type: 'regular' as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
       };
 
       const currentUser = {
@@ -147,6 +149,8 @@ describe('CampaignService', () => {
         background_color: '#ffffff',
         reward_ids: ['reward-id'],
         reward_type: 'regular' as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
       };
 
       const currentUser = {

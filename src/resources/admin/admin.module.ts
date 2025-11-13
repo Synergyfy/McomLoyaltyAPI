@@ -9,10 +9,11 @@ import { HashModule } from '../../common/hash/hash.module';
 import { MatchingPointsService } from '../participant-campaign-balance/services/matching-points.service';
 import { Participant } from '../participant/entities/participant.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
+import { Campaign } from '../campaign/entities/campaign.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin, Participant, PointHistory]),
+    TypeOrmModule.forFeature([Admin, Participant, PointHistory, Campaign]),
     BusinessModule,
     StaffModule,
     HashModule,
