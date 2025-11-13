@@ -31,6 +31,7 @@ export class PointEarningService {
     points: number,
   ): Promise<ParticipantCampaignBalance> {
     return await this.dataSource.transaction(async (manager) => {
+      let participantCampaignBalance: ParticipantCampaignBalance;
       const staff = await manager.findOne(Staff, { where: { id: staffId }, relations: ['business'] });
       if (!staff) {
         throw new NotFoundException('Staff not found');
@@ -49,7 +50,7 @@ export class PointEarningService {
       if (campaign.reward_type === 'matching') {
         participant.matching_points += points;
       } else {
-        let participantCampaignBalance = await manager.findOne(
+        participantCampaignBalance = await manager.findOne(
           ParticipantCampaignBalance,
           {
             where: {
