@@ -15,6 +15,7 @@ import { Type } from 'class-transformer';
 import {
   CampaignType,
   AudienceType,
+  RewardType,
 } from '../entities/campaign.entity';
 
 export class CreateCampaignDto {
@@ -98,4 +99,12 @@ export class CreateCampaignDto {
   @IsUUID('all', { each: true })
   reward_ids: string[];
 
+  @ApiProperty({
+    description: 'The type of reward for the campaign.',
+    enum: RewardType,
+    default: RewardType.REGULAR,
+  })
+  @IsEnum(RewardType)
+  @IsOptional()
+  reward_type: RewardType;
 }

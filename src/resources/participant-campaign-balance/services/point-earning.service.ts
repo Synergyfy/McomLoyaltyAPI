@@ -46,20 +46,32 @@ export class PointEarningService {
         throw new NotFoundException('Campaign not found');
       }
 
-      let participantCampaignBalance = await manager.findOne(ParticipantCampaignBalance, {
-        where: { participant: { id: participantId }, campaign: { id: campaignId } },
-      });
+      if (campaign.reward_type === 'matching') {
+        participant.matching_points += points;
+      } else {
+        let participantCampaignBalance = await manager.findOne(
+          ParticipantCampaignBalance,
+          {
+            where: {
+              participant: { id: participantId },
+              campaign: { id: campaignId },
+            },
+          },
+        );
 
-      if (!participantCampaignBalance) {
-        participantCampaignBalance = this.participantCampaignBalanceRepository.create({
-          participant,
-          campaign,
-          campaign_balance: 0,
-        });
+        if (!participantCampaignBalance) {
+          participantCampaignBalance =
+            this.participantCampaignBalanceRepository.create({
+              participant,
+              campaign,
+              campaign_balance: 0,
+            });
+        }
+        participantCampaignBalance.campaign_balance += points;
+        participant.global_total_points += points;
+        await manager.save(participantCampaignBalance);
       }
 
-      participantCampaignBalance.campaign_balance += points;
-      participant.global_total_points += points;
       campaign.total_points_earned += points;
 
       const pointHistory = this.pointHistoryRepository.create({
@@ -71,7 +83,9 @@ export class PointEarningService {
         business: staff.business,
       });
 
-      await manager.save(participantCampaignBalance);
+      if (campaign.reward_type !== 'matching') {
+        await manager.save(participantCampaignBalance);
+      }
       await manager.save(participant);
       await manager.save(campaign);
       await manager.save(pointHistory);

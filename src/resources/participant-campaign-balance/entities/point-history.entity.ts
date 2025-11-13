@@ -9,6 +9,7 @@ import { Reward } from '../../rewards/entities/reward.entity';
 export enum PointHistoryType {
   EARN = 'EARN',
   REDEEM = 'REDEEM',
+  MATCHING = 'MATCHING',
 }
 
 @Entity('point_histories')
@@ -41,4 +42,7 @@ export class PointHistory extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   redemption_code: string;
+
+  @Column({ nullable: true })
+  description: string;
 }

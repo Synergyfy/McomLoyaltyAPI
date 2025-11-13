@@ -108,6 +108,7 @@ describe('CampaignService', () => {
         text_color: '#000000',
         background_color: '#ffffff',
         reward_ids: ['reward-id'],
+        reward_type: 'regular' as any,
       };
 
       const currentUser = {
@@ -145,6 +146,7 @@ describe('CampaignService', () => {
         text_color: '#000000',
         background_color: '#ffffff',
         reward_ids: ['reward-id'],
+        reward_type: 'regular' as any,
       };
 
       const currentUser = {
