@@ -1,0 +1,40 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Admin } from '../resources/admin/entities/admin.entity';
+import { Business } from '../resources/business/entities/business.entity';
+import { Campaign } from '../resources/campaign/entities/campaign.entity';
+import { Category } from '../resources/category/entities/category.entity';
+import { Deal } from '../resources/deal/entities/deal.entity';
+import { Otp } from '../resources/otp/entities/otp.entity';
+import { Participant } from '../resources/participant/entities/participant.entity';
+import { ParticipantCampaignBalance } from '../resources/participant-campaign-balance/entities/participant-campaign-balance.entity';
+import { PointHistory } from '../resources/participant-campaign-balance/entities/point-history.entity';
+import { Referral } from '../resources/referral/entities/referral.entity';
+import { Reward } from '../resources/rewards/entities/reward.entity';
+import { Sector } from '../resources/sector/entities/sector.entity';
+import { Staff } from '../resources/staff/entities/staff.entity';
+import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
+import { SeederService } from './seeder.service';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      Admin,
+      Business,
+      Campaign,
+      Category,
+      Deal,
+      Otp,
+      Participant,
+      ParticipantCampaignBalance,
+      PointHistory,
+      Referral,
+      Reward,
+      Sector,
+      Staff,
+      SubCategory,
+    ]),
+  ],
+  providers: [SeederService],
+})
+export class SeederModule {}

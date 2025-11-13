@@ -9,7 +9,7 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { Role } from '../../common/role.enum';
 import { Admin } from '../admin/entities/admin.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { PointHistory } from '../point/entities/point-history.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 
 describe('CampaignService', () => {
@@ -108,6 +108,9 @@ describe('CampaignService', () => {
         text_color: '#000000',
         background_color: '#ffffff',
         reward_ids: ['reward-id'],
+        reward_type: 'regular' as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
       };
 
       const currentUser = {
@@ -145,6 +148,9 @@ describe('CampaignService', () => {
         text_color: '#000000',
         background_color: '#ffffff',
         reward_ids: ['reward-id'],
+        reward_type: 'regular' as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
       };
 
       const currentUser = {

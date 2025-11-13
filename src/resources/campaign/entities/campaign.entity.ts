@@ -27,6 +27,12 @@ export enum AudienceType {
   TARGET_WISHLIST = 'target_wishlist',
 }
 
+export enum RewardType {
+  REGULAR = 'regular',
+  MATCHING = 'matching',
+  BOTH = 'both',
+}
+
 @Entity('campaigns')
 export class Campaign extends AbstractBaseEntity {
   @Column()
@@ -102,4 +108,23 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ default: 0 })
   total_points_redeemed: number;
+
+  @Column({
+    type: 'enum',
+    enum: RewardType,
+    default: RewardType.REGULAR,
+  })
+  reward_type: RewardType;
+
+  @Column({ type: 'int', nullable: true })
+  regular_points_threshold: number;
+
+  @Column({ type: 'int', nullable: true })
+  matching_points_threshold: number;
+
+  @Column({ default: 0 })
+  total_matching_points_earned: number;
+
+  @Column({ default: false })
+  matching_points_disabled_by_admin: boolean;
 }
