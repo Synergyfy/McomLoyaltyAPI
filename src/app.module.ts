@@ -27,9 +27,11 @@ import { OtpModule } from './resources/otp/otp.module';
 import { DealModule } from './resources/deal/deal.module';
 import { ParticipantCampaignBalanceModule } from './resources/participant-campaign-balance/participant-campaign-balance.module';
 import { AnalyticsModule } from './resources/analytics/analytics.module';
+import { SeederModule } from './seeder/seeder.module';
 
 @Module({
   imports: [
+    SeederModule,
     MailModule,
     BusinessModule,
     SectorModule,
