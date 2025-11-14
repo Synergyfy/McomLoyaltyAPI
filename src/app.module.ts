@@ -6,7 +6,6 @@ import { AppService } from './app.service';
 import dataSource from './database/data-source';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
-import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ConfigModule } from '@nestjs/config';
 import commissionConfig from './config/commission.config';
 import { BusinessModule } from './resources/business/business.module';
@@ -33,9 +32,25 @@ import { CouponModule } from './resources/coupon/coupon.module';
 import { MembershipModule } from './resources/membership/membership.module';
 import { PaymentHistoryModule } from './resources/payment-history/payment-history.module';
 import { PaymentModule } from './resources/payment/payment.module';
+import { RequestLogModule } from './resources/request-log/request-log.module';
+import { LoggingModule } from './middleware/logging.module';
+import { LoggingMiddleware } from './middleware/logging.middleware';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { IpBlockModule } from './resources/ip-block/ip-block.module';
+import { IpBlockMiddlewareModule } from './middleware/ip-block.module';
+import { IpBlockMiddleware } from './middleware/ip-block.middleware';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60,
+        limit: 20,
+      },
+    ]),
+    LoggingModule,
+    IpBlockMiddlewareModule,
     SeederModule,
     MailModule,
     BusinessModule,
@@ -68,6 +83,8 @@ import { PaymentModule } from './resources/payment/payment.module';
     MembershipModule,
     PaymentHistoryModule,
     PaymentModule,
+    RequestLogModule,
+    IpBlockModule,
   ],
   controllers: [AppController],
   providers: [
@@ -84,10 +101,14 @@ import { PaymentModule } from './resources/payment/payment.module';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggingMiddleware).forRoutes('*');
+    consumer.apply(IpBlockMiddleware, LoggingMiddleware).forRoutes('*');
   }
 }
