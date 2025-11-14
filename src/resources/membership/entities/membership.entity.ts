@@ -1,0 +1,38 @@
+import { Entity, Column, ManyToOne } from 'typeorm';
+import { AbstractBaseEntity } from '../../../database/entities/base.entity';
+import { Tier } from '../../tier/entities/tier.entity';
+
+export enum MembershipStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  EXPIRED = 'expired',
+}
+
+export enum PlanType {
+  MONTHLY = 'monthly',
+  ANNUAL = 'annual',
+}
+
+@Entity()
+export class Membership extends AbstractBaseEntity {
+  @Column()
+  user_id: string;
+
+  @Column()
+  user_type: string;
+
+  @ManyToOne(() => Tier, { eager: true })
+  tier: Tier;
+
+  @Column({ type: 'enum', enum: MembershipStatus, default: MembershipStatus.INACTIVE })
+  status: MembershipStatus;
+
+  @Column({ type: 'enum', enum: PlanType })
+  plan_type: PlanType;
+
+  @Column()
+  starts_at: Date;
+
+  @Column()
+  expires_at: Date;
+}
