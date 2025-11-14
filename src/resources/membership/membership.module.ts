@@ -3,10 +3,10 @@ import { MembershipService } from './membership.service';
 import { MembershipController } from './membership.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Membership } from './entities/membership.entity';
-import { PaymentHistoryModule } from '../payment-history/payment-history.module';
+import { PaymentHistory } from '../payment-history/entities/payment-history.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Membership]), PaymentHistoryModule],
+  imports: [TypeOrmModule.forFeature([Membership, PaymentHistory])],
   controllers: [MembershipController],
   providers: [MembershipService],
 })
