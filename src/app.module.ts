@@ -36,7 +36,6 @@ import { RequestLogModule } from './resources/request-log/request-log.module';
 import { LoggingModule } from './middleware/logging.module';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
 import { IpBlockModule } from './resources/ip-block/ip-block.module';
 import { IpBlockMiddlewareModule } from './middleware/ip-block.module';
 import { IpBlockMiddleware } from './middleware/ip-block.middleware';
