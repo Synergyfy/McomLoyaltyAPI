@@ -1,6 +1,6 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateSectorDto {
   @ApiProperty({
@@ -16,8 +16,5 @@ export class CreateSectorDto {
     example: 'https://example.com/fashion.png',
     required: false,
   })
-  // @IsString()
-  @IsUrl()
-  @IsOptional()
   imageUrl?: string;
 }
