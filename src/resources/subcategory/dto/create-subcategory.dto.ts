@@ -1,6 +1,6 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl } from 'class-validator';
 
 export class CreateSubcategoryDto {
   @ApiProperty({
@@ -24,5 +24,6 @@ export class CreateSubcategoryDto {
     example: 'https://example.com/t-shirts.png',
     required: false,
   })
+  @IsUrl()
   imageUrl?: string;
 }
