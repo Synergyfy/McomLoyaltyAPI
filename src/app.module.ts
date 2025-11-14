@@ -27,9 +27,16 @@ import { OtpModule } from './resources/otp/otp.module';
 import { DealModule } from './resources/deal/deal.module';
 import { ParticipantCampaignBalanceModule } from './resources/participant-campaign-balance/participant-campaign-balance.module';
 import { AnalyticsModule } from './resources/analytics/analytics.module';
+import { SeederModule } from './seeder/seeder.module';
+import { TierModule } from './resources/tier/tier.module';
+import { CouponModule } from './resources/coupon/coupon.module';
+import { MembershipModule } from './resources/membership/membership.module';
+import { PaymentHistoryModule } from './resources/payment-history/payment-history.module';
+import { PaymentModule } from './resources/payment/payment.module';
 
 @Module({
   imports: [
+    SeederModule,
     MailModule,
     BusinessModule,
     SectorModule,
@@ -56,6 +63,11 @@ import { AnalyticsModule } from './resources/analytics/analytics.module';
     DealModule,
     ParticipantCampaignBalanceModule,
     AnalyticsModule,
+    TierModule,
+    CouponModule,
+    MembershipModule,
+    PaymentHistoryModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [

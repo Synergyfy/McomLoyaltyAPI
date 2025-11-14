@@ -5,7 +5,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Campaign } from './entities/campaign.entity';
 import { Business } from '../business/entities/business.entity';
 import { Reward } from '../rewards/entities/reward.entity';
-import { PointHistory } from '../point/entities/point-history.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';

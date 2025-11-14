@@ -1,4 +1,8 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
@@ -6,12 +10,15 @@ import { BusinessService } from '../../business/services/business.service';
 import { StaffService } from '../../staff/services/staff.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { HashService } from '../../../common/hash/hash.service';
+import { Campaign } from 'src/resources/campaign/entities/campaign.entity';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
+    @InjectRepository(Campaign)
+    private readonly campaignRepository: Repository<Campaign>,
     private readonly businessService: BusinessService,
     private readonly staffService: StaffService,
     private readonly hashService: HashService,
@@ -23,7 +30,9 @@ export class AdminService {
       throw new ConflictException('Email already exists');
     }
 
-    const hashedPassword = await this.hashService.hashPassword(createAdminDto.password);
+    const hashedPassword = await this.hashService.hashPassword(
+      createAdminDto.password,
+    );
     const { confirmPassword, ...adminData } = createAdminDto;
     const admin = this.adminRepository.create({
       ...adminData,
@@ -42,5 +51,17 @@ export class AdminService {
 
   async getStaffs(businessId: string, page: number, limit: number) {
     return this.staffService.findAll(businessId, page, limit);
+  }
+
+  async toggleMatchingPoints(campaignId: string): Promise<Campaign> {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id: campaignId },
+    });
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+    campaign.matching_points_disabled_by_admin =
+      !campaign.matching_points_disabled_by_admin;
+    return this.campaignRepository.save(campaign);
   }
 }

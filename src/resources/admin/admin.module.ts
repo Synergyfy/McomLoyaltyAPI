@@ -6,15 +6,19 @@ import { AdminController } from './controllers/admin.controller';
 import { BusinessModule } from '../business/business.module';
 import { StaffModule } from '../staff/staff.module';
 import { HashModule } from '../../common/hash/hash.module';
+import { MatchingPointsService } from '../participant-campaign-balance/services/matching-points.service';
+import { Participant } from '../participant/entities/participant.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
+import { Campaign } from '../campaign/entities/campaign.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin]),
+    TypeOrmModule.forFeature([Admin, Participant, PointHistory, Campaign]),
     BusinessModule,
     StaffModule,
     HashModule,
   ],
-  providers: [AdminService],
+  providers: [AdminService, MatchingPointsService],
   controllers: [AdminController],
   exports: [AdminService],
 })

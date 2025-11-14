@@ -28,7 +28,9 @@ export class ParticipantCampaignBalanceService {
     });
 
     return {
-      global_total_points: participant.global_total_points,
+      global_total_points:
+        participant.global_total_points + participant.matching_points,
+      matching_points: participant.matching_points,
       campaign_balances: campaignBalances.map((balance) => ({
         campaign_id: balance.campaign.id,
         campaign_name: balance.campaign.name,
