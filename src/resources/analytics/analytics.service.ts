@@ -127,7 +127,7 @@ export class AnalyticsService {
     const earnedPoints = await this.pointHistoryRepository
       .createQueryBuilder('ph')
       .select("DATE(ph.created_at) as date, SUM(ph.points) as points")
-      .where('ph.campaignId IN (:...campaignIds)', { campaignIds })
+      .where('ph.campaign_id IN (:...campaignIds)', { campaignIds })
       .andWhere('ph.type = :type', { type: PointHistoryType.EARN })
       .andWhere('ph.created_at >= :startDate', { startDate })
       .groupBy('DATE(ph.created_at)')
@@ -137,7 +137,7 @@ export class AnalyticsService {
     const redeemedPoints = await this.pointHistoryRepository
       .createQueryBuilder('ph')
       .select("DATE(ph.created_at) as date, SUM(ph.points) as points")
-      .where('ph.campaignId IN (:...campaignIds)', { campaignIds })
+      .where('ph.campaign_id IN (:...campaignIds)', { campaignIds })
       .andWhere('ph.type = :type', { type: PointHistoryType.REDEEM })
       .andWhere('ph.created_at >= :startDate', { startDate })
       .groupBy('DATE(ph.created_at)')
