@@ -6,6 +6,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -51,5 +52,27 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Public()
+  @Post('refresh-token')
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The token has been successfully refreshed.',
+    schema: {
+      example: {
+        user: {
+          name: 'John Doe',
+          role: 'Admin',
+        },
+        access_token: 'your_new_access_token',
+        refresh_token: 'your_new_refresh_token',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 }

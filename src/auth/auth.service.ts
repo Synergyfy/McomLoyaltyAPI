@@ -82,4 +82,17 @@ export class AuthService {
 
     return { message: 'Password reset successfully' };
   }
+
+  async refreshToken(token: string) {
+    try {
+      const payload = this.jwtService.verify(token);
+      const user = await this.userService.findOne(payload.username);
+      if (!user) {
+        throw new UnauthorizedException('Invalid token');
+      }
+      return this.login(user);
+    } catch (e) {
+      throw new UnauthorizedException('Invalid token');
+    }
+  }
 }
