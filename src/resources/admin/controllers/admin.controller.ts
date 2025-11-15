@@ -25,9 +25,13 @@ import { AwardMatchingPointsDto } from '../dto/award-matching-points.dto';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ToggleMatchingPointsDto } from '../dto/toggle-matching-points.dto';
 import { Campaign } from 'src/resources/campaign/entities/campaign.entity';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 
 @ApiTags('admin')
 @Controller('admin')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Admin)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
