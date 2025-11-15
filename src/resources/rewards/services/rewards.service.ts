@@ -102,6 +102,17 @@ export class RewardsService {
     return this.businessRewardRepository.save(businessReward);
   }
 
+  async getBusinessRewards(businessId: string, page: number, limit: number): Promise<{ data: BusinessReward[], total: number }> {
+    const [data, total] = await this.businessRewardRepository.findAndCount({
+      where: { business: { id: businessId } },
+      relations: ['reward'],
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
+
   async removeRewardFromBusiness(rewardId: string, businessId: string): Promise<void> {
     await this.businessRewardRepository.delete({
       reward: { id: rewardId },

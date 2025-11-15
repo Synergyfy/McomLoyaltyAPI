@@ -78,6 +78,15 @@ export class RewardsController {
     return this.rewardsService.getRewards(page, limit);
   }
 
+  @ApiOperation({ summary: 'Business: Get all rewards added to a business' })
+  @ApiResponse({ status: 200, description: 'Return all rewards for the business.' })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Get('business/my-added-rewards')
+  async getMyBusinessRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+    return this.rewardsService.getBusinessRewards(user.id, page, limit);
+  }
+
   @ApiOperation({ summary: 'Business: Add a reward to business' })
   @ApiResponse({ status: 201, description: 'The reward has been successfully added to the business.' })
   @Roles(Role.Business)
