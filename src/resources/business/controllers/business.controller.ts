@@ -1,4 +1,4 @@
-import { Controller, Post, Body, ValidationPipe, Get, Patch, Delete, Request } from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, Get, Patch, Delete, Request, UseGuards } from '@nestjs/common';
 import { BusinessService } from '../services/business.service';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
@@ -7,9 +7,12 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nes
 import { Public } from '../../../common/decorators/public.decorator';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 
 @ApiTags('Business Lifecycle')
 @Controller('business')
+@UseGuards(RolesGuard)
+@ApiBearerAuth()
 export class BusinessController {
   constructor(private readonly businessService: BusinessService) {}
 
