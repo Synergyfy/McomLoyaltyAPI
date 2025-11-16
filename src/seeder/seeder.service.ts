@@ -95,7 +95,7 @@ export class SeederService {
 
     // Seed businesses
     const businesses = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 100; i++) {
       businesses.push({
         name: `Business ${i + 1}`,
         email: `business${i + 1}@example.com`,
@@ -109,7 +109,7 @@ export class SeederService {
 
     // Seed participants
     const participants = [];
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 500; i++) {
       participants.push({
         name: `Participant ${i + 1}`,
         email: `participant${i + 1}@example.com`,
@@ -123,7 +123,7 @@ export class SeederService {
 
     // Seed rewards
     const rewards = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 200; i++) {
       rewards.push({
         title: `Reward ${i + 1}`,
         description: `Description for reward ${i + 1}`,
@@ -136,7 +136,7 @@ export class SeederService {
 
     // Seed campaigns
     const campaigns = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 150; i++) {
       campaigns.push({
         name: `Campaign ${i + 1}`,
         campaign_type: CampaignType.QR_CODE,
@@ -159,7 +159,7 @@ export class SeederService {
 
     // Seed deals
     const deals = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 300; i++) {
       deals.push({
         title: `Deal ${i + 1}`,
         description: `Description for deal ${i + 1}`,
