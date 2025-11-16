@@ -36,6 +36,21 @@ export class RewardsService {
     return { data, total };
   }
 
+  async getMyAddedRewards(
+    businessId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: BusinessReward[]; total: number }> {
+    const [data, total] = await this.businessRewardRepository.findAndCount({
+      where: { business: { id: businessId } },
+      relations: ['reward'],
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
+  }
+
   async updateReward(id: string, updateRewardDto: UpdateRewardDto): Promise<Reward> {
     const reward = await this.rewardRepository.findOne({ where: { id } });
     if (!reward) {

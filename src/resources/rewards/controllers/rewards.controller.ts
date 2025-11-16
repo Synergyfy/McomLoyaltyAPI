@@ -94,7 +94,7 @@ export class RewardsController {
   @ApiBearerAuth()
   @Get('business/my-added-rewards')
   async getMyBusinessRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
-    return this.rewardsService.getBusinessRewards(user.id, page, limit);
+    return this.rewardsService.getMyAddedRewards(user.id, page, limit);
   }
 
   @ApiOperation({ summary: 'Business: Add a reward to business' })
