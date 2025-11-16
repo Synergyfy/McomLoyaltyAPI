@@ -132,4 +132,28 @@ export class RewardsService {
       business: { id: businessId },
     });
   }
+
+  async getUnaddedAdminRewards(
+    businessId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: Reward[]; total: number }> {
+    const addedRewardIdsQuery = this.businessRewardRepository
+      .createQueryBuilder('businessReward')
+      .select('businessReward.reward.id')
+      .where('businessReward.business.id = :businessId', { businessId });
+
+    const query = this.rewardRepository
+      .createQueryBuilder('reward')
+      .where('reward.business IS NULL')
+      .andWhere(`reward.id NOT IN (${addedRewardIdsQuery.getQuery()})`)
+      .setParameters(addedRewardIdsQuery.getParameters())
+      .orderBy('reward.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await query.getManyAndCount();
+
+    return { data, total };
+  }
 }

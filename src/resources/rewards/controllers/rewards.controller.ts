@@ -118,4 +118,17 @@ export class RewardsController {
   async removeRewardFromBusiness(@Param('rewardId') rewardId: string, @CurrentUser() user: any) {
     return this.rewardsService.removeRewardFromBusiness(rewardId, user.id);
   }
+
+  @ApiOperation({ summary: 'Business: Get all unadded admin rewards' })
+  @ApiResponse({ status: 200, description: 'Return all unadded admin rewards.' })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Get('business/unadded-rewards')
+  async getUnaddedAdminRewards(
+    @CurrentUser() user: any,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.rewardsService.getUnaddedAdminRewards(user.id, page, limit);
+  }
 }
