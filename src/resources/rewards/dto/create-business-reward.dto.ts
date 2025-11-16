@@ -9,4 +9,11 @@ export class CreateBusinessRewardDto {
   @IsNumber()
   @IsOptional()
   quantity?: number;
+
+  @ApiProperty({
+    description: 'The points required to redeem the reward',
+    example: 1000,
+  })
+  @IsNumber()
+  point_required: number;
 }
