@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-
+import { Business } from '../../business/entities/business.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity()
@@ -29,4 +29,8 @@ export class Reward extends AbstractBaseEntity {
   })
   @Column({ default: false })
   disabled: boolean;
+
+  @ManyToOne(() => Business, { nullable: true })
+  @JoinColumn({ name: 'business_id' })
+  business: Business;
 }

@@ -22,8 +22,13 @@ export class RewardsService {
     return this.rewardRepository.save(reward);
   }
 
-  async getRewards(page: number, limit: number): Promise<{ data: Reward[], total: number }> {
+  async getRewards(page: number, limit: number, businessId?: string): Promise<{ data: Reward[], total: number }> {
+    const where: any = {};
+    if (businessId) {
+      where.business = { id: businessId };
+    }
     const [data, total] = await this.rewardRepository.findAndCount({
+      where,
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -73,6 +78,15 @@ export class RewardsService {
   }
 
   // Business methods
+  async createBusinessReward(createRewardDto: CreateRewardDto, businessId: string): Promise<Reward> {
+    const { business_id, ...rewardData } = createRewardDto;
+    const reward = this.rewardRepository.create({
+      ...rewardData,
+      business: { id: businessId },
+    });
+    return this.rewardRepository.save(reward);
+  }
+
   async addRewardToBusiness(rewardId: string, businessId: string, createBusinessRewardDto: CreateBusinessRewardDto): Promise<BusinessReward> {
     const reward = await this.rewardRepository.findOne({ where: { id: rewardId } });
     if (!reward) {
@@ -102,10 +116,9 @@ export class RewardsService {
     return this.businessRewardRepository.save(businessReward);
   }
 
-  async getBusinessRewards(businessId: string, page: number, limit: number): Promise<{ data: BusinessReward[], total: number }> {
-    const [data, total] = await this.businessRewardRepository.findAndCount({
+  async getBusinessRewards(businessId: string, page: number, limit: number): Promise<{ data: Reward[], total: number }> {
+    const [data, total] = await this.rewardRepository.findAndCount({
       where: { business: { id: businessId } },
-      relations: ['reward'],
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

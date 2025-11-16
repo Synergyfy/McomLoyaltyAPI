@@ -25,11 +25,12 @@ export class RewardsController {
 
   @ApiOperation({ summary: 'Admin: Get all rewards' })
   @ApiResponse({ status: 200, description: 'Return all rewards.' })
-  @Roles(Role.Admin)
+  @Roles(Role.Admin, Role.Business)
   @ApiBearerAuth()
   @Get('admin/rewards')
-  async getRewards(@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
-    return this.rewardsService.getRewards(page, limit);
+  async getRewards(@Query('page') page: number = 1, @Query('limit') limit: number = 10, @CurrentUser() user: any) {
+    const businessId = user.role === Role.Business ? user.id : undefined;
+    return this.rewardsService.getRewards(page, limit, businessId);
   }
 
   @ApiOperation({ summary: 'Admin: Update a reward' })
@@ -69,13 +70,22 @@ export class RewardsController {
   }
 
   // Business endpoints
+  @ApiOperation({ summary: 'Business: Create a new reward' })
+  @ApiResponse({ status: 201, description: 'The reward has been successfully created.' })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Post('business/rewards')
+  async createBusinessReward(@Body() createRewardDto: CreateRewardDto, @CurrentUser() user: any) {
+    return this.rewardsService.createBusinessReward(createRewardDto, user.id);
+  }
+
   @ApiOperation({ summary: 'Business: Get all rewards' })
   @ApiResponse({ status: 200, description: 'Return all rewards.' })
   @Roles(Role.Business)
   @ApiBearerAuth()
   @Get('business/rewards')
-  async getBusinessRewards(@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
-    return this.rewardsService.getRewards(page, limit);
+  async getBusinessRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+    return this.rewardsService.getBusinessRewards(user.id, page, limit);
   }
 
   @ApiOperation({ summary: 'Business: Get all rewards added to a business' })

@@ -52,4 +52,12 @@ export class CreateRewardDto {
   @IsBoolean()
   @IsOptional()
   disabled?: boolean;
+
+  @ApiProperty({
+    description: 'The ID of the business that owns the reward',
+    example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+  })
+  @IsString()
+  @IsOptional()
+  business_id?: string;
 }
