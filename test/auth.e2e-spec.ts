@@ -4,12 +4,13 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Admin } from '../src/resources/admin/entities/admin.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { IsPasswordMatchingConstraint } from '../src/common/decorators/validation/is-password-matching.decorator';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let adminRepository: Repository<Admin>;
+  let dataSource: DataSource;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -21,6 +22,7 @@ describe('AuthController (e2e)', () => {
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
     );
+    dataSource = moduleFixture.get<DataSource>(DataSource);
     adminRepository = moduleFixture.get<Repository<Admin>>(
       getRepositoryToken(Admin),
     );
@@ -28,7 +30,13 @@ describe('AuthController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await adminRepository.delete({});
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      await queryRunner.query('TRUNCATE TABLE "admins" RESTART IDENTITY CASCADE');
+    } finally {
+      await queryRunner.release();
+    }
     await app.close();
   });
 
