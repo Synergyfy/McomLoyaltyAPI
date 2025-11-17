@@ -10,6 +10,7 @@ import { Participant } from '../resources/participant/entities/participant.entit
 import { ParticipantCampaignBalance } from '../resources/participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PointHistory } from '../resources/participant-campaign-balance/entities/point-history.entity';
 import { Referral } from '../resources/referral/entities/referral.entity';
+import { BusinessReward } from '../resources/rewards/entities/business-reward.entity';
 import { Reward } from '../resources/rewards/entities/reward.entity';
 import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
@@ -30,6 +31,7 @@ import { SeederService } from './seeder.service';
       PointHistory,
       Referral,
       Reward,
+      BusinessReward,
       Sector,
       Staff,
       SubCategory,
