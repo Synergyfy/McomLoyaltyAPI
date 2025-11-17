@@ -89,12 +89,12 @@ export class AdminAnalyticsService {
    * @returns A promise that resolves to a list of the top 10 rewards.
    */
   async getTopRewards(): Promise<TopRewardDto[]> {
-    const topRewards = await this.rewardRepository
-      .createQueryBuilder('reward')
+    const topRewards = await this.pointHistoryRepository
+      .createQueryBuilder('ph')
       .select('reward.id', 'id')
       .addSelect('reward.title', 'name')
       .addSelect('COUNT(ph.id)', 'totalRedemptions')
-      .innerJoin('reward.pointHistories', 'ph')
+      .innerJoin('ph.reward', 'reward')
       .where('ph.type = :type', { type: PointHistoryType.REDEEM })
       .groupBy('reward.id, reward.title')
       .orderBy('"totalRedemptions"', 'DESC')
