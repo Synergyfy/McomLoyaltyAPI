@@ -5,6 +5,10 @@ import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/role.enum';
+import { SubscribeDto } from './dto/subscribe.dto';
+import { Business } from '../business/entities/business.entity';
 
 @ApiTags('Payment')
 @Controller('payment')
@@ -47,5 +51,13 @@ export class PaymentController {
   @ApiResponse({ status: 201, description: 'The payment has been successfully verified.', schema: { example: { status: 'COMPLETED' } } })
   verifyPaypalPayment(@Body() verifyPaymentDto: VerifyPaymentDto, @CurrentUser() user) {
     return this.paymentService.verifyPaypalPayment(verifyPaymentDto, user);
+  }
+
+  @Post('subscribe')
+  @Roles(Role.Business)
+  @ApiOperation({ summary: 'Subscribe to a tier (Business only)' })
+  @ApiResponse({ status: 201, description: 'Subscription created successfully.' })
+  subscribe(@Body() subscribeDto: SubscribeDto, @CurrentUser() business: Business) {
+    return this.paymentService.subscribe(subscribeDto, business);
   }
 }

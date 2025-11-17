@@ -9,10 +9,11 @@ import { StripeService } from './stripe.service';
 import { PaypalService } from './paypal.service';
 import { ConfigModule } from '@nestjs/config';
 import { CouponModule } from '../coupon/coupon.module';
+import { Business } from '../business/entities/business.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tier, Membership, PaymentHistory]),
+    TypeOrmModule.forFeature([Tier, Membership, PaymentHistory, Business]),
     ConfigModule,
     CouponModule,
   ],

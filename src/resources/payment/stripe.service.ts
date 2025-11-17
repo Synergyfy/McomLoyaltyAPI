@@ -21,4 +21,21 @@ export class StripeService {
   async verifyPayment(paymentIntentId: string) {
     return await this.stripe.paymentIntents.retrieve(paymentIntentId);
   }
+
+  async createCustomer(name: string, email: string, token: string) {
+    return await this.stripe.customers.create({
+      name,
+      email,
+      source: token,
+    });
+  }
+
+  async createCharge(amount: number, currency: string, customerId: string, description: string) {
+    return await this.stripe.charges.create({
+      amount,
+      currency,
+      customer: customerId,
+      description,
+    });
+  }
 }

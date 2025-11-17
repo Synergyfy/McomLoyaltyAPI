@@ -11,6 +11,7 @@ export enum MembershipStatus {
 export enum PlanType {
   MONTHLY = 'monthly',
   ANNUAL = 'annual',
+  QUARTERLY = 'quarterly',
 }
 
 @Entity()
@@ -35,4 +36,7 @@ export class Membership extends AbstractBaseEntity {
 
   @Column()
   expires_at: Date;
+
+  @Column({ default: false })
+  is_trial: boolean;
 }

@@ -8,6 +8,8 @@ import { Role } from '../common/role.enum';
 import { OtpService } from '../resources/otp/otp.service';
 import { MailService } from '../mail/mail.service';
 import { BusinessService } from '../resources/business/services/business.service';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Membership } from '../resources/membership/entities/membership.entity';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -38,6 +40,10 @@ describe('AuthService', () => {
     findById: jest.fn(),
   };
 
+  const mockMembershipRepository = {
+    findOne: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,6 +54,10 @@ describe('AuthService', () => {
         { provide: OtpService, useValue: mockOtpService },
         { provide: MailService, useValue: mockMailService },
         { provide: BusinessService, useValue: mockBusinessService },
+        {
+          provide: getRepositoryToken(Membership),
+          useValue: mockMembershipRepository,
+        },
       ],
     }).compile();
 
@@ -119,12 +129,18 @@ describe('AuthService', () => {
       });
       mockBusinessService.findById.mockResolvedValue({ sector: {} });
 
+      mockMembershipRepository.findOne.mockResolvedValue(null);
+
       const result = await service.login(user);
       expect(result).toEqual({
         user: {
           name: user.name,
           role: user.role,
           isOnboarded: true,
+          subscription: {
+            isActive: false,
+            isTrial: false,
+          },
         },
         access_token: accessToken,
         refresh_token: refreshToken,

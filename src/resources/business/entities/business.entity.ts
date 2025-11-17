@@ -78,4 +78,7 @@ export class Business extends AbstractBaseEntity {
 
   @OneToMany(() => Campaign, (campaign) => campaign.business)
   campaigns: Campaign[];
+
+  @Column({ nullable: true })
+  stripe_customer_id: string;
 }

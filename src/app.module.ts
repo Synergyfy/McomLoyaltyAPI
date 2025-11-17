@@ -33,9 +33,13 @@ import { CouponModule } from './resources/coupon/coupon.module';
 import { MembershipModule } from './resources/membership/membership.module';
 import { PaymentHistoryModule } from './resources/payment-history/payment-history.module';
 import { PaymentModule } from './resources/payment/payment.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
+    TasksModule,
     SeederModule,
     MailModule,
     BusinessModule,

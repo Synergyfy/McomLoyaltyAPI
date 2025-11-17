@@ -12,10 +12,13 @@ import { AuthController } from './auth.controller';
 import { OtpModule } from '../resources/otp/otp.module';
 import { MailModule } from '../mail/mail.module';
 import { BusinessModule } from '../resources/business/business.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Membership } from '../resources/membership/entities/membership.entity';
 
 @Module({
   controllers: [AuthController],
   imports: [
+    TypeOrmModule.forFeature([Membership]),
     UserModule,
     BusinessModule,
     PassportModule,

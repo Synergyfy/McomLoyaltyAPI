@@ -8,6 +8,7 @@ import { StripeService } from './stripe.service';
 import { PaypalService } from './paypal.service';
 import { CouponService } from '../coupon/coupon.service';
 import { Coupon, DiscountType } from '../coupon/entities/coupon.entity';
+import { Business } from '../business/entities/business.entity';
 
 describe('PaymentService', () => {
   let service: PaymentService;
@@ -25,6 +26,10 @@ describe('PaymentService', () => {
   const mockPaymentHistoryRepository = {
     create: jest.fn(),
     save: jest.fn(),
+  };
+
+  const mockBusinessRepository = {
+    update: jest.fn(),
   };
 
   const mockStripeService = {
@@ -57,6 +62,10 @@ describe('PaymentService', () => {
         {
           provide: getRepositoryToken(PaymentHistory),
           useValue: mockPaymentHistoryRepository,
+        },
+        {
+          provide: getRepositoryToken(Business),
+          useValue: mockBusinessRepository,
         },
         {
           provide: StripeService,

@@ -7,6 +7,9 @@ import { MailService } from '../mail/mail.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Role } from '../common/role.enum';
 import { BusinessService } from '../resources/business/services/business.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Membership, MembershipStatus } from '../resources/membership/entities/membership.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +20,8 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly businessService: BusinessService,
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -42,6 +47,14 @@ export class AuthService {
     if (user.role === Role.Business) {
       const business = await this.businessService.findById(user.id, ['sector']);
       response.user.isOnboarded = !!business.sector;
+
+      const membership = await this.membershipRepository.findOne({
+        where: { user_id: user.id, status: MembershipStatus.ACTIVE },
+      });
+      response.user.subscription = {
+        isActive: !!membership,
+        isTrial: membership ? membership.is_trial : false,
+      };
     }
 
     return response;
