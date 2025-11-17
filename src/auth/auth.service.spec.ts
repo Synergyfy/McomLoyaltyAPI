@@ -7,6 +7,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { Role } from '../common/role.enum';
 import { OtpService } from '../resources/otp/otp.service';
 import { MailService } from '../mail/mail.service';
+import { BusinessService } from '../resources/business/services/business.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -33,6 +34,10 @@ describe('AuthService', () => {
     sendOtp: jest.fn(),
   };
 
+  const mockBusinessService = {
+    findById: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -42,6 +47,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: OtpService, useValue: mockOtpService },
         { provide: MailService, useValue: mockMailService },
+        { provide: BusinessService, useValue: mockBusinessService },
       ],
     }).compile();
 
@@ -95,6 +101,30 @@ describe('AuthService', () => {
         user: {
           name: user.name,
           role: user.role,
+        },
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+    });
+
+    it('should return isOnboarded for business users', async () => {
+      const user = { name: 'Test User', email: 'test@test.com', id: 'someId', role: Role.Business };
+      const accessToken = 'someAccessToken';
+      const refreshToken = 'someRefreshToken';
+      mockJwtService.sign.mockImplementation((payload, options) => {
+        if (options?.expiresIn === '7d') {
+          return refreshToken;
+        }
+        return accessToken;
+      });
+      mockBusinessService.findById.mockResolvedValue({ sector: {} });
+
+      const result = await service.login(user);
+      expect(result).toEqual({
+        user: {
+          name: user.name,
+          role: user.role,
+          isOnboarded: true,
         },
         access_token: accessToken,
         refresh_token: refreshToken,

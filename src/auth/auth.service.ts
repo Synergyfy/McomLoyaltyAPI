@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { OtpService } from '../resources/otp/otp.service';
 import { MailService } from '../mail/mail.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Role } from '../common/role.enum';
+import { BusinessService } from '../resources/business/services/business.service';
 
 @Injectable()
 export class AuthService {
@@ -14,11 +16,12 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
+    private readonly businessService: BusinessService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.userService.findOne(email);
-    if (user && await this.hashService.comparePassword(pass, user.password)) {
+    if (user && (await this.hashService.comparePassword(pass, user.password))) {
       const { password, ...result } = user;
       return result;
     }
@@ -27,7 +30,7 @@ export class AuthService {
 
   async login(user: any) {
     const payload = { username: user.email, sub: user.id, role: user.role };
-    return {
+    const response: any = {
       user: {
         name: user.name,
         role: user.role,
@@ -35,6 +38,13 @@ export class AuthService {
       access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
     };
+
+    if (user.role === Role.Business) {
+      const business = await this.businessService.findById(user.id, ['sector']);
+      response.user.isOnboarded = !!business.sector;
+    }
+
+    return response;
   }
 
   async forgotPassword(email: string) {

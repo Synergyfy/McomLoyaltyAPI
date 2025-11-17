@@ -25,6 +25,7 @@ export class AuthController {
         user: {
           name: 'John Doe',
           role: 'Admin',
+          isOnboarded: true,
         },
         access_token: 'your_access_token',
         refresh_token: 'your_refresh_token',
