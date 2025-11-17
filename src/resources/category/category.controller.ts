@@ -9,7 +9,9 @@ import {
   Delete,
   UseGuards,
   ValidationPipe,
+  Query,
 } from '@nestjs/common';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -97,5 +99,22 @@ export class CategoryController {
   @Roles(Role.Admin)
   remove(@Param('id') id: string) {
     return this.categoryService.remove(id);
+  }
+
+  @Public()
+  @Get(':categoryId/subcategories')
+  @ApiOperation({ summary: 'Get all subcategories for a specific category' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all subcategories for a category.',
+  })
+  getSubCategoriesByCategory(
+    @Param('categoryId') categoryId: string,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.categoryService.getSubCategoriesByCategory(
+      categoryId,
+      paginationDto,
+    );
   }
 }

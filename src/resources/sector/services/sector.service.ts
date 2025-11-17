@@ -5,12 +5,16 @@ import { Repository } from 'typeorm';
 import { Sector } from '../entities/sector.entity';
 import { CreateSectorDto } from '../dto/create-sector.dto';
 import { UpdateSectorDto } from '../dto/update-sector.dto';
+import { Category } from 'src/resources/category/entities/category.entity';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class SectorService {
   constructor(
     @InjectRepository(Sector)
     private readonly sectorRepository: Repository<Sector>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
   ) {}
 
   async create(createSectorDto: CreateSectorDto): Promise<Sector> {
@@ -27,7 +31,7 @@ export class SectorService {
   }
 
   findAll(): Promise<Sector[]> {
-    return this.sectorRepository.find({ relations: ['categories'] });
+    return this.sectorRepository.find();
   }
 
   async findOne(id: string): Promise<Sector> {
@@ -50,5 +54,25 @@ export class SectorService {
   async remove(id: string): Promise<void> {
     const sector = await this.findOne(id);
     await this.sectorRepository.remove(sector);
+  }
+
+  async getCategoriesBySector(
+    sectorId: string,
+    paginationDto: PaginationDto,
+  ) {
+    const { page, limit } = paginationDto;
+    const [categories, total] = await this.categoryRepository.findAndCount({
+      where: { sector: { id: sectorId } },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
+
+    return {
+      data: categories,
+      total,
+      page,
+      limit,
+      nextPage: total > page * limit ? page + 1 : null,
+    };
   }
 }

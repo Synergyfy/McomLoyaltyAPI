@@ -9,8 +9,10 @@ import {
   Delete,
   UseGuards,
   ValidationPipe,
+  Query,
 } from '@nestjs/common';
 import { SectorService } from '../services/sector.service';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CreateSectorDto } from '../dto/create-sector.dto';
 import { UpdateSectorDto } from '../dto/update-sector.dto';
 import {
@@ -94,5 +96,16 @@ export class SectorController {
   @Roles(Role.Admin)
   remove(@Param('id') id: string) {
     return this.sectorService.remove(id);
+  }
+
+  @Public()
+  @Get(':sectorId/categories')
+  @ApiOperation({ summary: 'Get all categories for a specific sector' })
+  @ApiResponse({ status: 200, description: 'Return all categories for a sector.' })
+  getCategoriesBySector(
+    @Param('sectorId') sectorId: string,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.sectorService.getCategoriesBySector(sectorId, paginationDto);
   }
 }

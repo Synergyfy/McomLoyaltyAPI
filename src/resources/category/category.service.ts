@@ -6,6 +6,8 @@ import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { SectorService } from '../sector/services/sector.service';
+import { SubCategory } from '../subcategory/entities/subcategory.entity';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class CategoryService {
@@ -13,6 +15,8 @@ export class CategoryService {
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     private readonly sectorService: SectorService,
+    @InjectRepository(SubCategory)
+    private readonly subCategoryRepository: Repository<SubCategory>,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
@@ -25,7 +29,7 @@ export class CategoryService {
   }
 
   findAll(): Promise<Category[]> {
-    return this.categoryRepository.find({ relations: ['subCategories'] });
+    return this.categoryRepository.find();
   }
 
   async findOne(id: string): Promise<Category> {
@@ -55,5 +59,27 @@ export class CategoryService {
   async remove(id: string): Promise<void> {
     const category = await this.findOne(id);
     await this.categoryRepository.remove(category);
+  }
+
+  async getSubCategoriesByCategory(
+    categoryId: string,
+    paginationDto: PaginationDto,
+  ) {
+    const { page, limit } = paginationDto;
+    const [subCategories, total] = await this.subCategoryRepository.findAndCount(
+      {
+        where: { category: { id: categoryId } },
+        take: limit,
+        skip: (page - 1) * limit,
+      },
+    );
+
+    return {
+      data: subCategories,
+      total,
+      page,
+      limit,
+      nextPage: total > page * limit ? page + 1 : null,
+    };
   }
 }
