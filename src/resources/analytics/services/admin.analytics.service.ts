@@ -100,22 +100,27 @@ export class AdminAnalyticsService {
   async getTopRewards(): Promise<TopRewardDto[]> {
     const topRewards = await this.pointHistoryRepository
       .createQueryBuilder('ph')
-      // Join with the reward entity to get reward details.
-      .leftJoin('ph.reward', 'reward')
-      // Select the reward ID and name.
+      // Join with BusinessReward to ensure we are only considering rewards
+      // that are properly configured for a business and campaign.
+      .innerJoin(
+        'BusinessReward',
+        'br',
+        'br.reward = ph.reward AND br.campaign = ph.campaign AND br.business = ph.business',
+      )
+      // Join with the Reward entity to get the reward's details.
+      .innerJoin('br.reward', 'reward')
+      // Select the reward's ID and title (aliased as name for the DTO).
       .select('reward.id', 'id')
       .addSelect('reward.title', 'name')
-      // Count the number of point history records for each reward, which corresponds to the number of redemptions.
+      // Count the number of redemptions for each reward.
       .addSelect('COUNT(ph.id)', 'totalRedemptions')
-      // Filter the history records to only include redemptions.
+      // Filter to only include redemption records.
       .where('ph.type = :type', { type: PointHistoryType.REDEEM })
-      // Ensure we only count records that are linked to a reward.
-      .andWhere('reward.id IS NOT NULL')
-      // Group by reward to count redemptions for each unique reward.
-      .groupBy('reward.id')
-      // Order by the redemption count in descending order.
+      // Group by the reward to aggregate the counts correctly.
+      .groupBy('reward.id, reward.title')
+      // Order by the total redemptions in descending order to find the top performers.
       .orderBy('"totalRedemptions"', 'DESC')
-      // Limit to the top 10 rewards.
+      // Limit the result to the top 10.
       .limit(10)
       .getRawMany();
 
