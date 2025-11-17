@@ -11,11 +11,13 @@ import { UserModule } from '../user/user.module';
 import { AuthController } from './auth.controller';
 import { OtpModule } from '../resources/otp/otp.module';
 import { MailModule } from '../mail/mail.module';
+import { BusinessModule } from '../resources/business/business.module';
 
 @Module({
   controllers: [AuthController],
   imports: [
     UserModule,
+    BusinessModule,
     PassportModule,
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync({
