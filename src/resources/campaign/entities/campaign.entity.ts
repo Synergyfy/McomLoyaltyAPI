@@ -10,6 +10,7 @@ import {
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
+import { BusinessCampaign } from './business-campaign.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
@@ -127,4 +128,7 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ default: false })
   matching_points_disabled_by_admin: boolean;
+
+  @OneToMany(() => BusinessCampaign, (businessCampaign) => businessCampaign.campaign)
+  addedByBusinesses: BusinessCampaign[];
 }

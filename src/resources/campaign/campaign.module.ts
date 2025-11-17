@@ -7,6 +7,9 @@ import { Business } from '../business/entities/business.entity';
 import { Reward } from '../rewards/entities/reward.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { BusinessCampaign } from './entities/business-campaign.entity';
+import { BusinessCampaignController } from './business-campaign.controller';
+import { BusinessCampaignService } from './business-campaign.service';
 
 @Module({
   imports: [
@@ -16,9 +19,10 @@ import { Participant } from '../participant/entities/participant.entity';
       Reward,
       PointHistory,
       Participant,
+      BusinessCampaign,
     ]),
   ],
-  controllers: [CampaignController],
-  providers: [CampaignService],
+  controllers: [CampaignController, BusinessCampaignController],
+  providers: [CampaignService, BusinessCampaignService],
 })
 export class CampaignModule {}
