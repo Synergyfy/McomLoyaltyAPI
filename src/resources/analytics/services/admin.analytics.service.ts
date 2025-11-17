@@ -44,11 +44,20 @@ export class AdminAnalyticsService {
     const totalRedemptions = await this.pointHistoryRepository.count({
       where: { type: PointHistoryType.REDEEM },
     });
+    // Count all businesses in the database.
+    const totalBusiness = await this.businessRepository.count();
+    // Calculate the sum of all referral points from all businesses.
+    const { totalMatchingPoints } = await this.businessRepository
+      .createQueryBuilder('business')
+      .select('SUM(business.referralPoints)', 'totalMatchingPoints')
+      .getRawOne();
 
     return {
       totalCampaigns,
       totalParticipants,
       totalRedemptions,
+      totalBusiness,
+      totalMatchingPoints: parseInt(totalMatchingPoints, 10) || 0,
     };
   }
 

@@ -9,6 +9,18 @@ export class SystemOverviewDto {
 
   @ApiProperty({ example: 520, description: 'Total number of rewards redeemed across all campaigns.' })
   totalRedemptions: number;
+
+  @ApiProperty({
+    example: 50,
+    description: 'Total number of businesses registered.',
+  })
+  totalBusiness: number;
+
+  @ApiProperty({
+    example: 1000,
+    description: 'Total number of matching points given.',
+  })
+  totalMatchingPoints: number;
 }
 
 export class TopBusinessDto {

@@ -35,6 +35,8 @@ export class AdminAnalyticsController {
         totalCampaigns: 150,
         totalParticipants: 85,
         totalRedemptions: 520,
+        totalBusiness: 50,
+        totalMatchingPoints: 1000,
       },
     },
   })
