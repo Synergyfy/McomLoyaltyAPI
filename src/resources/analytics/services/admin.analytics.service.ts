@@ -104,7 +104,7 @@ export class AdminAnalyticsService {
       .leftJoin('ph.reward', 'reward')
       // Select the reward ID and name.
       .select('reward.id', 'id')
-      .addSelect('reward.name', 'name')
+      .addSelect('reward.title', 'name')
       // Count the number of point history records for each reward, which corresponds to the number of redemptions.
       .addSelect('COUNT(ph.id)', 'totalRedemptions')
       // Filter the history records to only include redemptions.
