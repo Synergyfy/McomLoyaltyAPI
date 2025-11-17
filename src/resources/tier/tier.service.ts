@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Tier } from './entities/tier.entity';
 import { CreateTierDto } from './dto/create-tier.dto';
 import { UpdateTierDto } from './dto/update-tier.dto';
-import { TierLog, TierAction } from './entities/tier-log.entity';
+import { TierHistory } from './entities/tier-history.entity';
 import { Admin } from '../admin/entities/admin.entity';
 
 @Injectable()
@@ -12,25 +12,23 @@ export class TierService {
   constructor(
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
-    @InjectRepository(TierLog)
-    private readonly tierLogRepository: Repository<TierLog>,
+    @InjectRepository(TierHistory)
+    private readonly tierHistoryRepository: Repository<TierHistory>,
   ) {}
+
+  private async createHistory(tier: Tier, admin: Admin) {
+    const history = this.tierHistoryRepository.create({
+      ...tier,
+      tier,
+      admin,
+    });
+    await this.tierHistoryRepository.save(history);
+  }
 
   async create(createTierDto: CreateTierDto, admin: Admin) {
     const tier = this.tierRepository.create(createTierDto);
     const savedTier = await this.tierRepository.save(tier);
-
-    await this.tierLogRepository.save(
-      this.tierLogRepository.create({
-        tier: savedTier,
-        admin,
-        action: TierAction.CREATE,
-        details: {
-          after: savedTier,
-        },
-      }),
-    );
-
+    await this.createHistory(savedTier, admin);
     return savedTier;
   }
 
@@ -43,38 +41,15 @@ export class TierService {
   }
 
   async update(id: string, updateTierDto: UpdateTierDto, admin: Admin) {
-    const tierBefore = await this.findOne(id);
     await this.tierRepository.update(id, updateTierDto);
-    const tierAfter = await this.findOne(id);
-
-    await this.tierLogRepository.save(
-      this.tierLogRepository.create({
-        tier: tierAfter,
-        admin,
-        action: TierAction.UPDATE,
-        details: {
-          before: tierBefore,
-          after: tierAfter,
-        },
-      }),
-    );
-
-    return tierAfter;
+    const updatedTier = await this.findOne(id);
+    await this.createHistory(updatedTier, admin);
+    return updatedTier;
   }
 
   async remove(id: string, admin: Admin) {
     const tier = await this.findOne(id);
     await this.tierRepository.softDelete(id);
-
-    await this.tierLogRepository.save(
-      this.tierLogRepository.create({
-        tier,
-        admin,
-        action: TierAction.DELETE,
-        details: {
-          before: tier,
-        },
-      }),
-    );
+    await this.createHistory(tier, admin);
   }
 }

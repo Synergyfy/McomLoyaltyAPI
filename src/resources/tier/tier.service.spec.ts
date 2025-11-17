@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TierService } from './tier.service';
 import { Tier } from './entities/tier.entity';
-import { TierLog } from './entities/tier-log.entity';
+import { TierHistory } from './entities/tier-history.entity';
 
 describe('TierService', () => {
   let service: TierService;
@@ -20,7 +20,7 @@ describe('TierService', () => {
           },
         },
         {
-          provide: getRepositoryToken(TierLog),
+          provide: getRepositoryToken(TierHistory),
           useValue: {
             create: jest.fn(),
             save: jest.fn(),

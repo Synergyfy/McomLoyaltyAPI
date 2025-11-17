@@ -3,10 +3,10 @@ import { TierService } from './tier.service';
 import { TierController } from './tier.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tier } from './entities/tier.entity';
-import { TierLog } from './entities/tier-log.entity';
+import { TierHistory } from './entities/tier-history.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tier, TierLog])],
+  imports: [TypeOrmModule.forFeature([Tier, TierHistory])],
   controllers: [TierController],
   providers: [TierService],
 })
