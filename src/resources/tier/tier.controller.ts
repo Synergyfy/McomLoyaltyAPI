@@ -8,6 +8,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Tier } from './entities/tier.entity';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Admin } from '../admin/entities/admin.entity';
 
 @ApiTags('Tier')
 @Controller('tier')
@@ -21,8 +23,8 @@ export class TierController {
   @ApiOperation({ summary: 'Create a new tier (Admin only)' })
   @ApiResponse({ status: 201, description: 'The tier has been successfully created.', type: Tier })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  create(@Body() createTierDto: CreateTierDto) {
-    return this.tierService.create(createTierDto);
+  create(@Body() createTierDto: CreateTierDto, @CurrentUser() admin: Admin) {
+    return this.tierService.create(createTierDto, admin);
   }
 
   @Get()
@@ -46,8 +48,12 @@ export class TierController {
   @ApiResponse({ status: 200, description: 'The tier has been successfully updated.', type: Tier })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 404, description: 'Tier not found.' })
-  update(@Param('id') id: string, @Body() updateTierDto: UpdateTierDto) {
-    return this.tierService.update(id, updateTierDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateTierDto: UpdateTierDto,
+    @CurrentUser() admin: Admin,
+  ) {
+    return this.tierService.update(id, updateTierDto, admin);
   }
 
   @Delete(':id')
@@ -56,7 +62,7 @@ export class TierController {
   @ApiResponse({ status: 200, description: 'The tier has been successfully deleted.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 404, description: 'Tier not found.' })
-  remove(@Param('id') id: string) {
-    return this.tierService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() admin: Admin) {
+    return this.tierService.remove(id, admin);
   }
 }

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { TierService } from './tier.service';
 import { Tier } from './entities/tier.entity';
+import { TierLog } from './entities/tier-log.entity';
 
 describe('TierService', () => {
   let service: TierService;
@@ -14,6 +15,15 @@ describe('TierService', () => {
           provide: getRepositoryToken(Tier),
           useValue: {
             find: jest.fn().mockResolvedValue([]),
+            create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(TierLog),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
           },
         },
       ],
