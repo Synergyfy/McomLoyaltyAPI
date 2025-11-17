@@ -25,4 +25,13 @@ export class Tier extends AbstractBaseEntity {
     default: TierStatus.DRAFT,
   })
   status: TierStatus;
+
+  @Column({ nullable: true })
+  stripe_monthly_price_id: string;
+
+  @Column({ nullable: true })
+  stripe_quarterly_price_id: string;
+
+  @Column({ nullable: true })
+  stripe_annual_price_id: string;
 }

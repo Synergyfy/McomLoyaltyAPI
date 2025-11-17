@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import Stripe from 'stripe';
 import { Tier } from '../tier/entities/tier.entity';
 import { Membership, MembershipStatus, PlanType } from '../membership/entities/membership.entity';
 import { PaymentHistory } from '../payment-history/entities/payment-history.entity';
@@ -12,6 +13,7 @@ import { PaymentProvider, PaymentStatus } from '../payment-history/entities/paym
 import { CouponService } from '../coupon/coupon.service';
 import { Business } from '../business/entities/business.entity';
 import { SubscribeDto } from './dto/subscribe.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PaymentService {
@@ -27,6 +29,7 @@ export class PaymentService {
     private readonly stripeService: StripeService,
     private readonly paypalService: PaypalService,
     private readonly couponService: CouponService,
+    private readonly configService: ConfigService,
   ) {}
 
   async initiateStripePayment(initiatePaymentDto: InitiatePaymentDto, user: any) {
@@ -121,32 +124,29 @@ export class PaymentService {
       await this.businessRepository.update(business.id, { stripe_customer_id: stripeCustomerId });
     }
 
-    if (subscribeDto.is_trial) {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 14); // 14-day trial
-
-      await this._createOrUpdateMembership(business, tier, subscribeDto.plan_type, 0, null, null, true, expiresAt);
-      return { status: 'Trial started' };
-    } else {
-      const amount = this._calculateAmountForSubscription(tier, subscribeDto.plan_type);
-      const charge = await this.stripeService.createCharge(amount * 100, 'gbp', stripeCustomerId, `Subscription to ${tier.name} (${subscribeDto.plan_type})`);
-
-      if (charge.status === 'succeeded') {
-        const expiresAt = new Date();
-        if (subscribeDto.plan_type === PlanType.ANNUAL) {
-          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-        } else if (subscribeDto.plan_type === PlanType.QUARTERLY) {
-          expiresAt.setMonth(expiresAt.getMonth() + 3);
-        } else {
-          expiresAt.setMonth(expiresAt.getMonth() + 1);
-        }
-
-        await this._createOrUpdateMembership(business, tier, subscribeDto.plan_type, amount, PaymentProvider.STRIPE, charge.id, false, expiresAt);
-        return { status: 'Subscription successful' };
-      } else {
-        throw new BadRequestException('Payment failed');
-      }
+    const priceId = this._getPriceIdForPlan(tier, subscribeDto.plan_type);
+    if (!priceId) {
+      throw new BadRequestException('Invalid plan type for this tier');
     }
+
+    const trialPeriodDays = subscribeDto.is_trial ? 14 : undefined;
+
+    await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
+
+    return { status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful' };
+  }
+
+  private _getPriceIdForPlan(tier: Tier, planType: PlanType): string | null {
+    if (planType === PlanType.MONTHLY) {
+      return tier.stripe_monthly_price_id;
+    }
+    if (planType === PlanType.QUARTERLY) {
+      return tier.stripe_quarterly_price_id;
+    }
+    if (planType === PlanType.ANNUAL) {
+      return tier.stripe_annual_price_id;
+    }
+    return null;
   }
 
   private _calculateAmountForSubscription(tier: Tier, planType: PlanType): number {
@@ -222,6 +222,48 @@ export class PaymentService {
         status: PaymentStatus.SUCCEEDED,
       });
       await this.paymentHistoryRepository.save(paymentHistory);
+    }
+  }
+
+  async handleStripeWebhook(signature: string, rawBody: Buffer) {
+    try {
+      const event = this.stripeService.constructWebhookEvent(
+        rawBody,
+        signature,
+        this.configService.get<string>('STRIPE_WEBHOOK_SECRET'),
+      );
+
+      const invoice: any = event.data.object;
+      const customerId = invoice.customer;
+      const business = await this.businessRepository.findOne({ where: { stripe_customer_id: customerId } });
+
+      if (business) {
+        if (event.type === 'invoice.payment_succeeded') {
+          const subscription: any = await this.stripeService.stripe.subscriptions.retrieve(invoice.subscription);
+          const tier = await this.tierRepository.findOne({ where: { id: subscription.metadata.tier_id } });
+
+          const expiresAt = new Date(subscription.current_period_end * 1000);
+
+          await this._createOrUpdateMembership(
+            business,
+            tier,
+            subscription.metadata.plan_type as PlanType,
+            invoice.amount_paid / 100,
+            PaymentProvider.STRIPE,
+            invoice.payment_intent,
+            false,
+            expiresAt,
+          );
+        } else if (event.type === 'invoice.payment_failed') {
+          const membership = await this.membershipRepository.findOne({ where: { user_id: business.id } });
+          if (membership) {
+            membership.status = MembershipStatus.EXPIRED;
+            await this.membershipRepository.save(membership);
+          }
+        }
+      }
+    } catch (err) {
+      throw new BadRequestException(`Webhook Error: ${err.message}`);
     }
   }
 }

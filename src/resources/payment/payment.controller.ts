@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Headers, Req } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
@@ -9,6 +9,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { Business } from '../business/entities/business.entity';
+import { Public } from '../../common/decorators/public.decorator';
+import { RawBody } from '../../common/decorators/raw-body.decorator';
 
 @ApiTags('Payment')
 @Controller('payment')
@@ -59,5 +61,13 @@ export class PaymentController {
   @ApiResponse({ status: 201, description: 'Subscription created successfully.' })
   subscribe(@Body() subscribeDto: SubscribeDto, @CurrentUser() business: Business) {
     return this.paymentService.subscribe(subscribeDto, business);
+  }
+
+  @Post('stripe-webhook')
+  @Public()
+  @ApiOperation({ summary: 'Stripe webhook endpoint' })
+  @ApiResponse({ status: 200, description: 'Webhook received successfully.' })
+  async stripeWebhook(@Headers('stripe-signature') signature: string, @RawBody() rawBody: Buffer) {
+    return this.paymentService.handleStripeWebhook(signature, rawBody);
   }
 }

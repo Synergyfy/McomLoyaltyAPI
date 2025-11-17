@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 
 @Injectable()
 export class StripeService {
-  private readonly stripe: Stripe;
+  public readonly stripe: Stripe;
 
   constructor(private readonly configService: ConfigService) {
     this.stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY'));
@@ -37,5 +37,17 @@ export class StripeService {
       customer: customerId,
       description,
     });
+  }
+
+  async createSubscription(customerId: string, priceId: string, trialPeriodDays?: number) {
+    return await this.stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      trial_period_days: trialPeriodDays,
+    });
+  }
+
+  constructWebhookEvent(payload: Buffer, signature: string, secret: string) {
+    return this.stripe.webhooks.constructEvent(payload, signature, secret);
   }
 }

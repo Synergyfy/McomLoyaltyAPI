@@ -9,6 +9,7 @@ import { PaypalService } from './paypal.service';
 import { CouponService } from '../coupon/coupon.service';
 import { Coupon, DiscountType } from '../coupon/entities/coupon.entity';
 import { Business } from '../business/entities/business.entity';
+import { ConfigService } from '@nestjs/config';
 
 describe('PaymentService', () => {
   let service: PaymentService;
@@ -35,6 +36,8 @@ describe('PaymentService', () => {
   const mockStripeService = {
     createPaymentIntent: jest.fn(),
     verifyPayment: jest.fn(),
+    createCustomer: jest.fn(),
+    createSubscription: jest.fn(),
   };
 
   const mockPaypalService = {
@@ -45,6 +48,10 @@ describe('PaymentService', () => {
   const mockCouponService = {
     findOne: jest.fn(),
     findByCode: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -78,6 +85,10 @@ describe('PaymentService', () => {
         {
           provide: CouponService,
           useValue: mockCouponService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
