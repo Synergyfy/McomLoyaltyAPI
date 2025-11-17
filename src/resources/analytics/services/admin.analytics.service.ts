@@ -100,34 +100,30 @@ export class AdminAnalyticsService {
   async getTopRewards(): Promise<TopRewardDto[]> {
     const topRewards = await this.pointHistoryRepository
       .createQueryBuilder('ph')
-      // Join with BusinessReward to ensure we are only considering rewards
-      // that are properly configured for a business and campaign.
-      .innerJoin(
-        'BusinessReward',
-        'br',
-        'br.reward = ph.reward AND br.campaign = ph.campaign AND br.business = ph.business',
-      )
-      // Join with the Reward entity to get the reward's details.
-      .innerJoin('br.reward', 'reward')
-      // Select the reward's ID and title (aliased as name for the DTO).
+      // Join with Reward to access reward details.
+      .innerJoin('ph.reward', 'reward')
+      // Join with BusinessReward to ensure we only count redemptions for rewards
+      // that are configured as a business reward.
+      .innerJoin('BusinessReward', 'br', 'br.reward = reward.id')
+      // Select the reward's ID and title.
       .select('reward.id', 'id')
       .addSelect('reward.title', 'name')
-      // Count the number of redemptions for each reward.
-      .addSelect('COUNT(ph.id)', 'totalRedemptions')
-      // Filter to only include redemption records.
+      // Count distinct redemptions to avoid duplicates caused by the join.
+      .addSelect('COUNT(DISTINCT ph.id)', 'totalRedemptions')
+      // Filter for redemption records only.
       .where('ph.type = :type', { type: PointHistoryType.REDEEM })
-      // Group by the reward to aggregate the counts correctly.
+      // Group by reward to aggregate the counts.
       .groupBy('reward.id, reward.title')
-      // Order by the total redemptions in descending order to find the top performers.
+      // Order by the highest number of redemptions.
       .orderBy('"totalRedemptions"', 'DESC')
-      // Limit the result to the top 10.
+      // Limit to the top 10.
       .limit(10)
       .getRawMany();
 
     // Parse the redemption count from a string to a number.
     return topRewards.map((r) => ({
       ...r,
-      totalRedemptions: parseInt(r.totalRedemptions, 10),
+      totalRedemptions: parseInt(r.totalRedemptions, 10) || 0,
     }));
   }
 }
