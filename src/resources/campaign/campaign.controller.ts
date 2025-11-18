@@ -33,6 +33,8 @@ import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Campaign, CampaignType, AudienceType } from './entities/campaign.entity';
+import { CampaignDetailedAnalyticsQueryDto } from './dto/campaign-detailed-analytics-query.dto';
+import { CampaignDetailedAnalyticsDto } from './dto/campaign-detailed-analytics.dto';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
@@ -204,6 +206,29 @@ export class CampaignController {
     @Query() query: CampaignAnalyticsQueryDto,
   ) {
     return this.campaignService.getAnalytics(currentUser, query);
+  }
+
+  @Get(':id/analytics/detailed')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Business)
+  @ApiOperation({
+    summary: 'Get detailed analytics for a specific campaign.',
+    description: 'Accessible by Business Owners.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns detailed analytics for a specific campaign.',
+    type: CampaignDetailedAnalyticsDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Campaign not found.' })
+  getDetailedAnalytics(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: User,
+    @Query() query: CampaignDetailedAnalyticsQueryDto,
+  ) {
+    return this.campaignService.getDetailedAnalytics(id, currentUser, query);
   }
 
   @Get(':id')

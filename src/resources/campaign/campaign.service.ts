@@ -25,6 +25,8 @@ import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CampaignAnalyticsDto } from './dto/campaign-analytics.dto';
+import { CampaignDetailedAnalyticsQueryDto, DateRange } from './dto/campaign-detailed-analytics-query.dto';
+import { CampaignDetailedAnalyticsDto } from './dto/campaign-detailed-analytics.dto';
 
 @Injectable()
 export class CampaignService {
@@ -256,7 +258,7 @@ export class CampaignService {
 
     const pointHistories = await this.pointHistoryRepository.find({
       where: { campaign: { id: In(campaignIds) } },
-      relations: ['participant'],
+      relations: ['participant', 'campaign'],
     });
 
     const analyticsData = campaigns.map((campaign) => {
@@ -310,5 +312,118 @@ export class CampaignService {
       limit,
       next_page: total > page * limit ? page + 1 : null,
     };
+  }
+
+  async getDetailedAnalytics(
+    campaignId: string,
+    currentUser: User,
+    query: CampaignDetailedAnalyticsQueryDto,
+  ): Promise<CampaignDetailedAnalyticsDto> {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id: campaignId, business: { id: currentUser.id } },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found or not owned by the user');
+    }
+
+    const { range } = query;
+    let startDate: Date | undefined;
+    const endDate = new Date();
+
+    if (range === DateRange.SevenDays) {
+      startDate = new Date();
+      startDate.setDate(endDate.getDate() - 7);
+    } else if (range === DateRange.ThirtyDays) {
+      startDate = new Date();
+      startDate.setDate(endDate.getDate() - 30);
+    }
+
+    const qb = this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .leftJoinAndSelect('ph.participant', 'participant')
+      .where('ph.campaign = :campaignId', { campaignId });
+
+    if (startDate) {
+      qb.andWhere('ph.created_at >= :startDate', { startDate });
+    }
+
+    const pointHistories = await qb.getMany();
+
+    const total_participants = new Set(
+      pointHistories.map((h) => h.participant.id),
+    ).size;
+    const total_points_redeemed = pointHistories
+      .filter((h) => h.type === 'REDEEM')
+      .reduce((acc, h) => acc + h.points, 0);
+    const total_points_awarded = pointHistories
+      .filter((h) => h.type === 'EARN')
+      .reduce((acc, h) => acc + h.points, 0);
+    const total_redemptions = pointHistories.filter(
+      (h) => h.type === 'REDEEM',
+    ).length;
+
+    const redemption_rate =
+      total_participants > 0
+        ? (total_redemptions / total_participants) * 100
+        : 0;
+
+    const chart_data = this.generateChartData(pointHistories, startDate, endDate);
+
+    return {
+      total_participants,
+      total_points_redeemed,
+      total_points_awarded,
+      redemption_rate: parseFloat(redemption_rate.toFixed(2)),
+      chart_data,
+    };
+  }
+
+  private generateChartData(
+    pointHistories: PointHistory[],
+    startDate: Date | undefined,
+    endDate: Date,
+  ): any[] {
+    const dataMap = new Map<string, any>();
+    const participantFirstInteraction = new Map<string, string>();
+
+    const start = startDate ? new Date(startDate) : new Date(Math.min(...pointHistories.map(ph => new Date(ph.created_at).getTime())));
+    const end = new Date(endDate);
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateString = d.toISOString().split('T')[0];
+      dataMap.set(dateString, {
+        date: dateString,
+        points_awarded: 0,
+        redemptions: 0,
+        participants_joined: 0,
+      });
+    }
+
+    pointHistories.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    pointHistories.forEach((ph) => {
+      const dateString = new Date(ph.created_at).toISOString().split('T')[0];
+      if (dataMap.has(dateString)) {
+        const dayData = dataMap.get(dateString);
+        if (ph.type === 'EARN') {
+          dayData.points_awarded += ph.points;
+        } else {
+          dayData.redemptions += 1;
+        }
+
+        if (!participantFirstInteraction.has(ph.participant.id)) {
+          participantFirstInteraction.set(ph.participant.id, dateString);
+        }
+      }
+    });
+
+    participantFirstInteraction.forEach((dateString, participantId) => {
+      if (dataMap.has(dateString)) {
+        dataMap.get(dateString).participants_joined += 1;
+      }
+    });
+
+    return Array.from(dataMap.values());
   }
 }
