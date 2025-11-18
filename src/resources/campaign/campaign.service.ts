@@ -24,6 +24,7 @@ import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { CampaignAnalyticsDto } from './dto/campaign-analytics.dto';
 
 @Injectable()
 export class CampaignService {
@@ -220,38 +221,94 @@ export class CampaignService {
     };
   }
 
-  async getAnalytics(currentUser: User, query: CampaignAnalyticsQueryDto) {
-    const { campaignId } = query;
+  async getAnalytics(
+    currentUser: User,
+    query: CampaignAnalyticsQueryDto,
+  ): Promise<{
+    data: CampaignAnalyticsDto[];
+    total: number;
+    page: number;
+    limit: number;
+    next_page: number | null;
+  }> {
+    const { page = 1, limit = 10 } = query;
     const businessId = currentUser.id;
 
-    const qb = this.pointHistoryRepository
-      .createQueryBuilder('ph')
-      .leftJoin('ph.campaign', 'c')
-      .where('c.business_id = :businessId', { businessId });
+    const [campaigns, total] = await this.campaignRepository.findAndCount({
+      where: { business: { id: businessId } },
+      relations: ['business', 'business.sector'],
+      order: { created_at: 'DESC' },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
 
-    if (campaignId) {
-      qb.andWhere('c.id = :campaignId', { campaignId });
+    if (campaigns.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        limit,
+        next_page: null,
+      };
     }
 
-    const pointHistories = await qb.getMany();
+    const campaignIds = campaigns.map((c) => c.id);
 
-    const totalPointsEarned = pointHistories.reduce(
-      (acc, ph) => acc + ph.points,
-      0,
-    );
-    const totalActivities = pointHistories.length;
+    const pointHistories = await this.pointHistoryRepository.find({
+      where: { campaign: { id: In(campaignIds) } },
+      relations: ['participant'],
+    });
 
-    const participantIds = [
-      ...new Set(pointHistories.map((ph) => ph.participant.id)),
-    ];
-    const participants = await this.participantRepository.findBy({
-      id: In(participantIds),
+    const analyticsData = campaigns.map((campaign) => {
+      const histories = pointHistories.filter(
+        (ph) => ph.campaign.id === campaign.id,
+      );
+
+      const total_participants = new Set(
+        histories.map((h) => h.participant.id),
+      ).size;
+      const total_reward_redeemed = histories.filter(
+        (h) => h.type === 'REDEEM',
+      ).length;
+      const total_point_awarded = histories
+        .filter((h) => h.type === 'EARN')
+        .reduce((acc, h) => acc + h.points, 0);
+
+      const redemption_rate =
+        total_participants > 0
+          ? (total_reward_redeemed / total_participants) * 100
+          : 0;
+
+      const now = new Date();
+      let status = 'Upcoming';
+      if (campaign.start_date > now) {
+        status = 'Upcoming';
+      } else if (campaign.end_date < now) {
+        status = 'Ended';
+      } else {
+        status = 'Active';
+      }
+      if (campaign.disabled) {
+        status = 'Disabled';
+      }
+
+      return {
+        name: campaign.name,
+        sector: campaign.business.sector ? campaign.business.sector.name : 'N/A',
+        status,
+        total_participants,
+        total_reward_redeemed,
+        total_point_awarded,
+        redemption_rate: parseFloat(redemption_rate.toFixed(2)),
+      };
     });
 
     return {
-      totalPointsEarned,
-      totalActivities,
-      participants,
+      data: analyticsData,
+      total,
+      page,
+      limit,
+      next_page: total > page * limit ? page + 1 : null,
     };
   }
 }

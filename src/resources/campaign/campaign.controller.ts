@@ -27,6 +27,7 @@ import { Business } from '../business/entities/business.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Public } from 'src/common/decorators/public.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { CampaignAnalyticsDto } from './dto/campaign-analytics.dto';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
@@ -189,12 +190,13 @@ export class CampaignController {
   @UseGuards(RolesGuard)
   @Roles(Role.Business)
   @ApiOperation({
-    summary: 'Get campaign analytics for the business.',
-    description: 'Accessible by Business Owners. Can be filtered by campaign.',
+    summary: 'Get paginated campaign analytics for the business.',
+    description: 'Accessible by Business Owners.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Returns the campaign analytics.',
+    description: 'Returns a paginated list of campaign analytics.',
+    type: [CampaignAnalyticsDto],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   getAnalytics(
