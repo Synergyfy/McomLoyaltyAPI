@@ -153,7 +153,7 @@ export class CampaignService {
 
     const [data, total] = await this.campaignRepository.findAndCount({
       where: { business: { id: businessId } },
-      relations: ['business'],
+      relations: ['business', 'rewards'],
       order: { created_at: 'DESC' },
       skip,
       take: limit,
