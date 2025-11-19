@@ -13,6 +13,26 @@ export class ParticipantCampaignBalanceService {
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
   ) {}
 
+  async findOneByParticipantAndCampaign(
+    participantId: string,
+    campaignId: string,
+  ): Promise<ParticipantCampaignBalance> {
+    return this.participantCampaignBalanceRepository.findOne({
+      where: {
+        participant: { id: participantId },
+        campaign: { id: campaignId },
+      },
+    });
+  }
+
+  async decrement(id: string, amount: number): Promise<void> {
+    await this.participantCampaignBalanceRepository.decrement(
+      { id },
+      'campaign_balance',
+      amount,
+    );
+  }
+
   async getParticipantBalance(participantId: string) {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
@@ -22,10 +42,11 @@ export class ParticipantCampaignBalanceService {
       throw new NotFoundException('Participant not found');
     }
 
-    const campaignBalances = await this.participantCampaignBalanceRepository.find({
-      where: { participant: { id: participantId } },
-      relations: ['campaign'],
-    });
+    const campaignBalances =
+      await this.participantCampaignBalanceRepository.find({
+        where: { participant: { id: participantId } },
+        relations: ['campaign'],
+      });
 
     return {
       global_total_points:
@@ -39,11 +60,18 @@ export class ParticipantCampaignBalanceService {
     };
   }
 
-  async getParticipantBalanceForCampaign(participantId: string, campaignId: string) {
-    const campaignBalance = await this.participantCampaignBalanceRepository.findOne({
-      where: { participant: { id: participantId }, campaign: { id: campaignId } },
-      relations: ['campaign'],
-    });
+  async getParticipantBalanceForCampaign(
+    participantId: string,
+    campaignId: string,
+  ) {
+    const campaignBalance =
+      await this.participantCampaignBalanceRepository.findOne({
+        where: {
+          participant: { id: participantId },
+          campaign: { id: campaignId },
+        },
+        relations: ['campaign'],
+      });
 
     if (!campaignBalance) {
       throw new NotFoundException(

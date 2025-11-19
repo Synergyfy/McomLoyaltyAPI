@@ -11,6 +11,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { Participant } from '../participant/entities/participant.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { VoucherService } from '../voucher/voucher.service';
 
 describe('CampaignController', () => {
   let controller: CampaignController;
@@ -87,6 +88,12 @@ describe('CampaignController', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn(),
+          },
+        },
+        {
+          provide: VoucherService,
+          useValue: {
+            findOne: jest.fn(),
           },
         },
       ],

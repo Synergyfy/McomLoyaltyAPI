@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsUUID } from 'class-validator';
+import { IsArray, IsUUID, IsOptional } from 'class-validator';
 import { BaseCampaignDto } from './base-campaign.dto';
 
 export class CreateCampaignDto extends BaseCampaignDto {
@@ -10,4 +10,13 @@ export class CreateCampaignDto extends BaseCampaignDto {
   @IsArray()
   @IsUUID('all', { each: true })
   business_reward_ids: string[];
+
+  @ApiProperty({
+    example: 'uuid-of-voucher',
+    description: 'The ID of the voucher to associate with this campaign.',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  voucherId?: string;
 }

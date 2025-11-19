@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -20,7 +21,10 @@ import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Role } from '../../common/role.enum';
-import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
+import {
+  PointHistory,
+  PointHistoryType,
+} from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
@@ -28,6 +32,8 @@ import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { nanoid } from 'nanoid';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
+import { VoucherService } from '../voucher/voucher.service';
+import { Voucher } from '../voucher/entities/voucher.entity';
 
 @Injectable()
 export class CampaignService {
@@ -46,12 +52,44 @@ export class CampaignService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-  ) { }
+    private readonly voucherService: VoucherService,
+  ) {}
+
+  private async validateVoucherOwnership(
+    voucherId: string,
+    currentUser: User,
+  ): Promise<void> {
+    // We need to fetch the voucher without user context first, to check its creator type
+    const voucher = await this.voucherService.findOne(voucherId, currentUser);
+
+    if (currentUser.role === Role.Admin) {
+      if (voucher.creatorType !== Role.Admin) {
+        throw new ForbiddenException(
+          'Admins can only use vouchers created by other admins.',
+        );
+      }
+    } else if (currentUser.role === Role.Business) {
+      if (voucher.creatorId !== currentUser.id) {
+        throw new ForbiddenException(
+          'You are not authorized to use this voucher.',
+        );
+      }
+    }
+  }
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
-    currentUser: Business | Admin,
+    currentUser: User,
   ): Promise<Campaign> {
+    if (
+      'voucherId' in createCampaignDto &&
+      createCampaignDto.voucherId
+    ) {
+      await this.validateVoucherOwnership(
+        createCampaignDto.voucherId,
+        currentUser,
+      );
+    }
     const campaignData = { ...createCampaignDto };
     const campaign = this.campaignRepository.create(campaignData);
     let rewards: Reward[] = [];
@@ -91,7 +129,7 @@ export class CampaignService {
   }
 
   async findAll(
-    currentUser: Business | Admin,
+    currentUser: User,
     paginationDto: PaginationDto,
   ): Promise<any> {
     const { page, limit } = paginationDto;
@@ -187,7 +225,7 @@ export class CampaignService {
     };
   }
 
-  async findOne(id: string, currentUser: Business | Admin): Promise<Campaign> {
+  async findOne(id: string, currentUser: User): Promise<Campaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id },
       relations: ['business', 'rewards'],
@@ -210,8 +248,17 @@ export class CampaignService {
   async update(
     id: string,
     updateCampaignDto: UpdateCampaignDto,
-    currentUser: Business | Admin,
+    currentUser: User,
   ): Promise<Campaign> {
+    if (
+      'voucherId' in updateCampaignDto &&
+      updateCampaignDto.voucherId
+    ) {
+      await this.validateVoucherOwnership(
+        updateCampaignDto.voucherId,
+        currentUser,
+      );
+    }
     const campaign = await this.findOne(id, currentUser);
     const { reward_ids, business_reward_ids, ...campaignData } =
       updateCampaignDto;
@@ -238,7 +285,7 @@ export class CampaignService {
     return this.campaignRepository.save(campaign);
   }
 
-  async remove(id: string, currentUser: Business | Admin): Promise<void> {
+  async remove(id: string, currentUser: User): Promise<void> {
     const campaign = await this.findOne(id, currentUser);
     await this.campaignRepository.remove(campaign);
   }
@@ -256,7 +303,7 @@ export class CampaignService {
 
   async toggleCampaignStatus(
     id: string,
-    currentUser: Business | Admin,
+    currentUser: User,
   ): Promise<Campaign> {
     const campaign = await this.findOne(id, currentUser);
     campaign.disabled = !campaign.disabled;
@@ -392,9 +439,14 @@ export class CampaignService {
       .createQueryBuilder('campaign')
       .leftJoin('campaign.business', 'business')
       .leftJoin('business.sector', 'sector')
-      .leftJoin('campaign.businessCampaigns', 'bc', 'bc.business_id = :businessId', {
-        businessId,
-      })
+      .leftJoin(
+        'campaign.businessCampaigns',
+        'bc',
+        'bc.business_id = :businessId',
+        {
+          businessId,
+        },
+      )
       .where('business.id = :businessId OR bc.id IS NOT NULL', { businessId });
 
     const total = await qb.getCount();
@@ -442,7 +494,8 @@ export class CampaignService {
 
     const result = data.map((row) => {
       const totalParticipants = parseInt(row.total_participants, 10) || 0;
-      const totalRewardsRedeemed = parseInt(row.total_rewards_redeemed, 10) || 0;
+      const totalRewardsRedeemed =
+        parseInt(row.total_rewards_redeemed, 10) || 0;
 
       return {
         id: row.id,
@@ -480,8 +533,8 @@ export class CampaignService {
       .andWhere('ph.business_id = :businessId', { businessId })
       .select([
         'COUNT(DISTINCT ph.participant_id) AS total_participants',
-        'COUNT(CASE WHEN ph.type = \'REDEEM\' THEN 1 END) AS total_rewards_redeemed',
-        'SUM(CASE WHEN ph.type = \'EARN\' THEN ph.points ELSE 0 END) AS total_points_awarded',
+        "COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS total_rewards_redeemed",
+        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS total_points_awarded",
       ])
       .getRawOne();
 
@@ -515,8 +568,8 @@ export class CampaignService {
         'p.id',
         'p.name',
         'p.email',
-        'SUM(CASE WHEN ph.type = \'EARN\' THEN ph.points ELSE 0 END) AS total_points_earned',
-        'COUNT(CASE WHEN ph.type = \'REDEEM\' THEN 1 END) AS total_redemptions',
+        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS total_points_earned",
+        "COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS total_redemptions",
       ])
       .groupBy('p.id')
       .orderBy('total_redemptions', 'DESC')
@@ -549,7 +602,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-        100
+          100
         : 0;
 
     return {

@@ -18,4 +18,13 @@ export class CreateCampaignAdminDto extends BaseCampaignDto {
   @IsArray()
   @IsUUID('all', { each: true })
   reward_ids: string[];
+
+  @ApiProperty({
+    example: 'uuid-of-voucher',
+    description: 'The ID of the voucher to associate with this campaign.',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  voucherId?: string;
 }

@@ -1,0 +1,6 @@
+export enum VoucherStatus {
+  ACTIVE = 'ACTIVE',
+  EXPIRED = 'EXPIRED',
+  FULFILLED = 'FULFILLED',
+  PARTIALLY_REDEEMED = 'PARTIALLY_REDEEMED',
+}

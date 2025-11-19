@@ -14,6 +14,7 @@ import { Admin } from '../admin/entities/admin.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { VoucherService } from '../voucher/voucher.service';
 
 describe('CampaignService', () => {
   let service: CampaignService;
@@ -73,7 +74,6 @@ describe('CampaignService', () => {
       andWhere: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       getRawOne: jest.fn().mockResolvedValue({}),
-      getCount: jest.fn().mockResolvedValue(0),
       getMany: jest.fn().mockResolvedValue([]),
     })),
     query: jest.fn().mockResolvedValue([]),
@@ -129,6 +129,12 @@ describe('CampaignService', () => {
           provide: getRepositoryToken(Participant),
           useValue: mockParticipantRepository,
         },
+        {
+          provide: VoucherService,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ creatorId: 'admin-id', creatorType: Role.Admin }),
+          },
+        },
       ],
     }).compile();
 
@@ -171,6 +177,7 @@ describe('CampaignService', () => {
         reward_type: 'regular' as any,
         regular_points_threshold: 100,
         matching_points_threshold: 100,
+        voucherId: 'voucher-id',
       };
 
       const currentUser = {
@@ -562,28 +569,29 @@ describe('CampaignService', () => {
   describe('getCampaignAnalytics', () => {
     it('should return a paginated list of campaigns with analytics', async () => {
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
-      const campaigns = [
-        [
-          {
-            id: 'campaign-1',
-            total_participants: '1',
-            total_rewards_redeemed: '1',
-            disabled: false,
-          },
-        ],
-        1,
-      ] as any;
-      (campaignRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+      const analyticsData = [{
+        id: 'campaign-1',
+        name: 'Test Campaign',
+        start_date: new Date(),
+        end_date: new Date(),
+        disabled: false,
+        sector: 'Test Sector',
+        total_participants: '10',
+        total_points_awarded: '1000',
+        total_rewards_redeemed: '5',
+      }];
+
+      mockCampaignRepository.createQueryBuilder.mockReturnValue({
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue(campaigns),
-      });
+        getRawMany: jest.fn().mockResolvedValue(analyticsData),
+      } as any);
 
       const result = await service.getCampaignAnalytics(
         'business-id',
