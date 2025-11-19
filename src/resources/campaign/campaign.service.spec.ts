@@ -6,6 +6,9 @@ import { Business } from '../business/entities/business.entity';
 import { Reward } from '../rewards/entities/reward.entity';
 import { Repository } from 'typeorm';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
+import { BusinessReward } from '../rewards/entities/business-reward.entity';
+import { BusinessCampaign } from './entities/business-campaign.entity';
 import { Role } from '../../common/role.enum';
 import { Admin } from '../admin/entities/admin.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -17,6 +20,7 @@ describe('CampaignService', () => {
   let campaignRepository: Repository<Campaign>;
   let businessRepository: Repository<Business>;
   let rewardRepository: Repository<Reward>;
+  let businessCampaignRepository: Repository<BusinessCampaign>;
 
   const mockCampaignRepository = {
     create: jest.fn(),
@@ -25,6 +29,20 @@ describe('CampaignService', () => {
     findOne: jest.fn(),
     remove: jest.fn(),
     find: jest.fn(),
+    createQueryBuilder: jest.fn(() => ({
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      getRawOne: jest.fn().mockResolvedValue({}),
+      getCount: jest.fn().mockResolvedValue(0),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    })),
   };
 
   const mockBusinessRepository = {
@@ -33,6 +51,19 @@ describe('CampaignService', () => {
 
   const mockRewardRepository = {
     findBy: jest.fn(),
+    createQueryBuilder: jest.fn(() => ({
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    })),
+  };
+
+  const mockBusinessRewardRepository = {
+    find: jest.fn(),
   };
 
   const mockPointHistoryRepository = {
@@ -40,12 +71,25 @@ describe('CampaignService', () => {
       leftJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue({}),
+      getCount: jest.fn().mockResolvedValue(0),
       getMany: jest.fn().mockResolvedValue([]),
     })),
+    query: jest.fn().mockResolvedValue([]),
   };
 
   const mockParticipantRepository = {
     findBy: jest.fn(),
+    createQueryBuilder: jest.fn(() => ({
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    })),
   };
 
   beforeEach(async () => {
@@ -69,6 +113,19 @@ describe('CampaignService', () => {
           useValue: mockPointHistoryRepository,
         },
         {
+          provide: getRepositoryToken(BusinessReward),
+          useValue: mockBusinessRewardRepository,
+        },
+        {
+          provide: getRepositoryToken(BusinessCampaign),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+            findAndCount: jest.fn(),
+          },
+        },
+        {
           provide: getRepositoryToken(Participant),
           useValue: mockParticipantRepository,
         },
@@ -85,6 +142,9 @@ describe('CampaignService', () => {
     rewardRepository = module.get<Repository<Reward>>(
       getRepositoryToken(Reward),
     );
+    businessCampaignRepository = module.get<Repository<BusinessCampaign>>(
+      getRepositoryToken(BusinessCampaign),
+    );
   });
 
   it('should be defined', () => {
@@ -93,7 +153,7 @@ describe('CampaignService', () => {
 
   describe('create', () => {
     it('should create a campaign for an admin', async () => {
-      const createCampaignDto: CreateCampaignDto = {
+      const createCampaignDto: CreateCampaignAdminDto = {
         name: 'Test Campaign',
         campaign_type: 'qr_code' as any,
         campaign_message: 'Test Message',
@@ -147,7 +207,7 @@ describe('CampaignService', () => {
         cta_text_color: '#ffffff',
         text_color: '#000000',
         background_color: '#ffffff',
-        reward_ids: ['reward-id'],
+        business_reward_ids: ['reward-id'],
         reward_type: 'regular' as any,
         regular_points_threshold: 100,
         matching_points_threshold: 100,
@@ -163,13 +223,58 @@ describe('CampaignService', () => {
       const campaign = { ...createCampaignDto, business, rewards };
 
       mockBusinessRepository.findOneBy.mockResolvedValue(business);
-      mockRewardRepository.findBy.mockResolvedValue(rewards);
+      mockBusinessRewardRepository.find.mockResolvedValue([
+        { id: 'business-reward-id', reward: rewards[0] },
+      ] as BusinessReward[]);
       mockCampaignRepository.create.mockReturnValue(campaign);
       mockCampaignRepository.save.mockResolvedValue(campaign);
 
       const result = await service.create(createCampaignDto, currentUser);
 
       expect(result).toEqual(campaign);
+    });
+
+    it('should generate a unique code for a business-created campaign', async () => {
+      const createCampaignDto: CreateCampaignDto = {
+        name: 'Test Campaign',
+        campaign_type: 'qr_code' as any,
+        campaign_message: 'Test Message',
+        start_date: new Date(),
+        end_date: new Date(),
+        quantity: 10,
+        audience_type: 'members' as any,
+        banner_url: 'test.jpg',
+        cta_text: 'Click Me',
+        cta_background_color: '#000000',
+        cta_text_color: '#ffffff',
+        text_color: '#000000',
+        background_color: '#ffffff',
+        business_reward_ids: ['reward-id'],
+        reward_type: 'regular' as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
+      };
+
+      const currentUser = {
+        id: 'business-id',
+        role: Role.Business,
+      } as Business;
+
+      const business = { id: 'business-id' } as Business;
+      const rewards = [{ id: 'reward-id' }] as Reward[];
+      const campaign = { ...createCampaignDto, business, rewards, uniqueCode: '123456789' };
+
+      mockBusinessRepository.findOneBy.mockResolvedValue(business);
+      mockBusinessRewardRepository.find.mockResolvedValue([
+        { id: 'business-reward-id', reward: rewards[0] },
+      ] as BusinessReward[]);
+      mockCampaignRepository.create.mockReturnValue(campaign);
+      mockCampaignRepository.save.mockResolvedValue(campaign);
+
+      const result = await service.create(createCampaignDto, currentUser);
+
+      expect(result.uniqueCode).toBeDefined();
+      expect(result.uniqueCode).toHaveLength(9);
     });
   });
 
@@ -288,6 +393,36 @@ describe('CampaignService', () => {
 
       expect(result.name).toEqual('Updated Campaign');
     });
+
+    it('should update a campaign rewards', async () => {
+      const currentUser = {
+        id: 'admin-id',
+        role: Role.Admin,
+      } as Admin;
+
+      const campaign = {
+        id: 'campaign-1',
+        business: { id: 'business-id' },
+        rewards: [],
+      } as Campaign;
+      const updateCampaignDto = { reward_ids: ['new-reward-id'] };
+      const rewards = [{ id: 'new-reward-id' }] as Reward[];
+
+      mockCampaignRepository.findOne.mockResolvedValue(campaign);
+      mockRewardRepository.findBy.mockResolvedValue(rewards);
+      mockCampaignRepository.save.mockResolvedValue({
+        ...campaign,
+        rewards,
+      });
+
+      const result = await service.update(
+        'campaign-1',
+        updateCampaignDto as any,
+        currentUser,
+      );
+
+      expect(result.rewards).toEqual(rewards);
+    });
   });
 
   describe('remove', () => {
@@ -347,6 +482,138 @@ describe('CampaignService', () => {
       );
 
       expect(result.disabled).toEqual(true);
+    });
+  });
+
+  describe('findClaimableCampaigns', () => {
+    it('should return a paginated list of claimable campaigns', async () => {
+      const paginationDto: PaginationDto = { page: 1, limit: 10 };
+      const campaigns = [[{ id: 'campaign-1' }], 1] as [Campaign[], number];
+      (campaignRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue(campaigns),
+      });
+
+      const result = await service.findClaimableCampaigns(
+        'business-id',
+        paginationDto,
+      );
+
+      expect(result.data).toEqual(campaigns[0]);
+    });
+  });
+
+  describe('claimCampaign', () => {
+    it('should allow a business to claim a campaign and generate a unique code', async () => {
+      const campaign = { id: 'campaign-1', business: null } as Campaign;
+      const business = { id: 'business-id' } as Business;
+      const businessCampaign = { business, campaign, uniqueCode: '123456789' } as BusinessCampaign;
+
+      mockCampaignRepository.findOne.mockResolvedValue(campaign);
+      mockBusinessRepository.findOneBy.mockResolvedValue(business);
+      (businessCampaignRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (businessCampaignRepository.create as jest.Mock).mockReturnValue(businessCampaign);
+      (businessCampaignRepository.save as jest.Mock).mockResolvedValue(businessCampaign);
+
+      const result = await service.claimCampaign('business-id', 'campaign-id');
+
+      expect(result.uniqueCode).toBeDefined();
+      expect(result.uniqueCode).toHaveLength(9);
+    });
+
+    it('should throw an error if the campaign is already claimed', async () => {
+      const campaign = { id: 'campaign-1', business: null } as Campaign;
+      const business = { id: 'business-id' } as Business;
+      const businessCampaign = { business, campaign } as BusinessCampaign;
+
+      mockCampaignRepository.findOne.mockResolvedValue(campaign);
+      (businessCampaignRepository.findOne as jest.Mock).mockResolvedValue(businessCampaign);
+
+      await expect(
+        service.claimCampaign('business-id', 'campaign-id'),
+      ).rejects.toThrow('Campaign already claimed');
+    });
+  });
+
+  describe('findClaimedCampaigns', () => {
+    it('should return a paginated list of claimed campaigns', async () => {
+      const paginationDto: PaginationDto = { page: 1, limit: 10 };
+      const businessCampaigns = [
+        [{ id: 'bc-1', campaign: { id: 'campaign-1' } }],
+        1,
+      ] as [BusinessCampaign[], number];
+      (businessCampaignRepository.findAndCount as jest.Mock).mockResolvedValue(
+        businessCampaigns,
+      );
+
+      const result = await service.findClaimedCampaigns(
+        'business-id',
+        paginationDto,
+      );
+
+      expect(result.data).toEqual([businessCampaigns[0][0].campaign]);
+    });
+  });
+
+  describe('getCampaignAnalytics', () => {
+    it('should return a paginated list of campaigns with analytics', async () => {
+      const paginationDto: PaginationDto = { page: 1, limit: 10 };
+      const campaigns = [
+        [
+          {
+            id: 'campaign-1',
+            total_participants: '1',
+            total_rewards_redeemed: '1',
+            disabled: false,
+          },
+        ],
+        1,
+      ] as any;
+      (campaignRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue(campaigns),
+      });
+
+      const result = await service.getCampaignAnalytics(
+        'business-id',
+        paginationDto,
+      );
+
+      expect(result.data[0].status).toEqual('active');
+    });
+  });
+
+  describe('getDetailedCampaignAnalytics', () => {
+    it('should return detailed analytics for a campaign', async () => {
+      const analytics = {
+        total_participants: '1',
+        total_rewards_redeemed: '1',
+        total_points_awarded: '100',
+      };
+      (mockPointHistoryRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue(analytics),
+      });
+
+      const result = await service.getDetailedCampaignAnalytics(
+        'business-id',
+        'campaign-id',
+      );
+
+      expect(result.total_participants).toEqual(analytics.total_participants);
     });
   });
 });

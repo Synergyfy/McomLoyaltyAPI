@@ -13,6 +13,7 @@ import { Business } from '../../business/entities/business.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
+import { BusinessCampaign } from './business-campaign.entity';
 
 export enum CampaignType {
   QR_CODE = 'qr_code',
@@ -103,6 +104,12 @@ export class Campaign extends AbstractBaseEntity {
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.campaign)
   pointHistories: PointHistory[];
 
+  @OneToMany(
+    () => BusinessCampaign,
+    (businessCampaign) => businessCampaign.campaign,
+  )
+  businessCampaigns: BusinessCampaign[];
+
   @Column({ default: 0 })
   total_points_earned: number;
 
@@ -127,4 +134,7 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ default: false })
   matching_points_disabled_by_admin: boolean;
+
+  @Column({ nullable: true, length: 9, unique: true })
+  uniqueCode: string;
 }

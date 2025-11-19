@@ -1,7 +1,8 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 
 @Entity()
 export class Reward extends AbstractBaseEntity {
@@ -33,4 +34,7 @@ export class Reward extends AbstractBaseEntity {
   @ManyToOne(() => Business, { nullable: true })
   @JoinColumn({ name: 'business_id' })
   business: Business;
+
+  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.reward)
+  pointHistories: PointHistory[];
 }
