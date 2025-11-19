@@ -16,6 +16,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Business } from '../business/entities/business.entity';
 import { CampaignService } from './campaign.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 
 @ApiTags('Business Campaigns')
 @ApiBearerAuth()
@@ -23,7 +24,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 @Roles(Role.Business)
 @Controller('business/campaigns')
 export class BusinessCampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
 
   @Get('claimable')
   @ApiOperation({ summary: 'Get all claimable campaigns for a business' })
@@ -88,6 +89,32 @@ export class BusinessCampaignController {
     return this.campaignService.getDetailedCampaignAnalytics(
       business.id,
       campaignId,
+    );
+  }
+
+  @Get('activities')
+  @ApiOperation({ summary: 'Get history of customer activities for the business' })
+  async getBusinessCustomerActivities(
+    @CurrentUser() business: Business,
+    @Query() paginationDto: PaginationDto,
+  ): Promise<PaginatedCustomerActivityResponseDto> {
+    return this.campaignService.getBusinessCustomerActivities(
+      business.id,
+      paginationDto,
+    );
+  }
+
+  @Get('activities/:participantId')
+  @ApiOperation({ summary: 'Get activity timeline for a specific participant' })
+  async getParticipantActivityTimeline(
+    @CurrentUser() business: Business,
+    @Param('participantId', ParseUUIDPipe) participantId: string,
+    @Query() paginationDto: PaginationDto,
+  ): Promise<PaginatedCustomerActivityResponseDto> {
+    return this.campaignService.getParticipantActivityTimeline(
+      business.id,
+      participantId,
+      paginationDto,
     );
   }
 }

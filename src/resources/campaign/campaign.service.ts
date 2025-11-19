@@ -20,13 +20,14 @@ import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Role } from '../../common/role.enum';
-import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
+import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { nanoid } from 'nanoid';
+import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 
 @Injectable()
 export class CampaignService {
@@ -45,7 +46,7 @@ export class CampaignService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-  ) {}
+  ) { }
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -394,15 +395,16 @@ export class CampaignService {
       .leftJoin('campaign.businessCampaigns', 'bc', 'bc.business_id = :businessId', {
         businessId,
       })
-      .where('business.id = :businessId OR bc.id IS NOT NULL', { businessId })
-      .select([
-        'campaign.id',
-        'campaign.name',
-        'campaign.start_date',
-        'campaign.end_date',
-        'campaign.disabled',
-        'sector.name AS sector',
-      ])
+      .where('business.id = :businessId OR bc.id IS NOT NULL', { businessId });
+
+    const total = await qb.getCount();
+
+    qb.select('campaign.id', 'id')
+      .addSelect('campaign.name', 'name')
+      .addSelect('campaign.start_date', 'start_date')
+      .addSelect('campaign.end_date', 'end_date')
+      .addSelect('campaign.disabled', 'disabled')
+      .addSelect('sector.name', 'sector')
       .addSelect(
         (subQuery) =>
           subQuery
@@ -415,7 +417,7 @@ export class CampaignService {
       .addSelect(
         (subQuery) =>
           subQuery
-            .select('SUM(ph.points)')
+            .select('COALESCE(SUM(ph.points), 0)')
             .from(PointHistory, 'ph')
             .where('ph.campaign_id = campaign.id')
             .andWhere('ph.business_id = :businessId', { businessId })
@@ -436,16 +438,29 @@ export class CampaignService {
       .skip(skip)
       .take(limit);
 
-    const [data, total] = await qb.getManyAndCount();
+    const data = await qb.getRawMany();
 
-    const result = data.map((campaign: any) => ({
-      ...campaign,
-      status: campaign.disabled ? 'inactive' : 'active',
-      redemption_rate:
-        campaign.total_participants > 0
-          ? (campaign.total_rewards_redeemed / campaign.total_participants) * 100
-          : 0,
-    }));
+    const result = data.map((row) => {
+      const totalParticipants = parseInt(row.total_participants, 10) || 0;
+      const totalRewardsRedeemed = parseInt(row.total_rewards_redeemed, 10) || 0;
+
+      return {
+        id: row.id,
+        name: row.name,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        disabled: row.disabled,
+        sector: row.sector,
+        status: row.disabled ? 'inactive' : 'active',
+        total_participants: row.total_participants,
+        total_points_awarded: row.total_points_awarded,
+        total_rewards_redeemed: row.total_rewards_redeemed,
+        redemption_rate:
+          totalParticipants > 0
+            ? (totalRewardsRedeemed / totalParticipants) * 100
+            : 0,
+      };
+    });
 
     return {
       data: result,
@@ -534,7 +549,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-          100
+        100
         : 0;
 
     return {
@@ -543,6 +558,94 @@ export class CampaignService {
       weekly_chart_data: weeklyChartData,
       ranked_participants: rankedParticipants,
       top_rewards: topRewards,
+    };
+  }
+
+  async getBusinessCustomerActivities(
+    businessId: string,
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedCustomerActivityResponseDto> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: { business: { id: businessId } },
+      relations: ['participant', 'reward', 'campaign'],
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    const activities = data.map((ph) => {
+      let details = '';
+      if (ph.type === PointHistoryType.EARN) {
+        details = `Earned ${ph.points} points`;
+      } else if (ph.type === PointHistoryType.REDEEM) {
+        details = `Redeemed ${ph.reward ? ph.reward.title : 'Reward'}`;
+      } else {
+        details = `${ph.type} ${ph.points} points`;
+      }
+
+      return {
+        participantName: ph.participant ? ph.participant.name : 'Unknown',
+        activityType: ph.type,
+        details,
+        date: ph.created_at,
+        campaignName: ph.campaign ? ph.campaign.name : 'Unknown',
+      };
+    });
+
+    return {
+      data: activities,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getParticipantActivityTimeline(
+    businessId: string,
+    participantId: string,
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedCustomerActivityResponseDto> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: {
+        business: { id: businessId },
+        participant: { id: participantId },
+      },
+      relations: ['participant', 'reward', 'campaign'],
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    const activities = data.map((ph) => {
+      let details = '';
+      if (ph.type === PointHistoryType.EARN) {
+        details = `Earned ${ph.points} points`;
+      } else if (ph.type === PointHistoryType.REDEEM) {
+        details = `Redeemed ${ph.reward ? ph.reward.title : 'Reward'}`;
+      } else {
+        details = `${ph.type} ${ph.points} points`;
+      }
+
+      return {
+        participantName: ph.participant ? ph.participant.name : 'Unknown',
+        activityType: ph.type,
+        details,
+        date: ph.created_at,
+        campaignName: ph.campaign ? ph.campaign.name : 'Unknown',
+      };
+    });
+
+    return {
+      data: activities,
+      total,
+      page,
+      limit,
     };
   }
 }
