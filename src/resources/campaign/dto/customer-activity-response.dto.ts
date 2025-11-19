@@ -2,6 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { PointHistoryType } from '../../participant-campaign-balance/entities/point-history.entity';
 
 export class CustomerActivityResponseDto {
+    @ApiProperty({ example: 'c7a8b9c0-d1e2-f3a4-b5c6-d7e8f9a0b1c2' })
+    participantId: string;
+
     @ApiProperty({ example: 'John Doe' })
     participantName: string;
 

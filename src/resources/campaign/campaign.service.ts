@@ -587,6 +587,7 @@ export class CampaignService {
       }
 
       return {
+        participantId: ph.participant ? ph.participant.id : 'Unknown',
         participantName: ph.participant ? ph.participant.name : 'Unknown',
         activityType: ph.type,
         details,
@@ -633,6 +634,7 @@ export class CampaignService {
       }
 
       return {
+        participantId: ph.participant ? ph.participant.id : 'Unknown',
         participantName: ph.participant ? ph.participant.name : 'Unknown',
         activityType: ph.type,
         details,
