@@ -33,6 +33,11 @@ import { CouponModule } from './resources/coupon/coupon.module';
 import { MembershipModule } from './resources/membership/membership.module';
 import { PaymentHistoryModule } from './resources/payment-history/payment-history.module';
 import { PaymentModule } from './resources/payment/payment.module';
+import { GroupModule } from './resources/group/group.module';
+import { PlaqueModule } from './resources/plaque/plaque.module';
+import { LedgerModule } from './resources/ledger/ledger.module';
+import { NotificationModule } from './resources/notification/notification.module';
+import { AssetModule } from './resources/asset/asset.module';
 
 @Module({
   imports: [
@@ -68,6 +73,11 @@ import { PaymentModule } from './resources/payment/payment.module';
     MembershipModule,
     PaymentHistoryModule,
     PaymentModule,
+    GroupModule,
+    PlaqueModule,
+    LedgerModule,
+    NotificationModule,
+    AssetModule,
   ],
   controllers: [AppController],
   providers: [

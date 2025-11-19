@@ -14,6 +14,9 @@ import { Referral } from '../../referral/entities/referral.entity';
 import { Deal } from '../../deal/entities/deal.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
 import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { Group } from '../../group/entities/group.entity';
+import { GroupMembership } from '../../group/entities/group-membership.entity';
+import { Plaque } from '../../plaque/entities/plaque.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -88,4 +91,19 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   stripe_customer_id: string;
+
+  @OneToMany(() => Group, (group) => group.owner)
+  ownedGroups: Group[];
+
+  @OneToMany(() => GroupMembership, (membership) => membership.business)
+  groupMemberships: GroupMembership[];
+
+  @OneToMany(() => Plaque, (plaque) => plaque.current_owner)
+  ownedPlaques: Plaque[];
+
+  @OneToMany(() => Plaque, (plaque) => plaque.original_seller)
+  originallySoldPlaques: Plaque[];
+
+  @OneToMany(() => Plaque, (plaque) => plaque.last_seller)
+  lastSoldPlaques: Plaque[];
 }
