@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { AbstractBaseEntity } from '../../../../database/entities/base.entity';
-import { Business } from '../../../business/entities/business.entity';
+import { AbstractBaseEntity } from '@/database/entities/base.entity';
+import { Business } from '@/resources/business/entities/business.entity';
 import { Group } from './group.entity';
 import { GroupMemberRole } from './enums/group-member-role.enum';
 import { GroupMembershipStatus } from './enums/group-membership-status.enum';
