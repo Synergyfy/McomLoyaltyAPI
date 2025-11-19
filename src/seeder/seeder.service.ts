@@ -26,6 +26,18 @@ import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
 import { Gender } from '../common/gender.enum';
+import { Tier } from '../resources/tier/entities/tier.entity';
+import { TierStatus } from '../resources/tier/entities/tier-status.enum';
+import {
+  Membership,
+  MembershipStatus,
+  PlanType,
+} from '../resources/membership/entities/membership.entity';
+import {
+  PaymentHistory,
+  PaymentProvider,
+  PaymentStatus,
+} from '../resources/payment-history/entities/payment-history.entity';
 
 @Injectable()
 export class SeederService {
@@ -60,6 +72,12 @@ export class SeederService {
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(SubCategory)
     private readonly subCategoryRepository: Repository<SubCategory>,
+    @InjectRepository(Tier)
+    private readonly tierRepository: Repository<Tier>,
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
+    @InjectRepository(PaymentHistory)
+    private readonly paymentHistoryRepository: Repository<PaymentHistory>,
   ) {}
 
   async seed() {
@@ -77,6 +95,7 @@ export class SeederService {
       { name: 'Web Development', category: categories[0] },
       { name: 'Clothing', category: categories[1] },
     ]);
+    const tiers = await this._seedTiers();
     const hashedPassword = await bcrypt.hash('password', 10);
 
     const admins = await this.adminRepository.save([
@@ -97,6 +116,8 @@ export class SeederService {
         subCategory: subcategories[i % subcategories.length],
       })),
     );
+    const memberships = await this._seedMemberships(tiers, businesses);
+    await this._seedPaymentHistories(memberships);
 
     const participants = await this.participantRepository.save(
       Array.from({ length: 100 }, (_, i) => ({
@@ -238,6 +259,9 @@ export class SeederService {
       'sectors',
       'staff',
       'subcategories',
+      'tier',
+      'membership',
+      'payment_history',
     ];
 
     for (const tableName of tableNames) {
@@ -251,5 +275,85 @@ export class SeederService {
     }
 
     await this.adminRepository.query('SET session_replication_role = DEFAULT;');
+  }
+
+  private async _seedTiers() {
+    return this.tierRepository.save([
+      {
+        name: 'Bronze',
+        monthly_price: 10,
+        quaterly_price: 25,
+        annual_price: 90,
+        features: ['Feature 1', 'Feature 2'],
+        status: TierStatus.PUBLISHED,
+      },
+      {
+        name: 'Silver',
+        monthly_price: 20,
+        quaterly_price: 50,
+        annual_price: 180,
+        features: ['Feature 1', 'Feature 2', 'Feature 3'],
+        status: TierStatus.PUBLISHED,
+      },
+      {
+        name: 'Gold',
+        monthly_price: 30,
+        quaterly_price: 75,
+        annual_price: 270,
+        features: ['Feature 1', 'Feature 2', 'Feature 3', 'Feature 4'],
+        status: TierStatus.PUBLISHED,
+      },
+    ]);
+  }
+
+  private async _seedMemberships(tiers: Tier[], businesses: Business[]) {
+    const memberships = businesses.map((business, i) => {
+      const plan_type =
+        i % 3 === 0
+          ? PlanType.MONTHLY
+          : i % 3 === 1
+          ? PlanType.QUARTERLY
+          : PlanType.ANNUAL;
+      const starts_at = new Date();
+      let expires_at = new Date();
+      if (plan_type === PlanType.MONTHLY) {
+        expires_at.setMonth(starts_at.getMonth() + 1);
+      } else if (plan_type === PlanType.QUARTERLY) {
+        expires_at.setMonth(starts_at.getMonth() + 3);
+      } else {
+        expires_at.setFullYear(starts_at.getFullYear() + 1);
+      }
+
+      return {
+        user_id: business.id,
+        user_type: 'business',
+        tier: tiers[i % tiers.length],
+        status: MembershipStatus.ACTIVE,
+        plan_type,
+        starts_at,
+        expires_at,
+      };
+    });
+    return this.membershipRepository.save(memberships);
+  }
+
+  private async _seedPaymentHistories(memberships: Membership[]) {
+    const paymentHistories = memberships.map((membership) => ({
+      user_id: membership.user_id,
+      user_type: membership.user_type,
+      membership,
+      amount:
+        membership.plan_type === PlanType.MONTHLY
+          ? membership.tier.monthly_price
+          : membership.plan_type === PlanType.QUARTERLY
+          ? membership.tier.quaterly_price
+          : membership.tier.annual_price,
+      payment_provider:
+        Math.random() > 0.5 ? PaymentProvider.STRIPE : PaymentProvider.PAYPAL,
+      transaction_id: nanoid(),
+      status: PaymentStatus.SUCCEEDED,
+    }));
+    await this.paymentHistoryRepository.save(paymentHistories);
+    console.log('PaymentHistory seeding completed!');
   }
 }

@@ -16,6 +16,9 @@ import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
 import { SeederService } from './seeder.service';
+import { Tier } from '../resources/tier/entities/tier.entity';
+import { Membership } from '../resources/membership/entities/membership.entity';
+import { PaymentHistory } from '../resources/payment-history/entities/payment-history.entity';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { SeederService } from './seeder.service';
       Sector,
       Staff,
       SubCategory,
+      Tier,
+      Membership,
+      PaymentHistory,
     ]),
   ],
   providers: [SeederService],
