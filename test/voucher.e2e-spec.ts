@@ -33,7 +33,7 @@ describe('VoucherController (e2e)', () => {
     await app.init();
 
     const businessRepository = moduleFixture.get(getRepositoryToken(Business));
-    const business = await businessRepository.save({ name: 'Test Business', email: 'business-e2e@test.com' });
+    const business = await businessRepository.save({ name: 'Test Business', email: 'business-e2e@test.com', password: 'password' });
     businessId = business.id;
 
     adminToken = generateToken({ id: 'admin-id', role: Role.Admin });
