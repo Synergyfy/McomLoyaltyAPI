@@ -10,13 +10,14 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { Tier } from './entities/tier.entity';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Admin } from '../admin/entities/admin.entity';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Tier')
 @Controller('tier')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class TierController {
-  constructor(private readonly tierService: TierService) {}
+  constructor(private readonly tierService: TierService) { }
 
   @Post()
   @Roles(Role.Admin)
@@ -28,6 +29,7 @@ export class TierController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all tiers' })
   @ApiResponse({ status: 200, description: 'Return all tiers.', type: [Tier] })
   findAll() {
