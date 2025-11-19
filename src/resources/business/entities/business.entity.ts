@@ -13,6 +13,7 @@ import { SubCategory } from '../../subcategory/entities/subcategory.entity';
 import { Referral } from '../../referral/entities/referral.entity';
 import { Deal } from '../../deal/entities/deal.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -78,6 +79,12 @@ export class Business extends AbstractBaseEntity {
 
   @OneToMany(() => Campaign, (campaign) => campaign.business)
   campaigns: Campaign[];
+
+  @OneToMany(
+    () => BusinessCampaign,
+    (businessCampaign) => businessCampaign.business,
+  )
+  businessCampaigns: BusinessCampaign[];
 
   @Column({ nullable: true })
   stripe_customer_id: string;
