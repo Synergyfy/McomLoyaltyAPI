@@ -33,6 +33,7 @@ import { CouponModule } from './resources/coupon/coupon.module';
 import { MembershipModule } from './resources/membership/membership.module';
 import { PaymentHistoryModule } from './resources/payment-history/payment-history.module';
 import { PaymentModule } from './resources/payment/payment.module';
+import { ProgressionModule } from './resources/progression/progression.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { PaymentModule } from './resources/payment/payment.module';
     MembershipModule,
     PaymentHistoryModule,
     PaymentModule,
+    ProgressionModule,
   ],
   controllers: [AppController],
   providers: [
