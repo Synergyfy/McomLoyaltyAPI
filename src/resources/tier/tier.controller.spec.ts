@@ -13,6 +13,11 @@ describe('TierController', () => {
           provide: TierService,
           useValue: {
             findAll: jest.fn().mockResolvedValue([]),
+            getTierBreakdown: jest.fn().mockResolvedValue([]),
+            create: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
           },
         },
       ],
@@ -23,5 +28,10 @@ describe('TierController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('should return tier breakdown', async () => {
+    const result = await controller.getBreakdown();
+    expect(result).toEqual([]);
   });
 });

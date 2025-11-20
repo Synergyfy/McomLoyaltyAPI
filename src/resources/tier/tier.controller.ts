@@ -11,6 +11,7 @@ import { Tier } from './entities/tier.entity';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Admin } from '../admin/entities/admin.entity';
 import { Public } from 'src/common/decorators/public.decorator';
+import { TierBreakdownDto } from './dto/tier-breakdown.dto';
 
 @ApiTags('Tier')
 @Controller('tier')
@@ -34,6 +35,15 @@ export class TierController {
   @ApiResponse({ status: 200, description: 'Return all tiers.', type: [Tier] })
   findAll() {
     return this.tierService.findAll();
+  }
+
+  @Get('breakdown')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Get tiers breakdown (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Return tiers breakdown.', type: [TierBreakdownDto] })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  getBreakdown() {
+    return this.tierService.getTierBreakdown();
   }
 
   @Get(':id')
