@@ -8,6 +8,7 @@ import {
   IsHexColor,
   IsEnum,
   IsInt,
+  IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -113,4 +114,76 @@ export class BaseCampaignDto {
   @IsOptional()
   @IsInt()
   matching_points_threshold?: number;
+
+  @ApiProperty({
+    description: 'The title of the earn point page.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  earn_point_page_title?: string;
+
+  @ApiProperty({
+    description: 'The description of the earn point page.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  earn_point_page_description?: string;
+
+  @ApiProperty({
+    description: 'The title of the redeem reward page.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  redeem_reward_page_title?: string;
+
+  @ApiProperty({
+    description: 'The description of the redeem reward page.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  redeem_reward_page_description?: string;
+
+  @ApiProperty({
+    description: 'The title of the contact us page.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  contact_us_page_title?: string;
+
+  @ApiProperty({
+    description: 'The description of the contact us page.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  contact_us_page_description?: string;
+
+  @ApiProperty({
+    description: 'The contact email for the campaign.',
+    required: false,
+  })
+  @IsOptional()
+  @IsEmail()
+  contact_email?: string;
+
+  @ApiProperty({
+    description: 'The contact phone number for the campaign.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  contact_phone_number?: string;
+
+  @ApiProperty({
+    description: 'The footer text for the campaign.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  footer_text?: string;
 }

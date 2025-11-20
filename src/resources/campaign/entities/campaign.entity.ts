@@ -137,4 +137,31 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ nullable: true, length: 9, unique: true })
   uniqueCode: string;
+
+  @Column({ nullable: true })
+  earn_point_page_title: string;
+
+  @Column({ type: 'text', nullable: true })
+  earn_point_page_description: string;
+
+  @Column({ nullable: true })
+  redeem_reward_page_title: string;
+
+  @Column({ type: 'text', nullable: true })
+  redeem_reward_page_description: string;
+
+  @Column({ nullable: true })
+  contact_us_page_title: string;
+
+  @Column({ type: 'text', nullable: true })
+  contact_us_page_description: string;
+
+  @Column({ nullable: true })
+  contact_email: string;
+
+  @Column({ nullable: true })
+  contact_phone_number: string;
+
+  @Column({ nullable: true })
+  footer_text: string;
 }
