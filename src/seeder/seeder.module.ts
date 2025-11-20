@@ -16,6 +16,8 @@ import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
 import { SeederService } from './seeder.service';
+import { ReputationLevel } from '../resources/reputation/entities/reputation-level.entity';
+import { ReputationLevelSeeder } from './reputation-level.seeder';
 
 @Module({
   imports: [

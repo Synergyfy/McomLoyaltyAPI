@@ -33,10 +33,13 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { nanoid } from 'nanoid';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 import { PaginatedCampaignResponseDto } from './dto/paginated-campaign-response.dto';
+import { ReputationService } from '../reputation/reputation.service';
+import { ReputationType } from '../reputation/entities/reputation-type.enum';
 
 @Injectable()
 export class CampaignService {
   constructor(
+    private readonly reputationService: ReputationService,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(Business)
@@ -92,7 +95,14 @@ export class CampaignService {
       }
     }
     campaign.rewards = rewards;
-    return this.campaignRepository.save(campaign);
+    const savedCampaign = await this.campaignRepository.save(campaign);
+
+    // Trigger reputation check for Business if they created the campaign
+    if (currentUser.role === Role.Business) {
+        await this.reputationService.checkAndUpgrade(currentUser.id, ReputationType.BUSINESS);
+    }
+
+    return savedCampaign;
   }
 
   async findAll(
@@ -387,7 +397,12 @@ export class CampaignService {
       uniqueCode: nanoid(9),
     });
 
-    return this.businessCampaignRepository.save(businessCampaign);
+    const saved = await this.businessCampaignRepository.save(businessCampaign);
+
+    // Trigger reputation check for Business when claiming a campaign
+    await this.reputationService.checkAndUpgrade(businessId, ReputationType.BUSINESS);
+
+    return saved;
   }
 
   async findClaimedCampaigns(

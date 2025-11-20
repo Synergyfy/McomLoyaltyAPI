@@ -14,10 +14,13 @@ import {
   PointHistoryType,
 } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
+import { ReputationService } from '../../reputation/reputation.service';
+import { ReputationType } from '../../reputation/entities/reputation-type.enum';
 
 @Injectable()
 export class PointEarningService {
   constructor(
+    private readonly reputationService: ReputationService,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(Participant)
@@ -150,7 +153,29 @@ export class PointEarningService {
       await manager.save(participant);
       await manager.save(campaign);
 
+      // Trigger reputation check outside transaction to avoid blocking, or ensure it's safe
+      // Since we don't have transaction propagation in checkAndUpgrade, we call it after
+      // Ideally, we'd want this inside the transaction, but checkAndUpgrade uses its own connection logic
+      // For simplicity and to avoid circular deps/transaction issues, we can do it after.
+      // Or, we can just let it be eventual consistency.
+
       return participant;
     });
+
+    // Trigger reputation check for Participant after successful transaction
+    try {
+      await this.reputationService.checkAndUpgrade(participantId, ReputationType.PARTICIPANT);
+    } catch (e) {
+      // Log error but don't fail the request? Or fail?
+      // Ideally just log.
+      console.error('Failed to update reputation', e);
+    }
+
+    // We might also want to update Business reputation if points are involved?
+    // The requirements say Business moves up based on Points. Is it points *they* have (referral)?
+    // Or points generated? "A business enters the ecosystem with 0–1000 points".
+    // Assuming it's referral points, we don't update business here.
+
+    return await this.participantRepository.findOneBy({ id: participantId });
   }
 }

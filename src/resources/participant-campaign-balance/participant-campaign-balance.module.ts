@@ -10,6 +10,7 @@ import { Participant } from '../participant/entities/participant.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { ParticipantCampaignBalanceService } from './services/participant-campaign-balance.service';
+import { ReputationModule } from '../reputation/reputation.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ParticipantCampaignBalanceService } from './services/participant-campai
       BusinessReward,
       Campaign,
     ]),
+    ReputationModule,
   ],
   providers: [
     RedemptionService,

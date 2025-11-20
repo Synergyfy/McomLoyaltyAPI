@@ -26,10 +26,12 @@ import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
 import { Gender } from '../common/gender.enum';
+import { ReputationLevelSeeder } from './reputation-level.seeder';
 
 @Injectable()
 export class SeederService {
   constructor(
+    private readonly reputationLevelSeeder: ReputationLevelSeeder,
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
     @InjectRepository(Business)
@@ -64,6 +66,7 @@ export class SeederService {
 
   async seed() {
     await this.clearDatabase();
+    await this.reputationLevelSeeder.seed();
 
     const sectors = await this.sectorRepository.save([
       { name: 'Technology' },
@@ -238,6 +241,8 @@ export class SeederService {
       'sectors',
       'staff',
       'subcategories',
+      'reputation_levels',
+      'reputation_logs'
     ];
 
     for (const tableName of tableNames) {

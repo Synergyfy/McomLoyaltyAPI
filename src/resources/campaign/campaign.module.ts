@@ -10,6 +10,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { Participant } from '../participant/entities/participant.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
+import { ReputationModule } from '../reputation/reputation.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { BusinessReward } from '../rewards/entities/business-reward.entity';
       BusinessCampaign,
       BusinessReward,
     ]),
+    ReputationModule,
   ],
   controllers: [CampaignController, BusinessCampaignController],
   providers: [CampaignService],
