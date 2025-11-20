@@ -6,6 +6,8 @@ import { Campaign } from '../campaign/entities/campaign.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Reward } from '../rewards/entities/reward.entity';
+import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
+import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
 
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
@@ -23,6 +25,8 @@ import { PointHistoryService } from './services/point-history.service';
       Participant,
       PointHistory,
       Reward,
+      BusinessCampaign,
+      ParticipantCampaignBalance,
     ]),
   ],
   controllers: [AnalyticsController, AdminAnalyticsController],
