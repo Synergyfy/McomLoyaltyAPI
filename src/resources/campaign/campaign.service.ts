@@ -10,6 +10,7 @@ import {
   LessThanOrEqual,
   MoreThanOrEqual,
   IsNull,
+  Not,
 } from 'typeorm';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -20,7 +21,10 @@ import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Role } from '../../common/role.enum';
-import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
+import {
+  PointHistory,
+  PointHistoryType,
+} from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
@@ -28,6 +32,7 @@ import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { nanoid } from 'nanoid';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
+import { PaginatedCampaignResponseDto } from './dto/paginated-campaign-response.dto';
 
 @Injectable()
 export class CampaignService {
@@ -46,7 +51,7 @@ export class CampaignService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-  ) { }
+  ) {}
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -93,7 +98,7 @@ export class CampaignService {
   async findAll(
     currentUser: Business | Admin,
     paginationDto: PaginationDto,
-  ): Promise<any> {
+  ): Promise<PaginatedCampaignResponseDto> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -120,7 +125,7 @@ export class CampaignService {
   async findClaimableCampaigns(
     businessId: string,
     paginationDto: PaginationDto,
-  ): Promise<any> {
+  ): Promise<PaginatedCampaignResponseDto> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -148,7 +153,7 @@ export class CampaignService {
   async findAllByBusiness(
     businessId: string,
     paginationDto: PaginationDto,
-  ): Promise<any> {
+  ): Promise<PaginatedCampaignResponseDto> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -168,13 +173,40 @@ export class CampaignService {
     };
   }
 
-  async findAllByAdmin(paginationDto: PaginationDto): Promise<any> {
+  async findAllByAdmin(
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedCampaignResponseDto> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
     const [data, total] = await this.campaignRepository.findAndCount({
       where: { business: IsNull() },
       relations: ['business', 'rewards'],
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async findAllByOtherAdmins(
+    currentUser: Admin,
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedCampaignResponseDto> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.campaignRepository.findAndCount({
+      where: {
+        business: IsNull(),
+      },
+      relations: ['business', 'rewards'],
+      order: { created_at: 'DESC' },
       skip,
       take: limit,
     });
@@ -263,7 +295,7 @@ export class CampaignService {
     return this.campaignRepository.save(campaign);
   }
 
-  async findAllPublic(query: any): Promise<any> {
+  async findAllPublic(query: any): Promise<PaginatedCampaignResponseDto> {
     const page = parseInt(query.page, 10) || 1;
     const limit = parseInt(query.limit, 10) || 10;
     const skip = (page - 1) * limit;
@@ -361,7 +393,7 @@ export class CampaignService {
   async findClaimedCampaigns(
     businessId: string,
     paginationDto: PaginationDto,
-  ): Promise<any> {
+  ): Promise<PaginatedCampaignResponseDto> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -392,9 +424,14 @@ export class CampaignService {
       .createQueryBuilder('campaign')
       .leftJoin('campaign.business', 'business')
       .leftJoin('business.sector', 'sector')
-      .leftJoin('campaign.businessCampaigns', 'bc', 'bc.business_id = :businessId', {
-        businessId,
-      })
+      .leftJoin(
+        'campaign.businessCampaigns',
+        'bc',
+        'bc.business_id = :businessId',
+        {
+          businessId,
+        },
+      )
       .where('business.id = :businessId OR bc.id IS NOT NULL', { businessId });
 
     const total = await qb.getCount();
@@ -442,7 +479,8 @@ export class CampaignService {
 
     const result = data.map((row) => {
       const totalParticipants = parseInt(row.total_participants, 10) || 0;
-      const totalRewardsRedeemed = parseInt(row.total_rewards_redeemed, 10) || 0;
+      const totalRewardsRedeemed =
+        parseInt(row.total_rewards_redeemed, 10) || 0;
 
       return {
         id: row.id,
@@ -480,8 +518,8 @@ export class CampaignService {
       .andWhere('ph.business_id = :businessId', { businessId })
       .select([
         'COUNT(DISTINCT ph.participant_id) AS total_participants',
-        'COUNT(CASE WHEN ph.type = \'REDEEM\' THEN 1 END) AS total_rewards_redeemed',
-        'SUM(CASE WHEN ph.type = \'EARN\' THEN ph.points ELSE 0 END) AS total_points_awarded',
+        "COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS total_rewards_redeemed",
+        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS total_points_awarded",
       ])
       .getRawOne();
 
@@ -515,8 +553,8 @@ export class CampaignService {
         'p.id',
         'p.name',
         'p.email',
-        'SUM(CASE WHEN ph.type = \'EARN\' THEN ph.points ELSE 0 END) AS total_points_earned',
-        'COUNT(CASE WHEN ph.type = \'REDEEM\' THEN 1 END) AS total_redemptions',
+        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS total_points_earned",
+        "COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS total_redemptions",
       ])
       .groupBy('p.id')
       .orderBy('total_redemptions', 'DESC')
@@ -549,7 +587,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-        100
+          100
         : 0;
 
     return {

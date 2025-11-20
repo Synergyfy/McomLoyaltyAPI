@@ -31,7 +31,11 @@ import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { Campaign, CampaignType, AudienceType } from './entities/campaign.entity';
+import {
+  Campaign,
+  CampaignType,
+  AudienceType,
+} from './entities/campaign.entity';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
@@ -160,6 +164,29 @@ export class CampaignController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   findAllByAdmin(@Query() paginationDto: PaginationDto) {
     return this.campaignService.findAllByAdmin(paginationDto);
+  }
+
+  @Get('admins')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin)
+  @ApiOperation({
+    summary: 'Get all campaigns created by other admins',
+    description: 'Accessible by Admins only.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a paginated list of admin-created campaigns.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  findAllByOtherAdmins(
+    @CurrentUser() currentUser: Admin,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.campaignService.findAllByOtherAdmins(
+      currentUser,
+      paginationDto,
+    );
   }
 
   @Get('ongoing')
