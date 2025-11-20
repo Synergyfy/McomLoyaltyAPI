@@ -57,6 +57,14 @@ export class BaseCampaignDto {
   @IsEnum(AudienceType)
   audience_type: AudienceType;
 
+  @ApiProperty({
+    description: 'Points awarded upon sign up.',
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  signUpPoint?: number;
+
   @ApiProperty({ description: 'The banner URL for the campaign.' })
   @IsUrl()
   banner_url: string;

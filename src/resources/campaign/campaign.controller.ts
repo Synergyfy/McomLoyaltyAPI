@@ -16,6 +16,8 @@ import {
   ApiResponse,
   ApiTags,
   ApiBody,
+  ApiExtraModels,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { CampaignService } from './campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -36,7 +38,7 @@ import { Campaign, CampaignType, AudienceType } from './entities/campaign.entity
 @ApiTags('Campaigns')
 @Controller('campaigns')
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
 
   @Post()
   @ApiBearerAuth()
@@ -46,49 +48,14 @@ export class CampaignController {
     summary: 'Create a new campaign',
     description: 'Accessible by Admins and Business Owners.',
   })
+  @ApiExtraModels(CreateCampaignDto, CreateCampaignAdminDto)
   @ApiBody({
     description: 'Payload for creating a new campaign',
-    type: CreateCampaignDto,
-    examples: {
-      business: {
-        summary: 'Business User Payload',
-        value: {
-          name: 'Summer Sale',
-          campaign_type: CampaignType.QR_CODE,
-          campaign_message: 'Get 20% off on all products!',
-          start_date: new Date(),
-          end_date: new Date(),
-          quantity: 100,
-          audience_type: AudienceType.MEMBERS,
-          banner_url: 'http://example.com/banner.jpg',
-          cta_text: 'Shop Now',
-          cta_background_color: '#FF0000',
-          cta_text_color: '#FFFFFF',
-          text_color: '#000000',
-          background_color: '#FFFFFF',
-          reward_ids: ['f9f2b2b2-b2b2-4b2b-b2b2-b2b2b2b2b2b2'],
-        },
-      },
-      admin: {
-        summary: 'Admin User Payload',
-        value: {
-          name: 'Admin Campaign',
-          campaign_type: CampaignType.QR_CODE,
-          campaign_message: 'Admin-created campaign',
-          start_date: new Date(),
-          end_date: new Date(),
-          quantity: 50,
-          audience_type: AudienceType.MEMBERS,
-          banner_url: 'http://example.com/admin_banner.jpg',
-          cta_text: 'Learn More',
-          cta_background_color: '#0000FF',
-          cta_text_color: '#FFFFFF',
-          text_color: '#000000',
-          background_color: '#FFFFFF',
-          reward_ids: ['f9f2b2b2-b2b2-4b2b-b2b2-b2b2b2b2b2b2'],
-          business_id: 'f9f2b2b2-b2b2-4b2b-b2b2-b2b2b2b2b2b2',
-        },
-      },
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(CreateCampaignDto) },
+        { $ref: getSchemaPath(CreateCampaignAdminDto) },
+      ],
     },
   })
   @ApiResponse({
