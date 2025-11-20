@@ -1,8 +1,12 @@
-import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { Entity, Column, ManyToMany, JoinTable } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
-import { ApiProperty } from '@nestjs/swagger';
-import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
+import { RewardType } from '../enums/reward-type.enum';
+import { BadgeLevel } from '../enums/badge-level.enum';
+import { RewardSource } from '../enums/reward-source.enum';
+import { RewardAudience } from '../enums/reward-audience.enum';
+import { RewardStatus } from '../enums/reward-status.enum';
+import { Sector } from '../../sector/entities/sector.entity';
+import { Tier } from '../../tier/entities/tier.entity';
 
 @Entity()
 export class Reward extends AbstractBaseEntity {
@@ -11,6 +15,36 @@ export class Reward extends AbstractBaseEntity {
 
   @Column()
   points_required: number;
+
+  @Column({ type: 'enum', enum: RewardType })
+  reward_type: RewardType;
+
+  @Column({ type: 'enum', enum: BadgeLevel })
+  badge_level: BadgeLevel;
+
+  @Column({ type: 'enum', enum: RewardSource })
+  reward_source: RewardSource;
+
+  @Column({ type: 'enum', enum: RewardAudience })
+  audience: RewardAudience;
+
+  @Column({ type: 'timestamp', nullable: true })
+  expiry_datetime: Date;
+
+  @Column({
+    type: 'enum',
+    enum: RewardStatus,
+    default: RewardStatus.ACTIVE,
+  })
+  status: RewardStatus;
+
+  @ManyToMany(() => Sector, { cascade: true })
+  @JoinTable()
+  sectors: Sector[];
+
+  @ManyToMany(() => Tier, { cascade: true })
+  @JoinTable()
+  tiers: Tier[];
 
   @Column()
   value: number;
@@ -24,17 +58,6 @@ export class Reward extends AbstractBaseEntity {
   @Column({ default: 0 })
   quantity: number;
 
-  @ApiProperty({
-    description: 'Indicates whether the reward is disabled',
-    example: false,
-  })
   @Column({ default: false })
   disabled: boolean;
-
-  @ManyToOne(() => Business, { nullable: true })
-  @JoinColumn({ name: 'business_id' })
-  business: Business;
-
-  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.reward)
-  pointHistories: PointHistory[];
 }
