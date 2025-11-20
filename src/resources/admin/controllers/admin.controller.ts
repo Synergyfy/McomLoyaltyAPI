@@ -26,6 +26,9 @@ import { Participant } from '../../participant/entities/participant.entity';
 import { ToggleMatchingPointsDto } from '../dto/toggle-matching-points.dto';
 import { Campaign } from 'src/resources/campaign/entities/campaign.entity';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PageDto } from '../../../common/dto/page.dto';
+import { Business } from '../../business/entities/business.entity';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -52,13 +55,18 @@ export class AdminController {
 
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Admin: Get all businesses' })
-  @ApiResponse({ status: 200, description: 'Return all businesses.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all businesses with pagination.',
+  })
   @Get('businesses')
   async getBusinesses(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return this.adminService.getBusinesses(page, limit);
+    @Query() paginationDto: PaginationDto,
+  ): Promise<PageDto<Business>> {
+    return this.adminService.getBusinesses(
+      paginationDto.page,
+      paginationDto.limit,
+    );
   }
 
   @Roles(Role.Admin)
