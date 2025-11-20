@@ -38,11 +38,11 @@ export class Reward extends AbstractBaseEntity {
   })
   status: RewardStatus;
 
-  @ManyToMany(() => Sector, { cascade: true })
+  @ManyToMany(() => Sector)
   @JoinTable()
   sectors: Sector[];
 
-  @ManyToMany(() => Tier, { cascade: true })
+  @ManyToMany(() => Tier)
   @JoinTable()
   tiers: Tier[];
 

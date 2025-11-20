@@ -6,10 +6,19 @@ import { RewardsService } from './services/rewards.service';
 import { BusinessReward } from './entities/business-reward.entity';
 import { Business } from '../business/entities/business.entity';
 import { Membership } from '../membership/entities/membership.entity';
+import { Sector } from '../sector/entities/sector.entity';
+import { Tier } from '../tier/entities/tier.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Reward, BusinessReward, Business, Membership]),
+    TypeOrmModule.forFeature([
+      Reward,
+      BusinessReward,
+      Business,
+      Membership,
+      Sector,
+      Tier,
+    ]),
   ],
   controllers: [RewardsController],
   providers: [RewardsService],
