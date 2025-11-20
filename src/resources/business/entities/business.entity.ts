@@ -83,6 +83,10 @@ export class Business extends AbstractBaseEntity {
   @Column({ type: 'numeric', default: 0 })
   referralPoints: number;
 
+  @ApiProperty({ description: 'The reputation points of the business', default: 0 })
+  @Column({ type: 'numeric', default: 0 })
+  reputation_points: number;
+
   @OneToMany(() => Deal, (deal) => deal.business)
   deals: Deal[];
 

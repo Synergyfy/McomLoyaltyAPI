@@ -18,7 +18,7 @@ const dataSource = new DataSource({
   //migrations: [process.env.DB_MIGRATIONS],
   migrations: [path.join(__dirname, './migrations/*.ts')],
   migrationsRun: false,
-  synchronize: isTest,
+  synchronize: isDevelopment || isTest,
   // migrationsTableName: 'migrations',
   //   ssl: process.env.DB_SSL === 'true',
   // Reduce connection footprint when using pgBouncer (Session mode limits pool size)
