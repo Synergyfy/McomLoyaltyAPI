@@ -15,6 +15,9 @@ import { Business } from '../../business/entities/business.entity';
 import { RewardStatus } from '../enums/reward-status.enum';
 import { RewardAudience } from '../enums/reward-audience.enum';
 import { Membership } from '../../membership/entities/membership.entity';
+import { Sector } from '../../sector/entities/sector.entity';
+import { Tier } from '../../tier/entities/tier.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class RewardsService {
@@ -27,15 +30,36 @@ export class RewardsService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
+    @InjectRepository(Sector)
+    private readonly sectorRepository: Repository<Sector>,
+    @InjectRepository(Tier)
+    private readonly tierRepository: Repository<Tier>,
   ) {}
 
   // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
     const { sector_ids, tier_ids, ...rewardData } = createRewardDto;
+
+    let sectors: Sector[] = [];
+    if (sector_ids && sector_ids.length > 0) {
+      sectors = await this.sectorRepository.findBy({ id: In(sector_ids) });
+      if (sectors.length !== sector_ids.length) {
+        throw new NotFoundException('One or more sectors not found');
+      }
+    }
+
+    let tiers: Tier[] = [];
+    if (tier_ids && tier_ids.length > 0) {
+      tiers = await this.tierRepository.findBy({ id: In(tier_ids) });
+      if (tiers.length !== tier_ids.length) {
+        throw new NotFoundException('One or more tiers not found');
+      }
+    }
+
     const reward = this.rewardRepository.create({
       ...rewardData,
-      sectors: sector_ids ? sector_ids.map((id) => ({ id })) : [],
-      tiers: tier_ids ? tier_ids.map((id) => ({ id })) : [],
+      sectors: sectors,
+      tiers: tiers,
     });
     return this.rewardRepository.save(reward);
   }
