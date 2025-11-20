@@ -22,6 +22,11 @@ import {
   GrowthActivityChartDto,
   GrowthActivityResponseDto,
 } from '../dto/growth-activity-chart.dto';
+import {
+  PointLogResponseDto,
+  PointLogItemDto,
+} from '../dto/point-log.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class AdminAnalyticsService {
@@ -274,6 +279,61 @@ export class AdminAnalyticsService {
       labels,
       registrations,
       activities,
+    };
+  }
+
+  /**
+   * Retrieves a paginated log of point transactions (earnings and redemptions).
+   * @param paginationDto The pagination options.
+   * @returns A promise that resolves to a paginated list of point logs.
+   */
+  async getPointLogs(paginationDto: PaginationDto): Promise<PointLogResponseDto> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .leftJoin('ph.participant', 'participant')
+      .select([
+        'ph.id',
+        'ph.points',
+        'ph.type',
+        'ph.created_at',
+        'participant.name',
+        'participant.email',
+      ])
+      .orderBy('ph.created_at', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [results, total] = await queryBuilder.getManyAndCount();
+
+    const data: PointLogItemDto[] = results.map((log) => {
+      const isMatching = log.type === PointHistoryType.MATCHING;
+      // Map MATCHING to EARN for description as per requirement "description (earn or redeem)"
+      // Assuming MATCHING is a form of earning.
+      let description = log.type.toString();
+      if (isMatching) {
+        description = PointHistoryType.EARN;
+      }
+
+      const type = isMatching ? 'Matching' : 'Regular';
+
+      return {
+        name: log.participant ? log.participant.name : 'Unknown',
+        email: log.participant ? log.participant.email : 'Unknown',
+        points: log.points,
+        description: description,
+        type: type,
+        date: log.created_at,
+      };
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
     };
   }
 }

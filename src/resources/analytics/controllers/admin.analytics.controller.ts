@@ -15,6 +15,8 @@ import {
   GrowthActivityResponseDto,
 } from '../dto/growth-activity-chart.dto';
 import { AdminAnalyticsService } from '../services/admin.analytics.service';
+import { PointLogResponseDto } from '../dto/point-log.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Admin Analytics')
 @Controller('admin/analytics')
@@ -131,5 +133,22 @@ export class AdminAnalyticsController {
     @Query() dto: GrowthActivityChartDto,
   ): Promise<GrowthActivityResponseDto> {
     return this.adminAnalyticsService.getGrowthActivityChart(dto);
+  }
+
+  @Get('point-logs')
+  @ApiOperation({
+    summary: 'Get Point Logs',
+    description:
+      'Retrieves a paginated log of point transactions (earnings and redemptions) for participants. Sorted from newest to oldest. This endpoint is restricted to users with the Admin role.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'A paginated list of point logs.',
+    type: PointLogResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized. JWT token is missing or invalid.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. User does not have the required Admin role.' })
+  getPointLogs(@Query() paginationDto: PaginationDto): Promise<PointLogResponseDto> {
+    return this.adminAnalyticsService.getPointLogs(paginationDto);
   }
 }
