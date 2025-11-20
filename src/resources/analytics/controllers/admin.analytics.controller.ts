@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -10,6 +10,10 @@ import {
   TopBusinessDto,
   TopRewardDto,
 } from '../dto/admin_analytics.dto';
+import {
+  GrowthActivityChartDto,
+  GrowthActivityResponseDto,
+} from '../dto/growth-activity-chart.dto';
 import { AdminAnalyticsService } from '../services/admin.analytics.service';
 
 @ApiTags('Admin Analytics')
@@ -108,5 +112,24 @@ export class AdminAnalyticsController {
   @ApiResponse({ status: 403, description: 'Forbidden. User does not have the required Admin role.' })
   getTopRewards(): Promise<TopRewardDto[]> {
     return this.adminAnalyticsService.getTopRewards();
+  }
+
+  @Get('growth-activity-chart')
+  @ApiOperation({
+    summary: 'Get Growth and Activity Chart Data',
+    description:
+      'Retrieves data for a line chart comparing customer growth (new registrations) vs customer activities (joins, earns, redeems, campaign creation) over a specified time range.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Chart data containing labels and datasets.',
+    type: GrowthActivityResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Admin access only.' })
+  getGrowthActivityChart(
+    @Query() dto: GrowthActivityChartDto,
+  ): Promise<GrowthActivityResponseDto> {
+    return this.adminAnalyticsService.getGrowthActivityChart(dto);
   }
 }
