@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Staff } from '../../staff/entities/staff.entity';
+import { Business } from '../../business/entities/business.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../entities/participant-campaign-balance.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
@@ -20,6 +21,8 @@ export class PointEarningService {
   constructor(
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(ParticipantCampaignBalance)
@@ -31,20 +34,41 @@ export class PointEarningService {
     private readonly dataSource: DataSource,
   ) {}
 
+  // Helper to find performer (Staff or Business)
+  private async findPerformer(id: string, type: 'Staff' | 'Business') {
+    if (type === 'Staff') {
+      const staff = await this.staffRepository.findOne({ where: { id }, relations: ['business'] });
+      if (!staff) throw new NotFoundException('Staff not found');
+      return { staff, business: staff.business };
+    } else {
+      const business = await this.businessRepository.findOne({ where: { id } });
+      if (!business) throw new NotFoundException('Business not found');
+      return { staff: null, business };
+    }
+  }
+
+  // Helper to find performer by unique code
+  private async findPerformerByCode(code: string) {
+    const staff = await this.staffRepository.findOne({ where: { uniqueCode: code }, relations: ['business'] });
+    if (staff) return { staff, business: staff.business };
+
+    const business = await this.businessRepository.findOne({ where: { uniqueCode: code } });
+    if (business) return { staff: null, business };
+
+    throw new NotFoundException('Invalid staff or business code');
+  }
+
   async awardPoints(
-    staffId: string,
+    performerId: string,
+    performerType: 'Staff' | 'Business',
     participantId: string,
     campaignId: string,
     points: number,
+    sourceDescription?: string,
+    transactionManager?: any, // EntityManager
   ): Promise<Participant> {
-    return await this.dataSource.transaction(async (manager) => {
-      const staff = await manager.findOne(Staff, {
-        where: { id: staffId },
-        relations: ['business'],
-      });
-      if (!staff) {
-        throw new NotFoundException('Staff not found');
-      }
+    const execute = async (manager: any) => {
+      const { staff, business } = await this.findPerformer(performerId, performerType);
 
       const participant = await manager.findOne(Participant, {
         where: { id: participantId },
@@ -113,7 +137,8 @@ export class PointEarningService {
           participant,
           campaign,
           initiated_by_staff: staff,
-          business: staff.business,
+          business: business,
+          description: sourceDescription,
         });
         await manager.save(regularPointHistory);
       }
@@ -141,8 +166,8 @@ export class PointEarningService {
           participant,
           campaign,
           initiated_by_staff: staff,
-          business: staff.business,
-          description: `Matching points for campaign: ${campaign.name}`,
+          business: business,
+          description: sourceDescription || `Matching points for campaign: ${campaign.name}`,
         });
         await manager.save(matchingPointHistory);
       }
@@ -151,6 +176,43 @@ export class PointEarningService {
       await manager.save(campaign);
 
       return participant;
-    });
+    };
+
+    if (transactionManager) {
+      return execute(transactionManager);
+    } else {
+      return await this.dataSource.transaction(execute);
+    }
+  }
+
+  // Method A: Staff/Business scans Participant
+  async awardPointsByScan(
+    performerId: string,
+    performerType: 'Staff' | 'Business',
+    participantCode: string,
+    campaignId: string,
+    points: number
+  ) {
+    const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
+    if (!participant) throw new NotFoundException('Participant not found');
+
+    return this.awardPoints(performerId, performerType, participant.id, campaignId, points, 'Awarded by scan');
+  }
+
+  // Method C: Dual Code
+  async awardPointsDualScan(
+    staffOrBusinessCode: string,
+    participantCode: string,
+    campaignId: string,
+    points: number
+  ) {
+    const { staff, business } = await this.findPerformerByCode(staffOrBusinessCode);
+    const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
+    if (!participant) throw new NotFoundException('Participant not found');
+
+    const performerId = staff ? staff.id : business.id;
+    const performerType = staff ? 'Staff' : 'Business';
+
+    return this.awardPoints(performerId, performerType, participant.id, campaignId, points, 'Awarded by dual scan');
   }
 }
