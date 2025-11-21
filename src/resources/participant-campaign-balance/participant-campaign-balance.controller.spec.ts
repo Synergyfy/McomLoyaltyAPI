@@ -46,7 +46,6 @@ describe('ParticipantCampaignBalanceController', () => {
           provide: TransactionCodeService,
           useValue: {
             generateCode: jest.fn(),
-            validateAndMarkUsed: jest.fn(),
             getGeneratedCodes: jest.fn(),
             validateDualScanPermission: jest.fn(),
           },

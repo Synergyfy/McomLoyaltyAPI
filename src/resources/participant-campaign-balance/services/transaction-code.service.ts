@@ -21,6 +21,14 @@ export class TransactionCodeService {
   ) {}
 
   async generateCode(dto: GenerateCodeDto, user: User): Promise<TransactionCode> {
+    if (dto.type === TransactionType.EARN && !dto.points) {
+      throw new BadRequestException('Points are required for EARN type');
+    }
+
+    if (dto.type === TransactionType.REDEEM && !dto.rewardId) {
+      throw new BadRequestException('Reward ID is required for REDEEM type');
+    }
+
     const code = nanoid(9);
 
     const transactionCode = this.transactionCodeRepository.create({
@@ -40,39 +48,7 @@ export class TransactionCodeService {
       transactionCode.creator_business = { id: user.id } as any;
     } else if (user.role === Role.Staff) {
       transactionCode.creator_staff = { id: user.id } as any;
-      // Optionally link the business of the staff?
-      // For now, we track the staff. If we need business, we can fetch it from staff.
     }
-
-    return this.transactionCodeRepository.save(transactionCode);
-  }
-
-  async validateAndMarkUsed(code: string, campaignId: string, participantId: string): Promise<TransactionCode> {
-    const transactionCode = await this.transactionCodeRepository.findOne({
-      where: { code },
-      relations: ['campaign', 'reward', 'creator_business', 'creator_staff'],
-    });
-
-    if (!transactionCode) {
-      throw new NotFoundException('Transaction code not found');
-    }
-
-    if (transactionCode.campaign.id !== campaignId) {
-      throw new BadRequestException('Code is not valid for this campaign');
-    }
-
-    if (transactionCode.status !== TransactionCodeStatus.ACTIVE) {
-      throw new BadRequestException(`Code is ${transactionCode.status}`);
-    }
-
-    if (transactionCode.expires_at < new Date()) {
-      transactionCode.status = TransactionCodeStatus.EXPIRED;
-      await this.transactionCodeRepository.save(transactionCode);
-      throw new BadRequestException('Code has expired');
-    }
-
-    transactionCode.status = TransactionCodeStatus.USED;
-    transactionCode.used_by_participant = { id: participantId } as any;
 
     return this.transactionCodeRepository.save(transactionCode);
   }
