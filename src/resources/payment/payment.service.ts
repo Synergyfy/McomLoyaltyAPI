@@ -15,6 +15,7 @@ import { Business } from '../business/entities/business.entity';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { ConfigService } from '@nestjs/config';
 import { QrPlaquesService } from '../qr-plaques/qr-plaques.service';
+import { VerifySubscriptionDto } from './dto/verify-subscription.dto';
 
 @Injectable()
 export class PaymentService {
@@ -111,6 +112,81 @@ export class PaymentService {
       );
     }
     return { status: capture.result.status };
+  }
+
+  async verifyPaypalSubscription(verifySubscriptionDto: VerifySubscriptionDto, user: any) {
+    const subscriptionId = verifySubscriptionDto.subscription_id;
+    const subscription = await this.paypalService.getSubscription(subscriptionId);
+
+    // Check status - 'ACTIVE' is the standard active status for PayPal subscriptions
+    if (subscription.status !== 'ACTIVE' && subscription.status !== 'APPROVAL_PENDING') {
+         // Depending on flow, APPROVAL_PENDING might mean user just returned from PayPal but it's not yet processed fully?
+         // Usually after return_url, it should be ACTIVE if auto-approved, or we might need to activate it?
+         // If User Action is SUBSCRIBE_NOW, it should be active upon return.
+         // Let's assume ACTIVE is required.
+         if (subscription.status !== 'ACTIVE') {
+             throw new BadRequestException(`Subscription status is ${subscription.status}`);
+         }
+    }
+
+    if (subscription.status === 'ACTIVE') {
+        // We need to find which tier this plan corresponds to.
+        const planId = subscription.plan_id;
+        // Inefficient but robust: Find tier by any of the plan IDs
+        const tier = await this.tierRepository.findOne({
+            where: [
+                { paypal_monthly_plan_id: planId },
+                { paypal_quarterly_plan_id: planId },
+                { paypal_annual_plan_id: planId }
+            ]
+        });
+
+        if (!tier) {
+            throw new NotFoundException('Tier matching this subscription plan not found');
+        }
+
+        // Determine PlanType
+        let planType: PlanType;
+        if (tier.paypal_monthly_plan_id === planId) planType = PlanType.MONTHLY;
+        else if (tier.paypal_quarterly_plan_id === planId) planType = PlanType.QUARTERLY;
+        else if (tier.paypal_annual_plan_id === planId) planType = PlanType.ANNUAL;
+        else throw new BadRequestException('Plan type mismatch');
+
+        // Calculate expiration
+        // If next_billing_time is available, use it. Otherwise calculate based on planType.
+        let expiresAt: Date;
+        if (subscription.billing_info && subscription.billing_info.next_billing_time) {
+             expiresAt = new Date(subscription.billing_info.next_billing_time);
+        } else {
+             expiresAt = new Date();
+             if (planType === PlanType.ANNUAL) expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+             else if (planType === PlanType.QUARTERLY) expiresAt.setMonth(expiresAt.getMonth() + 3);
+             else expiresAt.setMonth(expiresAt.getMonth() + 1);
+        }
+
+        // For amount, we can try to get it from subscription details or tier price
+        // subscription.billing_info.last_payment.amount.value might exist if paid
+        // Or just use tier price as fallback
+        let amount = 0;
+        if (subscription.billing_info?.last_payment?.amount?.value) {
+             amount = parseFloat(subscription.billing_info.last_payment.amount.value);
+        } else {
+             amount = this._calculateAmountForSubscription(tier, planType);
+        }
+
+        await this._createOrUpdateMembership(
+            user,
+            tier,
+            planType,
+            amount,
+            PaymentProvider.PAYPAL,
+            subscriptionId,
+            false,
+            expiresAt
+        );
+    }
+
+    return { status: subscription.status };
   }
 
   async subscribe(subscribeDto: SubscribeDto, business: Business) {

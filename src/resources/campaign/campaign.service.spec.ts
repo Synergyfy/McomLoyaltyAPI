@@ -496,6 +496,8 @@ describe('CampaignService', () => {
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue(campaigns),
+        getCount: jest.fn().mockResolvedValue(1),
+        getRawMany: jest.fn().mockResolvedValue(campaigns[0]),
       });
 
       const result = await service.findClaimableCampaigns(
@@ -563,17 +565,15 @@ describe('CampaignService', () => {
     it('should return a paginated list of campaigns with analytics', async () => {
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
       const campaigns = [
-        [
-          {
-            id: 'campaign-1',
-            total_participants: '1',
-            total_rewards_redeemed: '1',
-            disabled: false,
-          },
-        ],
-        1,
+        {
+          id: 'campaign-1',
+          total_participants: '1',
+          total_rewards_redeemed: '1',
+          disabled: false,
+        },
       ] as any;
-      (campaignRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+
+      const mockQueryBuilder = {
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -583,7 +583,10 @@ describe('CampaignService', () => {
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue(campaigns),
-      });
+        getCount: jest.fn().mockResolvedValue(1),
+        getRawMany: jest.fn().mockResolvedValue(campaigns),
+      };
+      (campaignRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQueryBuilder);
 
       const result = await service.getCampaignAnalytics(
         'business-id',

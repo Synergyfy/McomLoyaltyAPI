@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -687,5 +688,29 @@ export class CampaignService {
       page,
       limit,
     };
+  }
+
+  async findPublicBusinessCampaignByCode(uniqueCode: string): Promise<BusinessCampaign> {
+    const businessCampaign = await this.businessCampaignRepository.findOne({
+      where: { uniqueCode },
+      relations: ['campaign', 'business', 'campaign.rewards'],
+    });
+
+    if (!businessCampaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+
+    const campaign = businessCampaign.campaign;
+    const now = new Date();
+
+    if (campaign.end_date < now) {
+      throw new BadRequestException('Campaign has expired');
+    }
+
+    if (campaign.disabled) {
+      throw new BadRequestException('Campaign is disabled');
+    }
+
+    return businessCampaign;
   }
 }

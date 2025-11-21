@@ -47,6 +47,7 @@ describe('PaymentService', () => {
     createOrder: jest.fn(),
     capturePayment: jest.fn(),
     createSubscription: jest.fn(),
+    getSubscription: jest.fn(),
   };
 
   const mockCouponService = {
@@ -296,6 +297,35 @@ describe('PaymentService', () => {
         subscriptionId: 'sub_pp_123',
         approvalUrl: 'https://paypal.com/approve'
       });
+    });
+  });
+
+  describe('verifyPaypalSubscription', () => {
+    it('should activate membership on active subscription', async () => {
+      const subscription = {
+        status: 'ACTIVE',
+        plan_id: 'P-123',
+        billing_info: {
+            next_billing_time: '2025-01-01T00:00:00Z'
+        }
+      };
+      mockPaypalService.getSubscription.mockResolvedValue(subscription);
+
+      const tier = {
+        id: 'tier-1',
+        paypal_monthly_plan_id: 'P-123',
+        monthly_price: 10,
+        qrCodeCount: 0
+      };
+      mockTierRepository.findOne.mockResolvedValue(tier);
+      mockMembershipRepository.findOne.mockResolvedValue(null);
+      mockMembershipRepository.create.mockReturnValue({});
+
+      const result = await service.verifyPaypalSubscription({ subscription_id: 'sub-123' }, { id: 'u1', role: 'business' });
+
+      expect(result.status).toBe('ACTIVE');
+      expect(mockMembershipRepository.create).toHaveBeenCalled();
+      expect(mockPaymentHistoryRepository.create).toHaveBeenCalled();
     });
   });
 });

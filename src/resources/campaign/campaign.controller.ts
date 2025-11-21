@@ -38,6 +38,7 @@ import {
   CampaignType,
   AudienceType,
 } from './entities/campaign.entity';
+import { BusinessCampaign } from './entities/business-campaign.entity';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
@@ -176,6 +177,20 @@ export class CampaignController {
   })
   findAllPublic(@Query() query: any) {
     return this.campaignService.findAllPublic(query);
+  }
+
+  @Get('public/business-campaign/:uniqueCode')
+  @Public()
+  @ApiOperation({ summary: 'Get a public business campaign by unique code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the business campaign details.',
+    type: BusinessCampaign
+  })
+  @ApiResponse({ status: 404, description: 'Campaign not found.' })
+  @ApiResponse({ status: 400, description: 'Campaign has expired or is disabled.' })
+  findOnePublicBusinessCampaign(@Param('uniqueCode') uniqueCode: string) {
+    return this.campaignService.findPublicBusinessCampaignByCode(uniqueCode);
   }
 
   @Get('analytics')
