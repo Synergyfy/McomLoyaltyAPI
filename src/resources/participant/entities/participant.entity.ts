@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToMany, JoinTable, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
-import { UserRole } from '../../../common/enums/user-role.enum';
+import { Role } from '../../../common/role.enum';
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 
@@ -16,8 +16,8 @@ export class Participant extends AbstractBaseEntity {
   @Column()
   password?: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.PARTICIPANT })
-  role: UserRole;
+  @Column({ type: 'enum', enum: Role, default: Role.Participant })
+  role: Role;
 
   @Column({ unique: true })
   uniqueCode: string;
