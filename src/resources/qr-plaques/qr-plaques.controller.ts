@@ -1,17 +1,38 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Delete, Query } from '@nestjs/common';
 import { QrPlaquesService } from './qr-plaques.service';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('QR Plaques')
 @Controller('qr-plaques')
 export class QrPlaquesController {
     constructor(private readonly qrPlaquesService: QrPlaquesService) { }
+
+    @Get('admin/stats')
+    @UseGuards(AuthGuard('jwt'), RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get QR plaque statistics (Admin only)' })
+    async getAdminStats() {
+        return this.qrPlaquesService.getAdminStats();
+    }
+
+    @Get('admin/analytics/chart')
+    @UseGuards(AuthGuard('jwt'), RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get QR plaque scan chart data (Admin only)' })
+    @ApiQuery({ name: 'startDate', required: false, type: String })
+    @ApiQuery({ name: 'endDate', required: false, type: String })
+    async getChartData(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+        return this.qrPlaquesService.getChartData(startDate, endDate);
+    }
 
     @Get('admin/all')
     @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -38,6 +59,13 @@ export class QrPlaquesController {
     @ApiOperation({ summary: 'Delete a QR plaque (Admin only)' })
     async remove(@Param('id') id: string) {
         return this.qrPlaquesService.remove(id);
+    }
+
+    @Public()
+    @Get('scan/:code')
+    @ApiOperation({ summary: 'Scan a QR plaque and get the link' })
+    async scanPlaque(@Param('code') code: string) {
+        return this.qrPlaquesService.scanPlaque(code);
     }
 
     @Get('business')

@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID, IsEmail } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, IsEmail, IsUrl } from 'class-validator';
 import { QrPlaqueStatus } from '../entities/qr-plaque.entity';
 
 export class UpdateQrPlaqueDto {
@@ -27,4 +27,9 @@ export class UpdateQrPlaqueDto {
     @IsOptional()
     @IsString()
     pendingInviteCode?: string;
+
+    @ApiProperty({ description: 'The URL link attached to the plaque', required: false })
+    @IsOptional()
+    @IsUrl()
+    link?: string;
 }

@@ -1,18 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { QrPlaque, QrPlaqueStatus } from './entities/qr-plaque.entity';
+import { QrPlaqueScan } from './entities/qr-plaque-scan.entity';
 import { Business } from '../business/entities/business.entity';
 import { Partner } from '../partner/entities/partner.entity';
 import { MailService } from '../../mail/mail.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
+import * as moment from 'moment';
 
 @Injectable()
 export class QrPlaquesService {
     constructor(
         @InjectRepository(QrPlaque)
         private readonly qrPlaqueRepository: Repository<QrPlaque>,
+        @InjectRepository(QrPlaqueScan)
+        private readonly qrPlaqueScanRepository: Repository<QrPlaqueScan>,
         @InjectRepository(Partner)
         private readonly partnerRepository: Repository<Partner>,
         @InjectRepository(Business)
@@ -31,7 +35,7 @@ export class QrPlaquesService {
 
     async ensurePlaqueCountForBusiness(business: Business, targetCount: number) {
         const currentCount = await this.qrPlaqueRepository.count({
-            where: { codeMaster: { id: business.id } },
+            where: { assignedBusiness: { id: business.id } },
         });
 
         if (currentCount >= targetCount) {
@@ -54,7 +58,7 @@ export class QrPlaquesService {
 
             const plaque = this.qrPlaqueRepository.create({
                 code,
-                codeMaster: business,
+                assignedBusiness: business,
                 status: QrPlaqueStatus.PENDING_ASSIGNMENT,
             });
             plaques.push(plaque);
@@ -64,7 +68,7 @@ export class QrPlaquesService {
 
     async findAllForBusiness(businessId: string) {
         return this.qrPlaqueRepository.find({
-            where: { codeMaster: { id: businessId } },
+            where: { assignedBusiness: { id: businessId } },
             relations: ['assignedPartner', 'assignedBusiness'],
         });
     }
@@ -75,7 +79,7 @@ export class QrPlaquesService {
             take: limit,
             skip: (page - 1) * limit,
             order: { created_at: 'DESC' },
-            relations: ['codeMaster', 'assignedPartner', 'assignedBusiness'],
+            relations: ['assignedPartner', 'assignedBusiness'],
         });
 
         return {
@@ -102,7 +106,7 @@ export class QrPlaquesService {
                 throw new NotFoundException(`Partner with ID ${assignedPartnerId} not found`);
             }
             plaque.assignedPartner = partner;
-        } else if (assignedPartnerId === null) { // Handle explicit null if needed, though optional usually means ignore
+        } else if (assignedPartnerId === null) {
             plaque.assignedPartner = null;
         }
 
@@ -130,7 +134,7 @@ export class QrPlaquesService {
     async findOneByCode(code: string) {
         return this.qrPlaqueRepository.findOne({
             where: { code },
-            relations: ['codeMaster', 'assignedPartner', 'assignedBusiness'],
+            relations: ['assignedPartner', 'assignedBusiness'],
         });
     }
 
@@ -176,5 +180,71 @@ export class QrPlaquesService {
         }
 
         return { message: 'Code verified. Please register to claim plaque.', plaqueId: plaque.id };
+    }
+
+    async scanPlaque(code: string) {
+        const plaque = await this.qrPlaqueRepository.findOne({ where: { code } });
+        if (!plaque) {
+            throw new NotFoundException('QR Plaque not found');
+        }
+
+        // Record scan
+        const scan = this.qrPlaqueScanRepository.create({ qrPlaque: plaque });
+        await this.qrPlaqueScanRepository.save(scan);
+
+        return { link: plaque.link };
+    }
+
+    async getAdminStats() {
+        const totalPlaques = await this.qrPlaqueRepository.count();
+        const activePlaques = await this.qrPlaqueRepository.count({ where: { status: QrPlaqueStatus.ACTIVE } });
+        const totalScans = await this.qrPlaqueScanRepository.count();
+
+        const averageScansPerPlaque = totalPlaques > 0 ? totalScans / totalPlaques : 0;
+
+        return {
+            totalPlaques,
+            activePlaques,
+            totalScans,
+            averageScansPerPlaque: parseFloat(averageScansPerPlaque.toFixed(2))
+        };
+    }
+
+    async getChartData(startDate?: string, endDate?: string) {
+        const start = startDate ? moment(startDate).toDate() : moment().subtract(7, 'days').toDate();
+        const end = endDate ? moment(endDate).toDate() : moment().toDate();
+
+        // Use generic SQL that should work, but TypeORM query builder is best.
+        // DATE() is MySQL specific. Postgres uses TO_CHAR or cast.
+        // Let's check if we can use TypeORM's abstraction or simple group by if scannedAt is date.
+        // Since scannedAt is timestamp, we need to trunc.
+        // "DATE_TRUNC" is Postgres. "DATE" is MySQL.
+        // Safest is to fetch data and process in memory if dataset is small, but for analytics it's bad.
+        // However, the memory hint says "POSTGRES".
+
+        const query = this.qrPlaqueScanRepository.createQueryBuilder('scan')
+            .select("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD') as date")
+            .addSelect("COUNT(scan.id) as count")
+            .where("scan.scanned_at BETWEEN :start AND :end", { start, end })
+            .groupBy("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD')")
+            .orderBy("date", "ASC");
+
+        const result = await query.getRawMany();
+
+        const finalResult = [];
+        let current = moment(start);
+        const endMoment = moment(end);
+
+        while (current.isSameOrBefore(endMoment, 'day')) {
+            const dateStr = current.format('YYYY-MM-DD');
+            const found = result.find(r => r.date === dateStr);
+            finalResult.push({
+                date: dateStr,
+                count: found ? parseInt(found.count, 10) : 0
+            });
+            current.add(1, 'day');
+        }
+
+        return finalResult;
     }
 }
