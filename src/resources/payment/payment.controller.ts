@@ -11,6 +11,7 @@ import { SubscribeDto } from './dto/subscribe.dto';
 import { Business } from '../business/entities/business.entity';
 import { Public } from '../../common/decorators/public.decorator';
 import { RawBody } from '../../common/decorators/raw-body.decorator';
+import { VerifySubscriptionDto } from './dto/verify-subscription.dto';
 
 @ApiTags('Payment')
 @Controller('payment')
@@ -53,6 +54,14 @@ export class PaymentController {
   @ApiResponse({ status: 201, description: 'The payment has been successfully verified.', schema: { example: { status: 'COMPLETED' } } })
   verifyPaypalPayment(@Body() verifyPaymentDto: VerifyPaymentDto, @CurrentUser() user) {
     return this.paymentService.verifyPaypalPayment(verifyPaymentDto, user);
+  }
+
+  @Post('paypal/verify-subscription')
+  @ApiOperation({ summary: 'Verify a PayPal subscription' })
+  @ApiBody({ type: VerifySubscriptionDto })
+  @ApiResponse({ status: 201, description: 'The subscription has been successfully verified.', schema: { example: { status: 'ACTIVE' } } })
+  verifyPaypalSubscription(@Body() verifySubscriptionDto: VerifySubscriptionDto, @CurrentUser() user) {
+    return this.paymentService.verifyPaypalSubscription(verifySubscriptionDto, user);
   }
 
   @Post('subscribe')

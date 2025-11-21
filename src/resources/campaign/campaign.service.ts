@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -687,5 +688,56 @@ export class CampaignService {
       page,
       limit,
     };
+  }
+
+  async findPublicCampaign(identifier: string): Promise<BusinessCampaign | Campaign> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = uuidRegex.test(identifier);
+
+    let businessCampaign: BusinessCampaign | null = null;
+    let campaign: Campaign | null = null;
+
+    // Try finding BusinessCampaign
+    if (isUuid) {
+        businessCampaign = await this.businessCampaignRepository.findOne({
+            where: { id: identifier },
+            relations: ['campaign', 'business', 'campaign.rewards'],
+        });
+    } else {
+        businessCampaign = await this.businessCampaignRepository.findOne({
+            where: { uniqueCode: identifier },
+            relations: ['campaign', 'business', 'campaign.rewards'],
+        });
+    }
+
+    if (businessCampaign) {
+        const c = businessCampaign.campaign;
+        const now = new Date();
+        if (c.end_date < now) throw new BadRequestException('Campaign has expired');
+        if (c.disabled) throw new BadRequestException('Campaign is disabled');
+        return businessCampaign;
+    }
+
+    // Try finding Campaign
+    if (isUuid) {
+        campaign = await this.campaignRepository.findOne({
+            where: { id: identifier },
+            relations: ['business', 'rewards'],
+        });
+    } else {
+        campaign = await this.campaignRepository.findOne({
+            where: { uniqueCode: identifier },
+            relations: ['business', 'rewards'],
+        });
+    }
+
+    if (campaign) {
+        const now = new Date();
+        if (campaign.end_date < now) throw new BadRequestException('Campaign has expired');
+        if (campaign.disabled) throw new BadRequestException('Campaign is disabled');
+        return campaign;
+    }
+
+    throw new NotFoundException('Campaign not found');
   }
 }
