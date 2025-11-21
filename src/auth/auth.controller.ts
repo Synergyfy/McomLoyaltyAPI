@@ -20,12 +20,12 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 201,
-    description: 'The user has been successfully logged in.',
+    description: 'The user (Admin, Business, Staff, Participant) has been successfully logged in.',
     schema: {
       example: {
         user: {
           name: 'John Doe',
-          role: 'Admin',
+          role: 'Admin | Business | Staff | Participant',
           isOnboarded: true,
         },
         access_token: 'your_access_token',
