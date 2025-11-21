@@ -225,11 +225,44 @@ Create a new badge for customers.
 - **Payload**: `Partial<CustomerBadge>`
 ```json
 {
-  "name": "Ruby",
-  "minPoints": 10000,
-  "minCampaignsJoined": 50,
-  "privileges": ["Free Shipping"],
   "description": "A rare gem"
 }
 ```
 - **Response**: Created `CustomerBadge` object.
+
+---
+
+## 5. QR Plaques Resource
+
+### 5.1. Overview
+The QR Plaques resource manages physical or digital QR codes assigned to businesses. These codes are generated automatically when a business subscribes to a specific Tier. Each Tier can have a defined number of QR codes (`qrCodeCount`).
+
+### 5.2. Data Model (`QrPlaque`)
+Represents a unique QR code plaque.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | string | Unique identifier (UUID). |
+| `code` | string | Unique 9-character alphanumeric code (case-sensitive). |
+| `codeMaster` | Business | Relation to the Business that owns this plaque. |
+| `currentOwner` | Participant | Relation to the Participant currently holding/using the plaque (nullable). |
+| `status` | enum | Status of the plaque: `ACTIVE`, `INACTIVE`, `FOR_SALE`, `PENDING_ASSIGNMENT`. |
+
+### 5.3. Business Logic
+- **Generation**: When a business subscribes to a Tier (via `PaymentService`), the system checks the `qrCodeCount` of that Tier.
+- **Allocation**: If the business has fewer plaques than the Tier allows, the system automatically generates new unique plaques to meet the quota.
+- **Uniqueness**: Each generated code is a unique 9-character string.
+
+### 5.4. API Reference
+
+#### Get Business QR Plaques
+Retrieves all QR plaques assigned to the authenticated business.
+- **Endpoint**: `GET /qr-plaques/business`
+- **Access**: Authenticated Business
+- **Response**: `QrPlaque[]`
+
+#### Get QR Plaque by Code
+Retrieves details of a specific QR plaque using its unique code.
+- **Endpoint**: `GET /qr-plaques/:code`
+- **Access**: Public / Authenticated Users
+- **Response**: `QrPlaque`

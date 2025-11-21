@@ -14,6 +14,7 @@ import { CouponService } from '../coupon/coupon.service';
 import { Business } from '../business/entities/business.entity';
 import { SubscribeDto } from './dto/subscribe.dto';
 import { ConfigService } from '@nestjs/config';
+import { QrPlaquesService } from '../qr-plaques/qr-plaques.service';
 
 @Injectable()
 export class PaymentService {
@@ -30,7 +31,8 @@ export class PaymentService {
     private readonly paypalService: PaypalService,
     private readonly couponService: CouponService,
     private readonly configService: ConfigService,
-  ) {}
+    private readonly qrPlaquesService: QrPlaquesService,
+  ) { }
 
   async initiateStripePayment(initiatePaymentDto: InitiatePaymentDto, user: any) {
     const tier = await this.tierRepository.findOne({ where: { id: initiatePaymentDto.tier_id } });
@@ -222,6 +224,14 @@ export class PaymentService {
         status: PaymentStatus.SUCCEEDED,
       });
       await this.paymentHistoryRepository.save(paymentHistory);
+
+      // Generate QR Plaques if applicable
+      if (tier.qrCodeCount > 0 && user.role === 'business') {
+        const business = await this.businessRepository.findOne({ where: { id: user.id } });
+        if (business) {
+          await this.qrPlaquesService.ensurePlaqueCountForBusiness(business, tier.qrCodeCount);
+        }
+      }
     }
   }
 
