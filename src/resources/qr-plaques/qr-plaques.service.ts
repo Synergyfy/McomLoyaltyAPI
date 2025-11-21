@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QrPlaque, QrPlaqueStatus } from './entities/qr-plaque.entity';
 import { Business } from '../business/entities/business.entity';
 import { Partner } from '../partner/entities/partner.entity';
 import { MailService } from '../../mail/mail.service';
+import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
 
 @Injectable()
 export class QrPlaquesService {
@@ -67,6 +69,64 @@ export class QrPlaquesService {
         });
     }
 
+    async findAllAdmin(paginationDto: PaginationDto) {
+        const { page, limit } = paginationDto;
+        const [data, total] = await this.qrPlaqueRepository.findAndCount({
+            take: limit,
+            skip: (page - 1) * limit,
+            order: { created_at: 'DESC' },
+            relations: ['codeMaster', 'assignedPartner', 'assignedBusiness'],
+        });
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+        };
+    }
+
+    async update(id: string, updateQrPlaqueDto: UpdateQrPlaqueDto) {
+        const plaque = await this.qrPlaqueRepository.findOne({ where: { id } });
+        if (!plaque) {
+            throw new NotFoundException(`QR Plaque with ID ${id} not found`);
+        }
+
+        const { assignedPartnerId, assignedBusinessId, ...rest } = updateQrPlaqueDto;
+
+        Object.assign(plaque, rest);
+
+        if (assignedPartnerId) {
+            const partner = await this.partnerRepository.findOne({ where: { id: assignedPartnerId } });
+            if (!partner) {
+                throw new NotFoundException(`Partner with ID ${assignedPartnerId} not found`);
+            }
+            plaque.assignedPartner = partner;
+        } else if (assignedPartnerId === null) { // Handle explicit null if needed, though optional usually means ignore
+            plaque.assignedPartner = null;
+        }
+
+        if (assignedBusinessId) {
+            const business = await this.businessRepository.findOne({ where: { id: assignedBusinessId } });
+            if (!business) {
+                throw new NotFoundException(`Business with ID ${assignedBusinessId} not found`);
+            }
+            plaque.assignedBusiness = business;
+        } else if (assignedBusinessId === null) {
+            plaque.assignedBusiness = null;
+        }
+
+        return this.qrPlaqueRepository.save(plaque);
+    }
+
+    async remove(id: string) {
+        const plaque = await this.qrPlaqueRepository.findOne({ where: { id } });
+        if (!plaque) {
+            throw new NotFoundException(`QR Plaque with ID ${id} not found`);
+        }
+        return this.qrPlaqueRepository.remove(plaque);
+    }
+
     async findOneByCode(code: string) {
         return this.qrPlaqueRepository.findOne({
             where: { code },
@@ -77,7 +137,7 @@ export class QrPlaquesService {
     async inviteUser(plaqueId: string, email: string) {
         const plaque = await this.qrPlaqueRepository.findOne({ where: { id: plaqueId } });
         if (!plaque) {
-            throw new Error('Plaque not found');
+            throw new NotFoundException('Plaque not found');
         }
 
         const inviteCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -94,13 +154,13 @@ export class QrPlaquesService {
     async verifyInvite(code: string, email: string) {
         const plaque = await this.qrPlaqueRepository.findOne({ where: { pendingInviteCode: code, pendingInviteEmail: email } });
         if (!plaque) {
-            throw new Error('Invalid code or email');
+            throw new NotFoundException('Invalid code or email');
         }
 
         const partner = await this.partnerRepository.findOne({ where: { email } });
         if (partner) {
             plaque.assignedPartner = partner;
-            plaque.status = QrPlaqueStatus.ACTIVE; // Or keep as PENDING_ASSIGNMENT until confirmed? Assuming ACTIVE.
+            plaque.status = QrPlaqueStatus.ACTIVE;
             plaque.pendingInviteCode = null;
             plaque.pendingInviteEmail = null;
             return await this.qrPlaqueRepository.save(plaque);
@@ -114,12 +174,6 @@ export class QrPlaquesService {
             plaque.pendingInviteEmail = null;
             return await this.qrPlaqueRepository.save(plaque);
         }
-
-        // If user not found, we just return the plaque but don't assign yet?
-        // Or maybe we assign the email to a "pending owner" field?
-        // For now, returning success but not assigning relation.
-        // The prompt says "automatically assigned". If they don't exist, we can't assign relation.
-        // We'll assume they will register later.
 
         return { message: 'Code verified. Please register to claim plaque.', plaqueId: plaque.id };
     }
