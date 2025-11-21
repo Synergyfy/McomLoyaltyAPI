@@ -182,15 +182,21 @@ export class CampaignController {
   @Get('public/business-campaign/:identifier')
   @Public()
   @ApiOperation({ summary: 'Get a public business campaign by unique code or ID' })
+  @ApiExtraModels(BusinessCampaign, Campaign)
   @ApiResponse({
     status: 200,
-    description: 'Returns the business campaign details.',
-    type: BusinessCampaign
+    description: 'Returns the campaign details.',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(BusinessCampaign) },
+        { $ref: getSchemaPath(Campaign) },
+      ]
+    }
   })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
   @ApiResponse({ status: 400, description: 'Campaign has expired or is disabled.' })
   findOnePublicBusinessCampaign(@Param('identifier') identifier: string) {
-    return this.campaignService.findPublicBusinessCampaign(identifier);
+    return this.campaignService.findPublicCampaign(identifier);
   }
 
   @Get('analytics')

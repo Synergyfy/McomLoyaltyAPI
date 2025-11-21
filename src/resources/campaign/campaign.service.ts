@@ -690,11 +690,15 @@ export class CampaignService {
     };
   }
 
-  async findPublicBusinessCampaign(identifier: string): Promise<BusinessCampaign> {
+  async findPublicCampaign(identifier: string): Promise<BusinessCampaign | Campaign> {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    let businessCampaign;
+    const isUuid = uuidRegex.test(identifier);
 
-    if (uuidRegex.test(identifier)) {
+    let businessCampaign: BusinessCampaign | null = null;
+    let campaign: Campaign | null = null;
+
+    // Try finding BusinessCampaign
+    if (isUuid) {
         businessCampaign = await this.businessCampaignRepository.findOne({
             where: { id: identifier },
             relations: ['campaign', 'business', 'campaign.rewards'],
@@ -706,21 +710,34 @@ export class CampaignService {
         });
     }
 
-    if (!businessCampaign) {
-      throw new NotFoundException('Campaign not found');
+    if (businessCampaign) {
+        const c = businessCampaign.campaign;
+        const now = new Date();
+        if (c.end_date < now) throw new BadRequestException('Campaign has expired');
+        if (c.disabled) throw new BadRequestException('Campaign is disabled');
+        return businessCampaign;
     }
 
-    const campaign = businessCampaign.campaign;
-    const now = new Date();
-
-    if (campaign.end_date < now) {
-      throw new BadRequestException('Campaign has expired');
+    // Try finding Campaign
+    if (isUuid) {
+        campaign = await this.campaignRepository.findOne({
+            where: { id: identifier },
+            relations: ['business', 'rewards'],
+        });
+    } else {
+        campaign = await this.campaignRepository.findOne({
+            where: { uniqueCode: identifier },
+            relations: ['business', 'rewards'],
+        });
     }
 
-    if (campaign.disabled) {
-      throw new BadRequestException('Campaign is disabled');
+    if (campaign) {
+        const now = new Date();
+        if (campaign.end_date < now) throw new BadRequestException('Campaign has expired');
+        if (campaign.disabled) throw new BadRequestException('Campaign is disabled');
+        return campaign;
     }
 
-    return businessCampaign;
+    throw new NotFoundException('Campaign not found');
   }
 }
