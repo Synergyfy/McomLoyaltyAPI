@@ -179,9 +179,9 @@ export class CampaignController {
     return this.campaignService.findAllPublic(query);
   }
 
-  @Get('public/business-campaign/:uniqueCode')
+  @Get('public/business-campaign/:identifier')
   @Public()
-  @ApiOperation({ summary: 'Get a public business campaign by unique code' })
+  @ApiOperation({ summary: 'Get a public business campaign by unique code or ID' })
   @ApiResponse({
     status: 200,
     description: 'Returns the business campaign details.',
@@ -189,8 +189,8 @@ export class CampaignController {
   })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
   @ApiResponse({ status: 400, description: 'Campaign has expired or is disabled.' })
-  findOnePublicBusinessCampaign(@Param('uniqueCode') uniqueCode: string) {
-    return this.campaignService.findPublicBusinessCampaignByCode(uniqueCode);
+  findOnePublicBusinessCampaign(@Param('identifier') identifier: string) {
+    return this.campaignService.findPublicBusinessCampaign(identifier);
   }
 
   @Get('analytics')

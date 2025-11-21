@@ -690,11 +690,21 @@ export class CampaignService {
     };
   }
 
-  async findPublicBusinessCampaignByCode(uniqueCode: string): Promise<BusinessCampaign> {
-    const businessCampaign = await this.businessCampaignRepository.findOne({
-      where: { uniqueCode },
-      relations: ['campaign', 'business', 'campaign.rewards'],
-    });
+  async findPublicBusinessCampaign(identifier: string): Promise<BusinessCampaign> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let businessCampaign;
+
+    if (uuidRegex.test(identifier)) {
+        businessCampaign = await this.businessCampaignRepository.findOne({
+            where: { id: identifier },
+            relations: ['campaign', 'business', 'campaign.rewards'],
+        });
+    } else {
+        businessCampaign = await this.businessCampaignRepository.findOne({
+            where: { uniqueCode: identifier },
+            relations: ['campaign', 'business', 'campaign.rewards'],
+        });
+    }
 
     if (!businessCampaign) {
       throw new NotFoundException('Campaign not found');
