@@ -199,12 +199,9 @@ export class CampaignController {
   }
 
   @Get(':id')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({ summary: 'Get a campaign by ID' })
+  @Public()
+  @ApiOperation({ summary: 'Public: Get a campaign by ID' })
   @ApiResponse({ status: 200, description: 'Returns the campaign.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
