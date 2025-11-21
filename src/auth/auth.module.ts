@@ -1,26 +1,25 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
-import { LocalStrategy } from './local.strategy';
-import { HashModule } from '../common/hash/hash.module';
+import { AuthController } from './auth.controller';
+import { UserModule } from '../user/user.module';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import jwtConfig from '../config/jwt.config';
-import { UserModule } from '../user/user.module';
-import { AuthController } from './auth.controller';
+import { LocalStrategy } from './local.strategy';
+import { JwtStrategy } from './jwt.strategy';
+import { HashModule } from '../common/hash/hash.module';
 import { OtpModule } from '../resources/otp/otp.module';
 import { MailModule } from '../mail/mail.module';
 import { BusinessModule } from '../resources/business/business.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Membership } from '../resources/membership/entities/membership.entity';
+import { PartnerModule } from '../resources/partner/partner.module';
+import { PartnerLocalStrategy } from './partner-local.strategy';
 
 @Module({
-  controllers: [AuthController],
   imports: [
-    TypeOrmModule.forFeature([Membership]),
     UserModule,
-    BusinessModule,
     PassportModule,
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync({
@@ -34,8 +33,12 @@ import { Membership } from '../resources/membership/entities/membership.entity';
     HashModule,
     OtpModule,
     MailModule,
+    BusinessModule,
+    TypeOrmModule.forFeature([Membership]),
+    PartnerModule,
   ],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
+  controllers: [AuthController],
+  providers: [AuthService, LocalStrategy, JwtStrategy, PartnerLocalStrategy],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

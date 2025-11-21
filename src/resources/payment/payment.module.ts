@@ -10,14 +10,16 @@ import { PaypalService } from './paypal.service';
 import { ConfigModule } from '@nestjs/config';
 import { CouponModule } from '../coupon/coupon.module';
 import { Business } from '../business/entities/business.entity';
+import { QrPlaquesModule } from '../qr-plaques/qr-plaques.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Tier, Membership, PaymentHistory, Business]),
     ConfigModule,
     CouponModule,
+    QrPlaquesModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService, PaypalService],
 })
-export class PaymentModule {}
+export class PaymentModule { }

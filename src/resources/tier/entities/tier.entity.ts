@@ -34,4 +34,7 @@ export class Tier extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   stripe_annual_price_id: string;
+
+  @Column({ type: 'int', default: 0 })
+  qrCodeCount: number;
 }
