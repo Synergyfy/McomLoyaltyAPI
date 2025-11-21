@@ -2,6 +2,7 @@ import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './local-auth.guard';
+import { PartnerLocalAuthGuard } from './partner-local-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -11,7 +12,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @UseGuards(LocalAuthGuard)
@@ -35,6 +36,29 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async login(@Request() req, @Body() loginDto: LoginDto) {
     return this.authService.login(req.user);
+  }
+
+  @Public()
+  @UseGuards(PartnerLocalAuthGuard)
+  @Post('login/partner')
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The partner has been successfully logged in.',
+    schema: {
+      example: {
+        user: {
+          name: 'Partner Name',
+          role: 'Partner',
+        },
+        access_token: 'your_access_token',
+        refresh_token: 'your_refresh_token',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  async loginPartner(@Request() req, @Body() loginDto: LoginDto) {
+    return this.authService.loginPartner(req.user);
   }
 
   @Public()

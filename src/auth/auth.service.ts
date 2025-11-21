@@ -10,6 +10,7 @@ import { BusinessService } from '../resources/business/services/business.service
 import { InjectRepository } from '@nestjs/typeorm';
 import { Membership, MembershipStatus } from '../resources/membership/entities/membership.entity';
 import { Repository } from 'typeorm';
+import { PartnerService } from '../resources/partner/partner.service';
 
 @Injectable()
 export class AuthService {
@@ -20,9 +21,10 @@ export class AuthService {
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly businessService: BusinessService,
+    private readonly partnerService: PartnerService,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
-  ) {}
+  ) { }
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.userService.findOne(email);
@@ -117,5 +119,26 @@ export class AuthService {
     } catch (e) {
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  async validatePartner(email: string, pass: string): Promise<any> {
+    const partner = await this.partnerService.findByEmail(email);
+    if (partner && (await this.hashService.comparePassword(pass, partner.password))) {
+      const { password, ...result } = partner;
+      return result;
+    }
+    throw new UnauthorizedException('Invalid login credentials');
+  }
+
+  async loginPartner(partner: any) {
+    const payload = { username: partner.email, sub: partner.id, role: Role.Partner };
+    return {
+      user: {
+        name: partner.name,
+        role: Role.Partner,
+      },
+      access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
+    };
   }
 }
