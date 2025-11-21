@@ -167,15 +167,6 @@ export class SeederService {
         badge_level: BadgeLevel.SILVER,
         reward_source: RewardSource.PARTNER,
         audience: RewardAudience.ALL_BUSINESS,
-        // business: businesses[i % businesses.length], // Reward entity does not have 'business' relation directly in base Reward?
-        // Wait, I recall seeing 'business' in previous reads or seeder.
-        // Let's check the Reward entity again. It has ManyToMany Sectors/Tiers.
-        // It does NOT have ManyToOne business.
-        // But BusinessReward links them.
-        // Ah, the previous seeder had `business: businesses[...]` in `rewardRepository.save`.
-        // If the entity doesn't have it, that was a bug in previous seeder code or I misread the entity file.
-        // The entity file I just read shows NO business column.
-        // So I will remove `business` from here.
       })),
     );
 
@@ -217,7 +208,7 @@ export class SeederService {
       })),
     );
 
-    // Ensure every campaign has MULTIPLE rewards
+    // Ensure every campaign has MULTIPLE rewards linked
     const allCampaigns = [...adminCampaigns, ...businessCampaigns];
 
     for (const campaign of allCampaigns) {
@@ -225,6 +216,11 @@ export class SeederService {
         const shuffled = [...rewardsToAssign].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, 3);
 
+        // Update ManyToMany Relation
+        campaign.rewards = selected;
+        await this.campaignRepository.save(campaign);
+
+        // Also create BusinessReward entries as before (metadata/catalogue)
         for (const reward of selected) {
              const exists = await this.businessRewardRepository.findOne({
                  where: {
@@ -248,6 +244,19 @@ export class SeederService {
         for (const campaign of adminCampaigns) {
             const shuffled = [...adminRewards].sort(() => 0.5 - Math.random());
             const selected = shuffled.slice(0, 2);
+
+            // For claimed admin campaigns, we might need to update the underlying campaign rewards?
+            // No, admin campaigns are shared templates.
+            // Businesses 'claim' them by creating 'BusinessCampaign' entity.
+            // Does 'BusinessCampaign' have rewards? No.
+            // When a business claims a campaign, they might want to customize rewards?
+            // The `CampaignService.claimCampaign` creates `BusinessCampaign`.
+            // It does NOT clone the campaign.
+            // So if `findClaimedCampaigns` returns `campaign`, it returns the SHARED campaign.
+            // So `campaign.rewards` will be the admin rewards we just assigned above.
+            // That should be sufficient for the user's request.
+
+            // But we also populate BusinessReward for completeness
             for(const reward of selected) {
                  await this.businessRewardRepository.save({
                     business,
@@ -359,12 +368,7 @@ export class SeederService {
       'qr_plaque_scans',
       'membership',
       'tier',
-      'coupon' // Fixed from 'coupons' to 'coupon' assuming default naming if @Entity() is empty, or explicitly checked.
-      // Checking Coupon entity again: @Entity() defaults to class name 'Coupon' -> 'coupon' (lowercase usually in pg depending on config).
-      // But standard TypeORM naming is usually class name.
-      // Wait, 'reward' table worked and it was @Entity() -> 'reward'.
-      // 'Coupon' -> 'coupon'.
-      // If previous error was "relation 'coupons' does not exist", it means 'coupon' is likely correct.
+      'coupon'
     ];
 
     for (const tableName of tableNames) {
@@ -374,7 +378,6 @@ export class SeederService {
         );
       } catch (error) {
         // console.error(`Error truncating table ${tableName}:`, error.message);
-        // Suppress error if table doesn't exist (like if Coupon is not created yet or named differently)
       }
     }
 
