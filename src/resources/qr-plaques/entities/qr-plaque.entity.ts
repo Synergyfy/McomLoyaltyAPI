@@ -1,8 +1,8 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
-import { Participant } from '../../participant/entities/participant.entity';
 import { Partner } from '../../partner/entities/partner.entity';
+import { QrPlaqueScan } from './qr-plaque-scan.entity';
 
 export enum QrPlaqueStatus {
     ACTIVE = 'ACTIVE',
@@ -16,9 +16,7 @@ export class QrPlaque extends AbstractBaseEntity {
     @Column({ unique: true, length: 9 })
     code: string;
 
-    @ManyToOne(() => Business)
-    @JoinColumn({ name: 'code_master_id' })
-    codeMaster: Business;
+    // Removed codeMaster as per instructions
 
     @ManyToOne(() => Partner, { nullable: true })
     @JoinColumn({ name: 'assigned_partner_id' })
@@ -27,6 +25,9 @@ export class QrPlaque extends AbstractBaseEntity {
     @ManyToOne(() => Business, { nullable: true })
     @JoinColumn({ name: 'assigned_business_id' })
     assignedBusiness: Business;
+
+    @Column({ nullable: true })
+    link: string;
 
     @Column({ nullable: true })
     pendingInviteEmail: string;
@@ -40,4 +41,7 @@ export class QrPlaque extends AbstractBaseEntity {
         default: QrPlaqueStatus.PENDING_ASSIGNMENT,
     })
     status: QrPlaqueStatus;
+
+    @OneToMany(() => QrPlaqueScan, (scan) => scan.qrPlaque)
+    scans: QrPlaqueScan[];
 }

@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { QrPlaque, QrPlaqueStatus } from './entities/qr-plaque.entity';
+import { QrPlaqueScan } from './entities/qr-plaque-scan.entity';
 import { Business } from '../business/entities/business.entity';
 import { Partner } from '../partner/entities/partner.entity';
 import { MailService } from '../../mail/mail.service';
+import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
+import * as moment from 'moment';
 
 @Injectable()
 export class QrPlaquesService {
     constructor(
         @InjectRepository(QrPlaque)
         private readonly qrPlaqueRepository: Repository<QrPlaque>,
+        @InjectRepository(QrPlaqueScan)
+        private readonly qrPlaqueScanRepository: Repository<QrPlaqueScan>,
         @InjectRepository(Partner)
         private readonly partnerRepository: Repository<Partner>,
         @InjectRepository(Business)
@@ -29,7 +35,7 @@ export class QrPlaquesService {
 
     async ensurePlaqueCountForBusiness(business: Business, targetCount: number) {
         const currentCount = await this.qrPlaqueRepository.count({
-            where: { codeMaster: { id: business.id } },
+            where: { assignedBusiness: { id: business.id } },
         });
 
         if (currentCount >= targetCount) {
@@ -52,7 +58,7 @@ export class QrPlaquesService {
 
             const plaque = this.qrPlaqueRepository.create({
                 code,
-                codeMaster: business,
+                assignedBusiness: business,
                 status: QrPlaqueStatus.PENDING_ASSIGNMENT,
             });
             plaques.push(plaque);
@@ -62,22 +68,80 @@ export class QrPlaquesService {
 
     async findAllForBusiness(businessId: string) {
         return this.qrPlaqueRepository.find({
-            where: { codeMaster: { id: businessId } },
+            where: { assignedBusiness: { id: businessId } },
             relations: ['assignedPartner', 'assignedBusiness'],
         });
+    }
+
+    async findAllAdmin(paginationDto: PaginationDto) {
+        const { page, limit } = paginationDto;
+        const [data, total] = await this.qrPlaqueRepository.findAndCount({
+            take: limit,
+            skip: (page - 1) * limit,
+            order: { created_at: 'DESC' },
+            relations: ['assignedPartner', 'assignedBusiness'],
+        });
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+        };
+    }
+
+    async update(id: string, updateQrPlaqueDto: UpdateQrPlaqueDto) {
+        const plaque = await this.qrPlaqueRepository.findOne({ where: { id } });
+        if (!plaque) {
+            throw new NotFoundException(`QR Plaque with ID ${id} not found`);
+        }
+
+        const { assignedPartnerId, assignedBusinessId, ...rest } = updateQrPlaqueDto;
+
+        Object.assign(plaque, rest);
+
+        if (assignedPartnerId) {
+            const partner = await this.partnerRepository.findOne({ where: { id: assignedPartnerId } });
+            if (!partner) {
+                throw new NotFoundException(`Partner with ID ${assignedPartnerId} not found`);
+            }
+            plaque.assignedPartner = partner;
+        } else if (assignedPartnerId === null) {
+            plaque.assignedPartner = null;
+        }
+
+        if (assignedBusinessId) {
+            const business = await this.businessRepository.findOne({ where: { id: assignedBusinessId } });
+            if (!business) {
+                throw new NotFoundException(`Business with ID ${assignedBusinessId} not found`);
+            }
+            plaque.assignedBusiness = business;
+        } else if (assignedBusinessId === null) {
+            plaque.assignedBusiness = null;
+        }
+
+        return this.qrPlaqueRepository.save(plaque);
+    }
+
+    async remove(id: string) {
+        const plaque = await this.qrPlaqueRepository.findOne({ where: { id } });
+        if (!plaque) {
+            throw new NotFoundException(`QR Plaque with ID ${id} not found`);
+        }
+        return this.qrPlaqueRepository.remove(plaque);
     }
 
     async findOneByCode(code: string) {
         return this.qrPlaqueRepository.findOne({
             where: { code },
-            relations: ['codeMaster', 'assignedPartner', 'assignedBusiness'],
+            relations: ['assignedPartner', 'assignedBusiness'],
         });
     }
 
     async inviteUser(plaqueId: string, email: string) {
         const plaque = await this.qrPlaqueRepository.findOne({ where: { id: plaqueId } });
         if (!plaque) {
-            throw new Error('Plaque not found');
+            throw new NotFoundException('Plaque not found');
         }
 
         const inviteCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -94,13 +158,13 @@ export class QrPlaquesService {
     async verifyInvite(code: string, email: string) {
         const plaque = await this.qrPlaqueRepository.findOne({ where: { pendingInviteCode: code, pendingInviteEmail: email } });
         if (!plaque) {
-            throw new Error('Invalid code or email');
+            throw new NotFoundException('Invalid code or email');
         }
 
         const partner = await this.partnerRepository.findOne({ where: { email } });
         if (partner) {
             plaque.assignedPartner = partner;
-            plaque.status = QrPlaqueStatus.ACTIVE; // Or keep as PENDING_ASSIGNMENT until confirmed? Assuming ACTIVE.
+            plaque.status = QrPlaqueStatus.ACTIVE;
             plaque.pendingInviteCode = null;
             plaque.pendingInviteEmail = null;
             return await this.qrPlaqueRepository.save(plaque);
@@ -115,12 +179,91 @@ export class QrPlaquesService {
             return await this.qrPlaqueRepository.save(plaque);
         }
 
-        // If user not found, we just return the plaque but don't assign yet?
-        // Or maybe we assign the email to a "pending owner" field?
-        // For now, returning success but not assigning relation.
-        // The prompt says "automatically assigned". If they don't exist, we can't assign relation.
-        // We'll assume they will register later.
-
         return { message: 'Code verified. Please register to claim plaque.', plaqueId: plaque.id };
+    }
+
+    async scanPlaque(code: string) {
+        const plaque = await this.qrPlaqueRepository.findOne({ where: { code } });
+        if (!plaque) {
+            throw new NotFoundException('QR Plaque not found');
+        }
+
+        // Record scan
+        const scan = this.qrPlaqueScanRepository.create({ qrPlaque: plaque });
+        await this.qrPlaqueScanRepository.save(scan);
+
+        return { link: plaque.link };
+    }
+
+    async getAdminStats() {
+        const totalPlaques = await this.qrPlaqueRepository.count();
+        const activePlaques = await this.qrPlaqueRepository.count({ where: { status: QrPlaqueStatus.ACTIVE } });
+        const totalScans = await this.qrPlaqueScanRepository.count();
+
+        const averageScansPerPlaque = totalPlaques > 0 ? totalScans / totalPlaques : 0;
+
+        return {
+            totalPlaques,
+            activePlaques,
+            totalScans,
+            averageScansPerPlaque: parseFloat(averageScansPerPlaque.toFixed(2))
+        };
+    }
+
+    async getChartData(startDate?: string, endDate?: string) {
+        const start = startDate ? moment(startDate).toDate() : moment().subtract(7, 'days').toDate();
+        const end = endDate ? moment(endDate).toDate() : moment().toDate();
+
+        const query = this.qrPlaqueScanRepository.createQueryBuilder('scan')
+            .select("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD') as date")
+            .addSelect("COUNT(scan.id) as count")
+            .where("scan.scanned_at BETWEEN :start AND :end", { start, end })
+            .groupBy("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD')")
+            .orderBy("date", "ASC");
+
+        const result = await query.getRawMany();
+
+        const finalResult = [];
+        let current = moment(start);
+        const endMoment = moment(end);
+
+        while (current.isSameOrBefore(endMoment, 'day')) {
+            const dateStr = current.format('YYYY-MM-DD');
+            const found = result.find(r => r.date === dateStr);
+            finalResult.push({
+                date: dateStr,
+                count: found ? parseInt(found.count, 10) : 0
+            });
+            current.add(1, 'day');
+        }
+
+        return finalResult;
+    }
+
+    async getTopPerformingPlaques(limit: number = 10) {
+        const results = await this.qrPlaqueScanRepository.createQueryBuilder('scan')
+            .leftJoinAndSelect('scan.qrPlaque', 'plaque')
+            .leftJoinAndSelect('plaque.assignedPartner', 'partner')
+            .leftJoinAndSelect('plaque.assignedBusiness', 'business')
+            .select([
+                'partner.name AS partner_name',
+                'COUNT(scan.id) AS total_scans',
+                'plaque.status AS status',
+                'business.name AS business_name'
+            ])
+            .groupBy('plaque.id')
+            .addGroupBy('partner.name')
+            .addGroupBy('plaque.status')
+            .addGroupBy('business.name')
+            .orderBy('total_scans', 'DESC')
+            .limit(limit)
+            .getRawMany();
+
+        return results.map(row => ({
+            ownerName: row.partner_name || null,
+            totalScans: parseInt(row.total_scans, 10),
+            status: row.status,
+            fromBusiness: row.business_name || null
+        }));
     }
 }

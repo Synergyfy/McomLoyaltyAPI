@@ -15,6 +15,12 @@ import { Reward } from '../resources/rewards/entities/reward.entity';
 import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
+import { Partner } from '../resources/partner/entities/partner.entity';
+import { QrPlaque } from '../resources/qr-plaques/entities/qr-plaque.entity';
+import { QrPlaqueScan } from '../resources/qr-plaques/entities/qr-plaque-scan.entity';
+import { Membership } from '../resources/membership/entities/membership.entity';
+import { Tier } from '../resources/tier/entities/tier.entity';
+import { Coupon } from '../resources/coupon/entities/coupon.entity';
 import { SeederService } from './seeder.service';
 
 @Module({
@@ -35,6 +41,12 @@ import { SeederService } from './seeder.service';
       Sector,
       Staff,
       SubCategory,
+      Partner,
+      QrPlaque,
+      QrPlaqueScan,
+      Membership,
+      Tier,
+      Coupon,
     ]),
   ],
   providers: [SeederService],
