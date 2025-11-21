@@ -119,23 +119,50 @@ export class PaymentService {
       throw new NotFoundException('Tier not found');
     }
 
-    let stripeCustomerId = business.stripe_customer_id;
-    if (!stripeCustomerId) {
-      const customer = await this.stripeService.createCustomer(business.name, business.email, subscribeDto.payment_token);
-      stripeCustomerId = customer.id;
-      await this.businessRepository.update(business.id, { stripe_customer_id: stripeCustomerId });
+    if (subscribeDto.provider === PaymentProvider.PAYPAL) {
+        const planId = this._getPaypalPlanIdForPlan(tier, subscribeDto.plan_type);
+        if (!planId) {
+            throw new BadRequestException('Invalid plan type or PayPal plan not configured for this tier');
+        }
+        if (!subscribeDto.return_url || !subscribeDto.cancel_url) {
+            throw new BadRequestException('Return URL and Cancel URL are required for PayPal subscriptions');
+        }
+
+        // Create PayPal Subscription
+        const subscription = await this.paypalService.createSubscription(
+            planId,
+            subscribeDto.return_url,
+            subscribeDto.cancel_url
+        );
+
+        return {
+            status: 'Subscription initiated',
+            subscriptionId: subscription.subscriptionId,
+            approvalUrl: subscription.approvalUrl
+        };
+    } else {
+        // Default to Stripe
+        let stripeCustomerId = business.stripe_customer_id;
+        if (!stripeCustomerId) {
+            if (!subscribeDto.payment_token) {
+                throw new BadRequestException('Payment token required for Stripe subscription');
+            }
+            const customer = await this.stripeService.createCustomer(business.name, business.email, subscribeDto.payment_token);
+            stripeCustomerId = customer.id;
+            await this.businessRepository.update(business.id, { stripe_customer_id: stripeCustomerId });
+        }
+
+        const priceId = this._getPriceIdForPlan(tier, subscribeDto.plan_type);
+        if (!priceId) {
+            throw new BadRequestException('Invalid plan type for this tier');
+        }
+
+        const trialPeriodDays = subscribeDto.is_trial ? 14 : undefined;
+
+        await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
+
+        return { status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful' };
     }
-
-    const priceId = this._getPriceIdForPlan(tier, subscribeDto.plan_type);
-    if (!priceId) {
-      throw new BadRequestException('Invalid plan type for this tier');
-    }
-
-    const trialPeriodDays = subscribeDto.is_trial ? 14 : undefined;
-
-    await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
-
-    return { status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful' };
   }
 
   private _getPriceIdForPlan(tier: Tier, planType: PlanType): string | null {
@@ -147,6 +174,19 @@ export class PaymentService {
     }
     if (planType === PlanType.ANNUAL) {
       return tier.stripe_annual_price_id;
+    }
+    return null;
+  }
+
+  private _getPaypalPlanIdForPlan(tier: Tier, planType: PlanType): string | null {
+    if (planType === PlanType.MONTHLY) {
+      return tier.paypal_monthly_plan_id;
+    }
+    if (planType === PlanType.QUARTERLY) {
+      return tier.paypal_quarterly_plan_id;
+    }
+    if (planType === PlanType.ANNUAL) {
+      return tier.paypal_annual_plan_id;
     }
     return null;
   }

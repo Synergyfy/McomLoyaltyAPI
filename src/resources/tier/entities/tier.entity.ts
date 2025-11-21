@@ -35,6 +35,15 @@ export class Tier extends AbstractBaseEntity {
   @Column({ nullable: true })
   stripe_annual_price_id: string;
 
+  @Column({ nullable: true })
+  paypal_monthly_plan_id: string;
+
+  @Column({ nullable: true })
+  paypal_quarterly_plan_id: string;
+
+  @Column({ nullable: true })
+  paypal_annual_plan_id: string;
+
   @Column({ type: 'int', default: 0 })
   qrCodeCount: number;
 }

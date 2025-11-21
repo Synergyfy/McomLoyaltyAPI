@@ -1,7 +1,8 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { PlanType } from '../../membership/entities/membership.entity';
+import { PaymentProvider } from '../../payment-history/entities/payment-history.entity';
 
 export class SubscribeDto {
   @ApiProperty({
@@ -22,12 +23,44 @@ export class SubscribeDto {
   plan_type: PlanType;
 
   @ApiProperty({
-    description: 'The payment token from the frontend.',
-    example: 'tok_visa',
+    description: 'Payment Provider (stripe or paypal)',
+    example: PaymentProvider.STRIPE,
+    enum: PaymentProvider,
+    default: PaymentProvider.STRIPE
   })
+  @IsOptional()
+  @IsEnum(PaymentProvider)
+  provider: PaymentProvider = PaymentProvider.STRIPE;
+
+  @ApiProperty({
+    description: 'The payment token from the frontend (Required for Stripe).',
+    example: 'tok_visa',
+    required: false
+  })
+  @ValidateIf(o => o.provider === PaymentProvider.STRIPE)
   @IsNotEmpty()
   @IsString()
-  payment_token: string;
+  payment_token?: string;
+
+  @ApiProperty({
+    description: 'Return URL for PayPal success redirection',
+    required: false,
+    example: 'https://example.com/success'
+  })
+  @ValidateIf(o => o.provider === PaymentProvider.PAYPAL)
+  @IsNotEmpty()
+  @IsString()
+  return_url?: string;
+
+  @ApiProperty({
+    description: 'Cancel URL for PayPal cancellation redirection',
+    required: false,
+    example: 'https://example.com/cancel'
+  })
+  @ValidateIf(o => o.provider === PaymentProvider.PAYPAL)
+  @IsNotEmpty()
+  @IsString()
+  cancel_url?: string;
 
   @ApiProperty({
     description: 'Whether this is a trial subscription.',

@@ -10,6 +10,8 @@ import { CouponService } from '../coupon/coupon.service';
 import { Coupon, DiscountType } from '../coupon/entities/coupon.entity';
 import { Business } from '../business/entities/business.entity';
 import { ConfigService } from '@nestjs/config';
+import { QrPlaquesService } from '../qr-plaques/qr-plaques.service';
+import { PaymentProvider } from '../payment-history/entities/payment-history.entity';
 
 describe('PaymentService', () => {
   let service: PaymentService;
@@ -31,6 +33,7 @@ describe('PaymentService', () => {
 
   const mockBusinessRepository = {
     update: jest.fn(),
+    findOne: jest.fn(),
   };
 
   const mockStripeService = {
@@ -43,6 +46,7 @@ describe('PaymentService', () => {
   const mockPaypalService = {
     createOrder: jest.fn(),
     capturePayment: jest.fn(),
+    createSubscription: jest.fn(),
   };
 
   const mockCouponService = {
@@ -52,6 +56,10 @@ describe('PaymentService', () => {
 
   const mockConfigService = {
     get: jest.fn(),
+  };
+
+  const mockQrPlaquesService = {
+    ensurePlaqueCountForBusiness: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -89,6 +97,10 @@ describe('PaymentService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: QrPlaquesService,
+          useValue: mockQrPlaquesService,
         },
       ],
     }).compile();
@@ -174,10 +186,10 @@ describe('PaymentService', () => {
         amount: 1000,
         metadata: { tier_id: '1', plan_type: 'monthly' },
       });
-      mockTierRepository.findOne.mockResolvedValue({ id: '1' });
+      mockTierRepository.findOne.mockResolvedValue({ id: '1', qrCodeCount: 0 });
       mockMembershipRepository.findOne.mockResolvedValue(null);
       mockMembershipRepository.create.mockReturnValue({});
-      await service.verifyStripePayment({ transaction_id: '1' }, { id: '1', role: 'user' });
+      await service.verifyStripePayment({ transaction_id: '1' }, { id: '1', role: 'business' });
       expect(mockMembershipRepository.create).toHaveBeenCalled();
       expect(mockPaymentHistoryRepository.create).toHaveBeenCalled();
     });
@@ -189,16 +201,16 @@ describe('PaymentService', () => {
         amount: 1000,
         metadata: { tier_id: '1', plan_type: 'monthly' },
       });
-      mockTierRepository.findOne.mockResolvedValue({ id: '1' });
+      mockTierRepository.findOne.mockResolvedValue({ id: '1', qrCodeCount: 0 });
       mockMembershipRepository.findOne.mockResolvedValue({});
-      await service.verifyStripePayment({ transaction_id: '1' }, { id: '1', role: 'user' });
+      await service.verifyStripePayment({ transaction_id: '1' }, { id: '1', role: 'business' });
       expect(mockMembershipRepository.save).toHaveBeenCalled();
       expect(mockPaymentHistoryRepository.save).toHaveBeenCalled();
     });
 
     it('should not create a membership on failed payment', async () => {
       mockStripeService.verifyPayment.mockResolvedValue({ status: 'failed' });
-      await service.verifyStripePayment({ transaction_id: '1' }, { id: '1', role: 'user' });
+      await service.verifyStripePayment({ transaction_id: '1' }, { id: '1', role: 'business' });
       expect(mockMembershipRepository.create).not.toHaveBeenCalled();
     });
   });
@@ -222,12 +234,68 @@ describe('PaymentService', () => {
           purchaseUnits: [{ referenceId: '1', description: 'monthly', amount: { value: '10' } }],
         },
       });
-      mockTierRepository.findOne.mockResolvedValue({ id: '1' });
+      mockTierRepository.findOne.mockResolvedValue({ id: '1', qrCodeCount: 0 });
       mockMembershipRepository.findOne.mockResolvedValue(null);
       mockMembershipRepository.create.mockReturnValue({});
-      await service.verifyPaypalPayment({ transaction_id: '1' }, { id: '1', role: 'user' });
+      await service.verifyPaypalPayment({ transaction_id: '1' }, { id: '1', role: 'business' });
       expect(mockMembershipRepository.create).toHaveBeenCalled();
       expect(mockPaymentHistoryRepository.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('subscribe', () => {
+    it('should create a Stripe subscription for Quarterly plan', async () => {
+      const tier = {
+        id: '1',
+        stripe_quarterly_price_id: 'price_123',
+        name: 'Gold'
+      };
+      mockTierRepository.findOne.mockResolvedValue(tier);
+      mockBusinessRepository.update.mockResolvedValue({});
+      mockStripeService.createSubscription.mockResolvedValue({ id: 'sub_123' });
+
+      const business = { id: 'b1', name: 'Test Biz', email: 'test@test.com', stripe_customer_id: 'cus_123' };
+      const dto = {
+        tier_id: '1',
+        plan_type: PlanType.QUARTERLY,
+        payment_token: 'tok_123',
+        provider: PaymentProvider.STRIPE
+      };
+
+      await service.subscribe(dto, business as any);
+
+      expect(mockStripeService.createSubscription).toHaveBeenCalledWith('cus_123', 'price_123', undefined);
+    });
+
+    it('should create a PayPal subscription for Quarterly plan', async () => {
+      const tier = {
+        id: '1',
+        paypal_quarterly_plan_id: 'P-123',
+        name: 'Gold'
+      };
+      mockTierRepository.findOne.mockResolvedValue(tier);
+      mockPaypalService.createSubscription.mockResolvedValue({
+        subscriptionId: 'sub_pp_123',
+        approvalUrl: 'https://paypal.com/approve'
+      });
+
+      const business = { id: 'b1', name: 'Test Biz' };
+      const dto = {
+        tier_id: '1',
+        plan_type: PlanType.QUARTERLY,
+        provider: PaymentProvider.PAYPAL,
+        return_url: 'https://return',
+        cancel_url: 'https://cancel'
+      };
+
+      const result = await service.subscribe(dto, business as any);
+
+      expect(mockPaypalService.createSubscription).toHaveBeenCalledWith('P-123', 'https://return', 'https://cancel');
+      expect(result).toEqual({
+        status: 'Subscription initiated',
+        subscriptionId: 'sub_pp_123',
+        approvalUrl: 'https://paypal.com/approve'
+      });
     });
   });
 });
