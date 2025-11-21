@@ -6,6 +6,9 @@ import { GenerateCodeDto } from './dto/generate-code.dto';
 import { ClaimCodeDto } from './dto/claim-code.dto';
 import { ScanParticipantDto } from './dto/scan-participant.dto';
 import { DualScanDto } from './dto/dual-scan.dto';
+import { IsJoinedDto } from './dto/is-joined.dto';
+import { AwardPointsDto } from './dto/award-points.dto';
+import { RedeemRewardDto } from './dto/redeem-reward.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -73,6 +76,80 @@ export class ParticipantCampaignBalanceController {
     return this.participantCampaignBalanceService.getParticipantBalanceForCampaign(
       user.id,
       campaignId,
+    );
+  }
+
+  @Post('is-joined')
+  @ApiOperation({
+    summary: 'Check if participant has joined a campaign',
+    description: 'Checks if the authenticated participant is part of the specified campaign.',
+  })
+  @ApiBody({ type: IsJoinedDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns whether the participant has joined.',
+    schema: {
+      type: 'object',
+      properties: {
+        isJoined: { type: 'boolean' },
+      },
+    },
+  })
+  @Roles(Role.Participant)
+  async isJoined(@CurrentUser() user: User, @Body() dto: IsJoinedDto) {
+    return this.participantCampaignBalanceService.isJoined(user.id, dto.campaignId);
+  }
+
+  @Post('award-points')
+  @ApiOperation({
+    summary: 'Award points to a participant',
+    description:
+      'Allows a staff member to award points to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.',
+  })
+  @ApiBody({ type: AwardPointsDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The points have been successfully awarded.',
+    type: ParticipantCampaignBalance,
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Admin, Role.Business, Role.Staff)
+  awardPoints(@Body() awardPointsDto: AwardPointsDto) {
+    return this.pointEarningService.awardPoints(
+      awardPointsDto.staffId,
+      'Staff',
+      awardPointsDto.participantId,
+      awardPointsDto.campaignId,
+      awardPointsDto.points,
+    );
+  }
+
+  @Post('redeem-reward')
+  @ApiOperation({
+    summary: 'Redeem a reward for a participant',
+    description:
+      'Allows a staff member to process a reward redemption for a participant. Accessible by Admin, Business, and Staff roles.',
+  })
+  @ApiBody({ type: RedeemRewardDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The reward has been successfully redeemed.',
+    type: ParticipantCampaignBalance,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. For example, not enough points.',
+  })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Admin, Role.Business, Role.Staff)
+  redeemReward(@Body() redeemRewardDto: RedeemRewardDto) {
+    return this.redemptionService.redeemReward(
+      redeemRewardDto.staffId,
+      'Staff',
+      redeemRewardDto.participantId,
+      redeemRewardDto.rewardId,
+      redeemRewardDto.redemptionCode,
     );
   }
 
