@@ -66,6 +66,17 @@ export class ParticipantCampaignBalanceService {
     };
   }
 
+  async isJoined(participantId: string, campaignId: string): Promise<{ isJoined: boolean }> {
+    const count = await this.participantCampaignBalanceRepository.count({
+      where: {
+        participant: { id: participantId },
+        campaign: { id: campaignId },
+      },
+    });
+
+    return { isJoined: count > 0 };
+  }
+
   async claimCode(participantId: string, code: string, campaignId: string) {
     return await this.dataSource.transaction(async (manager) => {
       // 1. Validate Code

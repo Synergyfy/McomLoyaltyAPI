@@ -40,6 +40,7 @@ describe('ParticipantCampaignBalanceController', () => {
             getParticipantBalance: jest.fn(),
             getParticipantBalanceForCampaign: jest.fn(),
             claimCode: jest.fn(),
+            isJoined: jest.fn(),
           },
         },
         {
@@ -136,6 +137,17 @@ describe('ParticipantCampaignBalanceController', () => {
 
           expect(transactionCodeService.validateDualScanPermission).toHaveBeenCalledWith(user, dto.staffOrBusinessCode);
           expect(pointEarningService.awardPointsDualScan).toHaveBeenCalled();
+      });
+  });
+
+  describe('isJoined', () => {
+      it('should call isJoined service method', async () => {
+          const user = { id: 'part1', role: Role.Participant } as any;
+          const dto = { campaignId: 'camp1' };
+
+          await controller.isJoined(user, dto);
+
+          expect(participantCampaignBalanceService.isJoined).toHaveBeenCalledWith(user.id, dto.campaignId);
       });
   });
 });
