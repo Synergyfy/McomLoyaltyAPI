@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { nanoid } from 'nanoid';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { LoginParticipantDto } from './dto/login-participant.dto';
 import { Participant } from './entities/participant.entity';
@@ -31,18 +32,6 @@ export class ParticipantService {
     private readonly authService: AuthService,
   ) {}
 
-  private generateUniqueCode(): string {
-    const characters =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 9; i++) {
-      result += characters.charAt(
-        Math.floor(Math.random() * characters.length),
-      );
-    }
-    return result;
-  }
-
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
       createParticipantDto;
@@ -65,7 +54,7 @@ export class ParticipantService {
       name,
       email,
       password: hashedPassword,
-      uniqueCode: this.generateUniqueCode(),
+      uniqueCode: nanoid(9),
     });
 
     const savedParticipant = await this.participantRepository.save(

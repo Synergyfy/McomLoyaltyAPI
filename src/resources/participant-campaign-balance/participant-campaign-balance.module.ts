@@ -10,6 +10,9 @@ import { Participant } from '../participant/entities/participant.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { ParticipantCampaignBalanceService } from './services/participant-campaign-balance.service';
+import { TransactionCode } from './entities/transaction-code.entity';
+import { Business } from '../business/entities/business.entity';
+import { TransactionCodeService } from './services/transaction-code.service';
 
 @Module({
   imports: [
@@ -20,12 +23,15 @@ import { ParticipantCampaignBalanceService } from './services/participant-campai
       Participant,
       BusinessReward,
       Campaign,
+      TransactionCode,
+      Business,
     ]),
   ],
   providers: [
     RedemptionService,
     PointEarningService,
     ParticipantCampaignBalanceService,
+    TransactionCodeService,
   ],
   controllers: [ParticipantCampaignBalanceController],
 })

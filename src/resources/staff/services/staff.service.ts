@@ -1,6 +1,7 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { nanoid } from 'nanoid';
 import { Staff } from '../entities/staff.entity';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateStaffDto } from '../dto/update-staff.dto';
@@ -24,6 +25,7 @@ export class StaffService {
     const { confirmPassword, ...staffData } = createStaffDto;
     const staff = this.staffRepository.create({
       ...staffData,
+      uniqueCode: nanoid(9),
       password: hashedPassword,
       business: { id: businessId },
     });

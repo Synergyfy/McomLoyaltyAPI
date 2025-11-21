@@ -1,6 +1,7 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { nanoid } from 'nanoid';
 import { Business } from '../entities/business.entity';
 import { Referral, ReferralStatus } from '../../referral/entities/referral.entity';
 import { CreateBusinessDto } from '../dto/create-business.dto';
@@ -54,16 +55,8 @@ export class BusinessService {
       }
     }
 
-    let uniqueCode: string;
-    let isUnique = false;
-    while (!isUnique) {
-      uniqueCode = Math.floor(100000000 + Math.random() * 900000000).toString();
-      const existingBusiness = await this.findByUniqueCode(uniqueCode);
-      if (!existingBusiness) {
-        isUnique = true;
-      }
-    }
-
+    // Use nanoid(9) for consistency with other entities
+    const uniqueCode = nanoid(9);
     const affiliateCode = await this.generateAffiliateCode();
 
     const business = this.businessRepository.create({

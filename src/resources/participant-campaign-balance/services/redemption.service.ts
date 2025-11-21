@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Staff } from '../../staff/entities/staff.entity';
+import { Business } from '../../business/entities/business.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { BusinessReward } from '../../rewards/entities/business-reward.entity';
 import { ParticipantCampaignBalance } from '../entities/participant-campaign-balance.entity';
@@ -14,6 +15,8 @@ export class RedemptionService {
   constructor(
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(BusinessReward)
@@ -27,17 +30,41 @@ export class RedemptionService {
     private readonly dataSource: DataSource,
   ) {}
 
+  // Helper to find performer (Staff or Business)
+  private async findPerformer(id: string, type: 'Staff' | 'Business') {
+    if (type === 'Staff') {
+      const staff = await this.staffRepository.findOne({ where: { id }, relations: ['business'] });
+      if (!staff) throw new NotFoundException('Staff not found');
+      return { staff, business: staff.business };
+    } else {
+      const business = await this.businessRepository.findOne({ where: { id } });
+      if (!business) throw new NotFoundException('Business not found');
+      return { staff: null, business };
+    }
+  }
+
+  // Helper to find performer by unique code
+  private async findPerformerByCode(code: string) {
+    const staff = await this.staffRepository.findOne({ where: { uniqueCode: code }, relations: ['business'] });
+    if (staff) return { staff, business: staff.business };
+
+    const business = await this.businessRepository.findOne({ where: { uniqueCode: code } });
+    if (business) return { staff: null, business };
+
+    throw new NotFoundException('Invalid staff or business code');
+  }
+
   async redeemReward(
-    staffId: string,
+    performerId: string,
+    performerType: 'Staff' | 'Business',
     participantId: string,
     rewardId: string,
-    redemptionCode: string,
+    redemptionCode: string | null,
+    sourceDescription?: string,
+    transactionManager?: any, // EntityManager
   ): Promise<ParticipantCampaignBalance> {
-    return await this.dataSource.transaction(async (manager) => {
-      const staff = await manager.findOne(Staff, { where: { id: staffId }, relations: ['business'] });
-      if (!staff) {
-        throw new NotFoundException('Staff not found');
-      }
+    const execute = async (manager: any) => {
+      const { staff, business } = await this.findPerformer(performerId, performerType);
 
       const participant = await manager.findOne(Participant, { where: { id: participantId } });
       if (!participant) {
@@ -49,8 +76,8 @@ export class RedemptionService {
         throw new NotFoundException('Reward not found');
       }
 
-      if (staff.business.id !== businessReward.business.id) {
-        throw new BadRequestException('Staff does not belong to the business that owns the reward');
+      if (business.id !== businessReward.business.id) {
+        throw new BadRequestException('This reward does not belong to the performing business');
       }
 
       if (businessReward.campaign.disabled) {
@@ -80,8 +107,9 @@ export class RedemptionService {
         campaign: businessReward.campaign,
         reward: businessReward.reward,
         initiated_by_staff: staff,
-        business: staff.business,
+        business: business,
         redemption_code: redemptionCode,
+        description: sourceDescription,
       });
 
       await manager.save(participantCampaignBalance);
@@ -90,6 +118,43 @@ export class RedemptionService {
       await manager.save(pointHistory);
 
       return participantCampaignBalance;
-    });
+    };
+
+    if (transactionManager) {
+      return execute(transactionManager);
+    } else {
+      return await this.dataSource.transaction(execute);
+    }
+  }
+
+   // Method A: Staff/Business scans Participant to Redeem
+   async redeemRewardByScan(
+    performerId: string,
+    performerType: 'Staff' | 'Business',
+    participantCode: string,
+    rewardId: string,
+    redemptionCode: string | null
+  ) {
+    const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
+    if (!participant) throw new NotFoundException('Participant not found');
+
+    return this.redeemReward(performerId, performerType, participant.id, rewardId, redemptionCode, 'Redeemed by scan');
+  }
+
+  // Method C: Dual Code Redemption
+  async redeemRewardDualScan(
+    staffOrBusinessCode: string,
+    participantCode: string,
+    rewardId: string,
+    redemptionCode: string | null
+  ) {
+    const { staff, business } = await this.findPerformerByCode(staffOrBusinessCode);
+    const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
+    if (!participant) throw new NotFoundException('Participant not found');
+
+    const performerId = staff ? staff.id : business.id;
+    const performerType = staff ? 'Staff' : 'Business';
+
+    return this.redeemReward(performerId, performerType, participant.id, rewardId, redemptionCode, 'Redeemed by dual scan');
   }
 }

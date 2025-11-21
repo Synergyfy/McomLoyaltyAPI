@@ -20,6 +20,9 @@ export class Staff extends AbstractBaseEntity {
   @ManyToOne(() => Business, (business) => business.staff)
   business: Business;
 
+  @Column({ unique: true })
+  uniqueCode: string;
+
   @Column({ type: 'enum', enum: Role, default: Role.Staff })
   role: Role;
 }
