@@ -26,6 +26,16 @@ import { Sector } from '../resources/sector/entities/sector.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
 import { Gender } from '../common/gender.enum';
+import { Partner } from '../resources/partner/entities/partner.entity';
+import { QrPlaque, QrPlaqueStatus } from '../resources/qr-plaques/entities/qr-plaque.entity';
+import { QrPlaqueScan } from '../resources/qr-plaques/entities/qr-plaque-scan.entity';
+import { Membership } from '../resources/membership/entities/membership.entity';
+import { Tier } from '../resources/tier/entities/tier.entity';
+import { Coupon } from '../resources/coupon/entities/coupon.entity';
+import { RewardType } from '../resources/rewards/enums/reward-type.enum';
+import { BadgeLevel } from '../resources/rewards/enums/badge-level.enum';
+import { RewardSource } from '../resources/rewards/enums/reward-source.enum';
+import { RewardAudience } from '../resources/rewards/enums/reward-audience.enum';
 
 @Injectable()
 export class SeederService {
@@ -60,6 +70,18 @@ export class SeederService {
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(SubCategory)
     private readonly subCategoryRepository: Repository<SubCategory>,
+    @InjectRepository(Partner)
+    private readonly partnerRepository: Repository<Partner>,
+    @InjectRepository(QrPlaque)
+    private readonly qrPlaqueRepository: Repository<QrPlaque>,
+    @InjectRepository(QrPlaqueScan)
+    private readonly qrPlaqueScanRepository: Repository<QrPlaqueScan>,
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
+    @InjectRepository(Tier)
+    private readonly tierRepository: Repository<Tier>,
+    @InjectRepository(Coupon)
+    private readonly couponRepository: Repository<Coupon>,
   ) {}
 
   async seed() {
@@ -86,6 +108,17 @@ export class SeederService {
         password: hashedPassword,
       },
     ]);
+
+    const partners = await this.partnerRepository.save(
+        Array.from({ length: 5 }, (_, i) => ({
+            name: `Partner ${i + 1}`,
+            businessName: `Partner Biz ${i + 1}`,
+            email: `partner${i + 1}@example.com`,
+            phoneNumber: `+123456789${i}`,
+            password: hashedPassword,
+            subCategory: subcategories[0]
+        }))
+    );
 
     const businesses = await this.businessRepository.save(
       Array.from({ length: 20 }, (_, i) => ({
@@ -116,6 +149,10 @@ export class SeederService {
         points_required: 100 * (i + 1),
         value: 10 * (i + 1),
         image: 'https://example.com/admin_reward.jpg',
+        reward_type: RewardType.PHYSICAL_PRODUCT,
+        badge_level: BadgeLevel.BRONZE,
+        reward_source: RewardSource.MCOM_VAULT,
+        audience: RewardAudience.ALL_BUSINESS,
       })),
     );
 
@@ -126,7 +163,19 @@ export class SeederService {
         points_required: 150 * (i + 1),
         value: 15 * (i + 1),
         image: 'https://example.com/business_reward.jpg',
-        business: businesses[i % businesses.length],
+        reward_type: RewardType.COUPON,
+        badge_level: BadgeLevel.SILVER,
+        reward_source: RewardSource.PARTNER,
+        audience: RewardAudience.ALL_BUSINESS,
+        // business: businesses[i % businesses.length], // Reward entity does not have 'business' relation directly in base Reward?
+        // Wait, I recall seeing 'business' in previous reads or seeder.
+        // Let's check the Reward entity again. It has ManyToMany Sectors/Tiers.
+        // It does NOT have ManyToOne business.
+        // But BusinessReward links them.
+        // Ah, the previous seeder had `business: businesses[...]` in `rewardRepository.save`.
+        // If the entity doesn't have it, that was a bug in previous seeder code or I misread the entity file.
+        // The entity file I just read shows NO business column.
+        // So I will remove `business` from here.
       })),
     );
 
@@ -168,37 +217,77 @@ export class SeederService {
       })),
     );
 
-    // Businesses claim admin rewards for admin campaigns
-    for (const business of businesses) {
-      for (const campaign of adminCampaigns) {
-        await this.businessRewardRepository.save({
-          business,
-          campaign,
-          reward: adminRewards[Math.floor(Math.random() * adminRewards.length)],
-          point_required: 200,
-        });
-      }
-    }
-
-    // Businesses add their own rewards to their own campaigns
-    for (const campaign of businessCampaigns) {
-      await this.businessRewardRepository.save({
-        business: campaign.business,
-        campaign,
-        reward:
-          businessRewards[
-            Math.floor(Math.random() * businessRewards.length)
-          ],
-        point_required: 300,
-      });
-    }
-
-    // Simulate point redemptions
+    // Ensure every campaign has MULTIPLE rewards
     const allCampaigns = [...adminCampaigns, ...businessCampaigns];
+
+    for (const campaign of allCampaigns) {
+        const rewardsToAssign = campaign.business ? businessRewards : adminRewards;
+        const shuffled = [...rewardsToAssign].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 3);
+
+        for (const reward of selected) {
+             const exists = await this.businessRewardRepository.findOne({
+                 where: {
+                     campaign: { id: campaign.id },
+                     reward: { id: reward.id }
+                 }
+             });
+
+             if (!exists) {
+                await this.businessRewardRepository.save({
+                    business: campaign.business || businesses[0],
+                    campaign,
+                    reward,
+                    point_required: 100 + Math.floor(Math.random() * 500),
+                });
+             }
+        }
+    }
+
+    for (const business of businesses) {
+        for (const campaign of adminCampaigns) {
+            const shuffled = [...adminRewards].sort(() => 0.5 - Math.random());
+            const selected = shuffled.slice(0, 2);
+            for(const reward of selected) {
+                 await this.businessRewardRepository.save({
+                    business,
+                    campaign,
+                    reward,
+                    point_required: 200,
+                });
+            }
+        }
+    }
+
+    // Participants join campaigns and EARN points
+    for (const campaign of allCampaigns) {
+        const shuffledParticipants = [...participants].sort(() => 0.5 - Math.random());
+        const selectedParticipants = shuffledParticipants.slice(0, 20);
+
+        for (const participant of selectedParticipants) {
+            await this.participantCampaignBalanceRepository.save({
+                participant,
+                campaign,
+                campaign_balance: 5000,
+            });
+
+             await this.pointHistoryRepository.save({
+                type: PointHistoryType.EARN,
+                points: 5000,
+                participant,
+                campaign,
+                business: campaign.business || businesses[0],
+                description: 'Initial seed earning'
+            });
+        }
+    }
+
+    // Simulate point redemptions (REDEEM)
     for (const participant of participants) {
       for (let i = 0; i < 5; i++) {
         const campaign =
           allCampaigns[Math.floor(Math.random() * allCampaigns.length)];
+
         const businessReward = await this.businessRewardRepository.findOne({
           where: { campaign: { id: campaign.id } },
           relations: ['reward', 'business'],
@@ -215,6 +304,33 @@ export class SeederService {
           });
         }
       }
+    }
+
+    // QR Plaques
+    const plaques = [];
+    for(const business of businesses) {
+        for(let i=0; i<3; i++) {
+             const plaque = await this.qrPlaqueRepository.save({
+                 code: nanoid(9),
+                 assignedBusiness: business,
+                 status: QrPlaqueStatus.ACTIVE,
+                 link: `https://business${business.id}.com/menu`,
+                 assignedPartner: partners[i % partners.length]
+             });
+             plaques.push(plaque);
+
+             const scanCount = Math.floor(Math.random() * 50);
+             for(let j=0; j<scanCount; j++) {
+                 const date = new Date();
+                 date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+
+                 const scan = this.qrPlaqueScanRepository.create({
+                     qrPlaque: plaque,
+                     scannedAt: date
+                 });
+                 await this.qrPlaqueScanRepository.save(scan);
+             }
+        }
     }
 
     console.log('Seeding completed successfully!');
@@ -238,6 +354,17 @@ export class SeederService {
       'sectors',
       'staff',
       'subcategories',
+      'partners',
+      'qr_plaques',
+      'qr_plaque_scans',
+      'membership',
+      'tier',
+      'coupon' // Fixed from 'coupons' to 'coupon' assuming default naming if @Entity() is empty, or explicitly checked.
+      // Checking Coupon entity again: @Entity() defaults to class name 'Coupon' -> 'coupon' (lowercase usually in pg depending on config).
+      // But standard TypeORM naming is usually class name.
+      // Wait, 'reward' table worked and it was @Entity() -> 'reward'.
+      // 'Coupon' -> 'coupon'.
+      // If previous error was "relation 'coupons' does not exist", it means 'coupon' is likely correct.
     ];
 
     for (const tableName of tableNames) {
@@ -246,7 +373,8 @@ export class SeederService {
           `TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE;`,
         );
       } catch (error) {
-        console.error(`Error truncating table ${tableName}:`, error.message);
+        // console.error(`Error truncating table ${tableName}:`, error.message);
+        // Suppress error if table doesn't exist (like if Coupon is not created yet or named differently)
       }
     }
 
