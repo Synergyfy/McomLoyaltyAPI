@@ -36,6 +36,7 @@ import { RewardType } from '../resources/rewards/enums/reward-type.enum';
 import { BadgeLevel } from '../resources/rewards/enums/badge-level.enum';
 import { RewardSource } from '../resources/rewards/enums/reward-source.enum';
 import { RewardAudience } from '../resources/rewards/enums/reward-audience.enum';
+import { Role } from '../common/role.enum';
 
 @Injectable()
 export class SeederService {
@@ -130,6 +131,21 @@ export class SeederService {
         subCategory: subcategories[i % subcategories.length],
       })),
     );
+
+    const staffList = [];
+    for (const business of businesses) {
+      for (let i = 0; i < 5; i++) {
+        staffList.push({
+          name: `Staff ${business.id}-${i + 1}`,
+          email: `staff-b${business.id}-s${i + 1}@example.com`,
+          password: hashedPassword,
+          business: business,
+          uniqueCode: nanoid(9),
+          role: Role.Staff,
+        });
+      }
+    }
+    await this.staffRepository.save(staffList);
 
     const participants = await this.participantRepository.save(
       Array.from({ length: 100 }, (_, i) => ({
