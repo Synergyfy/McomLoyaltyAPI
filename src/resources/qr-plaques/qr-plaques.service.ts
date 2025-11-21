@@ -214,14 +214,6 @@ export class QrPlaquesService {
         const start = startDate ? moment(startDate).toDate() : moment().subtract(7, 'days').toDate();
         const end = endDate ? moment(endDate).toDate() : moment().toDate();
 
-        // Use generic SQL that should work, but TypeORM query builder is best.
-        // DATE() is MySQL specific. Postgres uses TO_CHAR or cast.
-        // Let's check if we can use TypeORM's abstraction or simple group by if scannedAt is date.
-        // Since scannedAt is timestamp, we need to trunc.
-        // "DATE_TRUNC" is Postgres. "DATE" is MySQL.
-        // Safest is to fetch data and process in memory if dataset is small, but for analytics it's bad.
-        // However, the memory hint says "POSTGRES".
-
         const query = this.qrPlaqueScanRepository.createQueryBuilder('scan')
             .select("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD') as date")
             .addSelect("COUNT(scan.id) as count")
@@ -246,5 +238,32 @@ export class QrPlaquesService {
         }
 
         return finalResult;
+    }
+
+    async getTopPerformingPlaques(limit: number = 10) {
+        const results = await this.qrPlaqueScanRepository.createQueryBuilder('scan')
+            .leftJoinAndSelect('scan.qrPlaque', 'plaque')
+            .leftJoinAndSelect('plaque.assignedPartner', 'partner')
+            .leftJoinAndSelect('plaque.assignedBusiness', 'business')
+            .select([
+                'partner.name AS partner_name',
+                'COUNT(scan.id) AS total_scans',
+                'plaque.status AS status',
+                'business.name AS business_name'
+            ])
+            .groupBy('plaque.id')
+            .addGroupBy('partner.name')
+            .addGroupBy('plaque.status')
+            .addGroupBy('business.name')
+            .orderBy('total_scans', 'DESC')
+            .limit(limit)
+            .getRawMany();
+
+        return results.map(row => ({
+            ownerName: row.partner_name || null,
+            totalScans: parseInt(row.total_scans, 10),
+            status: row.status,
+            fromBusiness: row.business_name || null
+        }));
     }
 }

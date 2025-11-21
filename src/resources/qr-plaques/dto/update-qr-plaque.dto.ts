@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID, IsEmail, IsUrl } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, IsEmail, IsUrl, ValidateIf } from 'class-validator';
 import { QrPlaqueStatus } from '../entities/qr-plaque.entity';
 
 export class UpdateQrPlaqueDto {
@@ -10,13 +10,15 @@ export class UpdateQrPlaqueDto {
 
     @ApiProperty({ description: 'ID of the partner assigned to the plaque', required: false })
     @IsOptional()
+    @ValidateIf((object, value) => value !== null)
     @IsUUID()
-    assignedPartnerId?: string;
+    assignedPartnerId?: string | null;
 
     @ApiProperty({ description: 'ID of the business assigned to the plaque', required: false })
     @IsOptional()
+    @ValidateIf((object, value) => value !== null)
     @IsUUID()
-    assignedBusinessId?: string;
+    assignedBusinessId?: string | null;
 
     @ApiProperty({ description: 'Pending invite email', required: false })
     @IsOptional()

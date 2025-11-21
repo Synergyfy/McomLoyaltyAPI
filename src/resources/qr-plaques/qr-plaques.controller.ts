@@ -34,6 +34,15 @@ export class QrPlaquesController {
         return this.qrPlaquesService.getChartData(startDate, endDate);
     }
 
+    @Get('admin/analytics/top-performing')
+    @UseGuards(AuthGuard('jwt'), RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get top 10 performing QR plaques (Admin only)' })
+    async getTopPerforming() {
+        return this.qrPlaquesService.getTopPerformingPlaques();
+    }
+
     @Get('admin/all')
     @UseGuards(AuthGuard('jwt'), RolesGuard)
     @Roles(Role.Admin)
