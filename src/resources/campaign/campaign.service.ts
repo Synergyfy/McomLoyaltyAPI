@@ -223,7 +223,7 @@ export class CampaignService {
     };
   }
 
-  async findOne(id: string, currentUser: Business | Admin): Promise<Campaign> {
+  async findOne(id: string, currentUser?: User): Promise<Campaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id },
       relations: ['business', 'rewards'],
@@ -233,11 +233,52 @@ export class CampaignService {
       throw new NotFoundException('Campaign not found');
     }
 
+    // If public (no user), allow access
+    if (!currentUser) {
+      return campaign;
+    }
+
+    // If Business, check ownership
     if (
       currentUser.role === Role.Business &&
-      campaign.business.id !== currentUser.id
+      campaign.business?.id !== currentUser.id
     ) {
-      throw new UnauthorizedException();
+      // Check if it's a claimed campaign
+      const claimed = await this.businessCampaignRepository.findOne({
+        where: {
+          campaign: { id: campaign.id },
+          business: { id: currentUser.id },
+        },
+      });
+      if (!claimed) {
+        throw new UnauthorizedException();
+      }
+    }
+
+    // If Staff, check business association
+    if (currentUser.role === Role.Staff) {
+      const staff = await this.staffRepository.findOne({
+        where: { id: currentUser.id },
+        relations: ['business'],
+      });
+
+      if (!staff || !staff.business) {
+        throw new UnauthorizedException('Staff not found or no business linked');
+      }
+
+      const businessId = staff.business.id;
+      if (campaign.business?.id !== businessId) {
+        // Check if it's a claimed campaign
+        const claimed = await this.businessCampaignRepository.findOne({
+          where: {
+            campaign: { id: campaign.id },
+            business: { id: businessId },
+          },
+        });
+        if (!claimed) {
+          throw new UnauthorizedException();
+        }
+      }
     }
 
     return campaign;
@@ -360,6 +401,64 @@ export class CampaignService {
       page,
       limit,
     };
+  }
+
+  async findParticipantCampaignsForBusiness(
+    currentUser: User,
+    query: string,
+  ): Promise<Campaign[]> {
+    let businessId: string;
+
+    if (currentUser.role === Role.Business) {
+      businessId = currentUser.id;
+    } else {
+      const staff = await this.staffRepository.findOne({
+        where: { id: currentUser.id },
+        relations: ['business'],
+      });
+
+      if (!staff || !staff.business) {
+        throw new UnauthorizedException(
+          'Staff or associated business not found',
+        );
+      }
+      businessId = staff.business.id;
+    }
+
+    const participant = await this.participantRepository.findOne({
+      where: [{ email: query }, { uniqueCode: query }],
+    });
+
+    if (!participant) {
+      throw new NotFoundException('Participant not found');
+    }
+
+    // Find campaigns where the participant has a balance or history for this business
+    // We can use ParticipantCampaignBalance as it links participant and campaign
+    // But we need to ensure the campaign belongs to or is claimed by the business
+
+    const qb = this.campaignRepository
+      .createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.rewards', 'rewards')
+      .leftJoinAndSelect('campaign.business', 'business')
+      .leftJoin(
+        'campaign.businessCampaigns',
+        'bc',
+        'bc.business_id = :businessId',
+        { businessId },
+      )
+      .innerJoin(
+        'campaign.participantCampaignBalances',
+        'pcb',
+        'pcb.participantId = :participantId',
+        { participantId: participant.id },
+      )
+      .where('(campaign.business_id = :businessId OR bc.id IS NOT NULL)', {
+        businessId,
+      })
+      .andWhere('campaign.disabled = :disabled', { disabled: false });
+
+    return qb.getMany();
   }
 
   async toggleCampaignStatus(

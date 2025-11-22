@@ -7,6 +7,7 @@ import { Participant } from '../../participant/entities/participant.entity';
 import { BusinessReward } from '../../rewards/entities/business-reward.entity';
 import { ParticipantCampaignBalance } from '../entities/participant-campaign-balance.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
+import { Reward } from '../../rewards/entities/reward.entity';
 import { PointHistory, PointHistoryType } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
 
@@ -59,6 +60,7 @@ export class RedemptionService {
     performerType: 'Staff' | 'Business',
     participantId: string,
     rewardId: string,
+    campaignId: string,
     redemptionCode: string | null,
     sourceDescription?: string,
     transactionManager?: any, // EntityManager
@@ -71,41 +73,55 @@ export class RedemptionService {
         throw new NotFoundException('Participant not found');
       }
 
-      const businessReward = await manager.findOne(BusinessReward, { where: { id: rewardId }, relations: ['campaign', 'business', 'reward'] });
-      if (!businessReward) {
+      const reward = await manager.findOne(Reward, { where: { id: rewardId } });
+      if (!reward) {
         throw new NotFoundException('Reward not found');
       }
 
-      if (business.id !== businessReward.business.id) {
-        throw new BadRequestException('This reward does not belong to the performing business');
+      const campaign = await manager.findOne(Campaign, {
+        where: { id: campaignId },
+        relations: ['business', 'rewards'],
+      });
+
+      if (!campaign) {
+        throw new NotFoundException('Campaign not found');
       }
 
-      if (businessReward.campaign.disabled) {
+      if (!campaign.business || business.id !== campaign.business.id) {
+        throw new BadRequestException('This campaign does not belong to the performing business');
+      }
+
+      if (campaign.disabled) {
         throw new BadRequestException('Campaign is not active');
       }
 
+      const isRewardInCampaign = campaign.rewards.some((r) => r.id === reward.id);
+      if (!isRewardInCampaign) {
+        throw new BadRequestException('Reward is not available in this campaign');
+      }
+
       const participantCampaignBalance = await manager.findOne(ParticipantCampaignBalance, {
-        where: { participant: { id: participantId }, campaign: { id: businessReward.campaign.id } },
+        where: { participant: { id: participantId }, campaign: { id: campaignId } },
       });
 
       if (!participantCampaignBalance) {
         throw new BadRequestException('Participant is not enrolled in this campaign');
       }
 
-      if (participantCampaignBalance.campaign_balance < businessReward.point_required) {
+      if (participantCampaignBalance.campaign_balance < reward.points_required) {
         throw new BadRequestException('Not enough points');
       }
 
-      participantCampaignBalance.campaign_balance -= businessReward.point_required;
-      participant.global_total_points -= businessReward.point_required;
-      businessReward.campaign.total_points_redeemed += businessReward.point_required;
+      participantCampaignBalance.campaign_balance -= reward.points_required;
+      participant.global_total_points -= reward.points_required;
+      campaign.total_points_redeemed += reward.points_required;
 
       const pointHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.REDEEM,
-        points: businessReward.point_required,
+        points: reward.points_required,
         participant,
-        campaign: businessReward.campaign,
-        reward: businessReward.reward,
+        campaign: campaign,
+        reward: reward,
         initiated_by_staff: staff,
         business: business,
         redemption_code: redemptionCode,
@@ -114,7 +130,7 @@ export class RedemptionService {
 
       await manager.save(participantCampaignBalance);
       await manager.save(participant);
-      await manager.save(businessReward.campaign);
+      await manager.save(campaign);
       await manager.save(pointHistory);
 
       return participantCampaignBalance;
@@ -133,12 +149,13 @@ export class RedemptionService {
     performerType: 'Staff' | 'Business',
     participantCode: string,
     rewardId: string,
+    campaignId: string,
     redemptionCode: string | null
   ) {
     const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
     if (!participant) throw new NotFoundException('Participant not found');
 
-    return this.redeemReward(performerId, performerType, participant.id, rewardId, redemptionCode, 'Redeemed by scan');
+    return this.redeemReward(performerId, performerType, participant.id, rewardId, campaignId, redemptionCode, 'Redeemed by scan');
   }
 
   // Method C: Dual Code Redemption
@@ -146,6 +163,7 @@ export class RedemptionService {
     staffOrBusinessCode: string,
     participantCode: string,
     rewardId: string,
+    campaignId: string,
     redemptionCode: string | null
   ) {
     const { staff, business } = await this.findPerformerByCode(staffOrBusinessCode);
@@ -155,6 +173,6 @@ export class RedemptionService {
     const performerId = staff ? staff.id : business.id;
     const performerType = staff ? 'Staff' : 'Business';
 
-    return this.redeemReward(performerId, performerType, participant.id, rewardId, redemptionCode, 'Redeemed by dual scan');
+    return this.redeemReward(performerId, performerType, participant.id, rewardId, campaignId, redemptionCode, 'Redeemed by dual scan');
   }
 }

@@ -188,6 +188,32 @@ export class CampaignController {
     return this.campaignService.findOngoingForStaff(currentUser, paginationDto);
   }
 
+  @Get('participant/search')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Staff, Role.Business)
+  @ApiOperation({
+    summary: 'Search for a participant and get their campaigns for the business',
+    description:
+      'Accessible by Staff and Business. Search by email or unique code.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a list of campaigns the participant is in.',
+    type: [Campaign],
+  })
+  @ApiResponse({ status: 404, description: 'Participant not found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  findParticipantCampaignsForBusiness(
+    @CurrentUser() currentUser: User,
+    @Query('query') query: string,
+  ) {
+    return this.campaignService.findParticipantCampaignsForBusiness(
+      currentUser,
+      query,
+    );
+  }
+
   @Get('all/public')
   @Public()
   @ApiOperation({ summary: 'Get all public campaigns' })

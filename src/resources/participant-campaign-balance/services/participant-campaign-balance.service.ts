@@ -141,6 +141,7 @@ export class ParticipantCampaignBalanceService {
           performerType,
           participantId,
           transactionCode.reward.id,
+          campaignId,
           code,
           'Redeemed via claimed code',
           manager // Pass manager
