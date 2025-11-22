@@ -168,6 +168,26 @@ export class CampaignController {
     return this.campaignService.findOngoingCampaigns();
   }
 
+  @Get('staff/ongoing')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Staff, Role.Business)
+  @ApiOperation({
+    summary: 'Get all ongoing campaigns for the staff\'s business or the business itself',
+    description: 'Accessible by Staff and Business Owners.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a paginated list of ongoing campaigns.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  findOngoingForStaff(
+    @CurrentUser() currentUser: User,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.campaignService.findOngoingForStaff(currentUser, paginationDto);
+  }
+
   @Get('all/public')
   @Public()
   @ApiOperation({ summary: 'Get all public campaigns' })
