@@ -16,6 +16,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Membership } from '../resources/membership/entities/membership.entity';
 import { PartnerModule } from '../resources/partner/partner.module';
 import { PartnerLocalStrategy } from './partner-local.strategy';
+import { Business } from '../resources/business/entities/business.entity';
+import { Staff } from '../resources/staff/entities/staff.entity';
+import { Participant } from '../resources/participant/entities/participant.entity';
 
 @Module({
   imports: [
@@ -34,11 +37,11 @@ import { PartnerLocalStrategy } from './partner-local.strategy';
     OtpModule,
     MailModule,
     BusinessModule,
-    TypeOrmModule.forFeature([Membership]),
+    TypeOrmModule.forFeature([Membership, Business, Staff, Participant]),
     PartnerModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, PartnerLocalStrategy],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}
