@@ -1,18 +1,29 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './local-auth.guard';
 import { PartnerLocalAuthGuard } from './partner-local-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
-import { ApiBody, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../common/role.enum';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { User } from '../common/interfaces/user.interface';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @UseGuards(LocalAuthGuard)
@@ -20,7 +31,8 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 201,
-    description: 'The user (Admin, Business, Staff, Participant) has been successfully logged in.',
+    description:
+      'The user (Admin, Business, Staff, Participant) has been successfully logged in.',
     schema: {
       example: {
         user: {
@@ -99,5 +111,24 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  }
+
+  @Get('unique-code')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Business, Role.Staff, Role.Participant)
+  @ApiOperation({
+    summary: 'Get the unique code for the current user',
+    description: 'Accessible by Business, Staff, and Participant users.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the unique code for the current user.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  getUniqueCode(
+    @CurrentUser() currentUser: User,
+  ): Promise<{ uniqueCode: string }> {
+    return this.authService.getUniqueCode(currentUser);
   }
 }
