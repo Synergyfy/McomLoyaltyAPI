@@ -102,6 +102,7 @@ describe('ParticipantCampaignBalanceController', () => {
         'Business',
         dto.participantCode,
         dto.rewardId,
+        dto.campaignId,
         null
       );
     });

@@ -149,6 +149,7 @@ export class ParticipantCampaignBalanceController {
       'Staff',
       redeemRewardDto.participantId,
       redeemRewardDto.rewardId,
+      redeemRewardDto.campaignId,
       redeemRewardDto.redemptionCode,
     );
   }
@@ -168,7 +169,7 @@ export class ParticipantCampaignBalanceController {
       return this.pointEarningService.awardPointsByScan(user.id, performerType, dto.participantCode, dto.campaignId, dto.points);
     } else {
       if (!dto.rewardId) throw new BadRequestException('Reward ID is required for REDEEM type');
-      return this.redemptionService.redeemRewardByScan(user.id, performerType, dto.participantCode, dto.rewardId, null);
+      return this.redemptionService.redeemRewardByScan(user.id, performerType, dto.participantCode, dto.rewardId, dto.campaignId, null);
     }
   }
 
@@ -211,7 +212,7 @@ export class ParticipantCampaignBalanceController {
       return this.pointEarningService.awardPointsDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.campaignId, dto.points);
     } else {
       if (!dto.rewardId) throw new BadRequestException('Reward ID is required for REDEEM type');
-      return this.redemptionService.redeemRewardDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.rewardId, null);
+      return this.redemptionService.redeemRewardDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.rewardId, dto.campaignId, null);
     }
   }
 
