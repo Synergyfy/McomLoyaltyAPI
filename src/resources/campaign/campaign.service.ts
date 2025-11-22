@@ -27,6 +27,7 @@ import {
   PointHistoryType,
 } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
@@ -52,7 +53,9 @@ export class CampaignService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-  ) {}
+    @InjectRepository(Staff)
+    private readonly staffRepository: Repository<Staff>,
+  ) { }
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -285,6 +288,78 @@ export class CampaignService {
         disabled: false,
       },
     });
+  }
+
+  async findOngoingForStaff(
+    currentUser: User,
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedCampaignResponseDto> {
+    let businessId: string;
+
+    if (currentUser.role === Role.Business) {
+      businessId = currentUser.id;
+    } else {
+      const staff = await this.staffRepository.findOne({
+        where: { id: currentUser.id },
+        relations: ['business'],
+      });
+
+      if (!staff || !staff.business) {
+        throw new UnauthorizedException(
+          'Staff or associated business not found',
+        );
+      }
+      businessId = staff.business.id;
+    }
+
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.campaignRepository
+      .createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.rewards', 'rewards')
+      .leftJoinAndSelect('campaign.business', 'business')
+      .leftJoin(
+        'campaign.businessCampaigns',
+        'bc',
+        'bc.business_id = :businessId',
+        { businessId },
+      )
+      .addSelect(
+        (subQuery) =>
+          subQuery
+            .select('COUNT(DISTINCT ph.participant_id)', 'participant_count')
+            .from(PointHistory, 'ph')
+            .where('ph.campaign_id = campaign.id')
+            .andWhere('ph.business_id = :businessId', { businessId }),
+        'participantCount',
+      )
+      .where('(campaign.business_id = :businessId OR bc.id IS NOT NULL)', {
+        businessId,
+      })
+      .andWhere('campaign.start_date <= NOW()')
+      .andWhere('campaign.end_date >= NOW()')
+      .andWhere('campaign.disabled = :disabled', { disabled: false })
+      .orderBy('campaign.created_at', 'DESC')
+      .take(limit);
+
+    const total = await qb.getCount();
+    const { entities, raw } = await qb.getRawAndEntities();
+
+    const data = entities.map((entity) => {
+      const rawResult = raw.find((r) => r.campaign_id === entity.id);
+      const participantCount = rawResult
+        ? parseInt(rawResult.participantCount, 10)
+        : 0;
+      return { ...entity, participantCount };
+    });
+
+    return {
+      data: data as any, // Cast to any to avoid type error with extra property
+      total,
+      page,
+      limit,
+    };
   }
 
   async toggleCampaignStatus(
@@ -588,7 +663,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-          100
+        100
         : 0;
 
     return {
@@ -699,43 +774,43 @@ export class CampaignService {
 
     // Try finding BusinessCampaign
     if (isUuid) {
-        businessCampaign = await this.businessCampaignRepository.findOne({
-            where: { id: identifier },
-            relations: ['campaign', 'business', 'campaign.rewards'],
-        });
+      businessCampaign = await this.businessCampaignRepository.findOne({
+        where: { id: identifier },
+        relations: ['campaign', 'business', 'campaign.rewards'],
+      });
     } else {
-        businessCampaign = await this.businessCampaignRepository.findOne({
-            where: { uniqueCode: identifier },
-            relations: ['campaign', 'business', 'campaign.rewards'],
-        });
+      businessCampaign = await this.businessCampaignRepository.findOne({
+        where: { uniqueCode: identifier },
+        relations: ['campaign', 'business', 'campaign.rewards'],
+      });
     }
 
     if (businessCampaign) {
-        const c = businessCampaign.campaign;
-        const now = new Date();
-        if (c.end_date < now) throw new BadRequestException('Campaign has expired');
-        if (c.disabled) throw new BadRequestException('Campaign is disabled');
-        return businessCampaign;
+      const c = businessCampaign.campaign;
+      const now = new Date();
+      if (c.end_date < now) throw new BadRequestException('Campaign has expired');
+      if (c.disabled) throw new BadRequestException('Campaign is disabled');
+      return businessCampaign;
     }
 
     // Try finding Campaign
     if (isUuid) {
-        campaign = await this.campaignRepository.findOne({
-            where: { id: identifier },
-            relations: ['business', 'rewards'],
-        });
+      campaign = await this.campaignRepository.findOne({
+        where: { id: identifier },
+        relations: ['business', 'rewards'],
+      });
     } else {
-        campaign = await this.campaignRepository.findOne({
-            where: { uniqueCode: identifier },
-            relations: ['business', 'rewards'],
-        });
+      campaign = await this.campaignRepository.findOne({
+        where: { uniqueCode: identifier },
+        relations: ['business', 'rewards'],
+      });
     }
 
     if (campaign) {
-        const now = new Date();
-        if (campaign.end_date < now) throw new BadRequestException('Campaign has expired');
-        if (campaign.disabled) throw new BadRequestException('Campaign is disabled');
-        return campaign;
+      const now = new Date();
+      if (campaign.end_date < now) throw new BadRequestException('Campaign has expired');
+      if (campaign.disabled) throw new BadRequestException('Campaign is disabled');
+      return campaign;
     }
 
     throw new NotFoundException('Campaign not found');

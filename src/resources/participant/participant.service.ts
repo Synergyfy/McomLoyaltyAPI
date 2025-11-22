@@ -30,7 +30,7 @@ export class ParticipantService {
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly authService: AuthService,
-  ) {}
+  ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
@@ -82,6 +82,7 @@ export class ParticipantService {
     const isPasswordValid = await bcrypt.compare(
       password,
       participant.password,
+
     );
 
     if (!isPasswordValid) {

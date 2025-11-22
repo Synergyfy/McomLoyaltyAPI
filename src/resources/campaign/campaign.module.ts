@@ -10,6 +10,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { Participant } from '../participant/entities/participant.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
+import { Staff } from '../staff/entities/staff.entity';
 
 @Module({
   imports: [
@@ -21,9 +22,10 @@ import { BusinessReward } from '../rewards/entities/business-reward.entity';
       Participant,
       BusinessCampaign,
       BusinessReward,
+      Staff,
     ]),
   ],
   controllers: [CampaignController, BusinessCampaignController],
   providers: [CampaignService],
 })
-export class CampaignModule {}
+export class CampaignModule { }
