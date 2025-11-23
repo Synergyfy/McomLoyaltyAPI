@@ -255,4 +255,26 @@ export class ParticipantService {
       })),
     };
   }
+
+  async getParticipatingCampaigns(
+    participantId: string,
+    page: number,
+    limit: number,
+  ) {
+    const [data, total] = await this.participantCampaignBalanceRepository.findAndCount({
+      where: { participant: { id: participantId } },
+      relations: ['campaign'],
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { created_at: 'DESC' },
+    });
+
+    return {
+      data: data.map((item) => ({
+        ...item.campaign,
+        balance: item.campaign_balance,
+      })),
+      total,
+    };
+  }
 }

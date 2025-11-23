@@ -1,9 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Query } from '@nestjs/common';
 import { ParticipantService } from './participant.service';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { LoginParticipantDto } from './dto/login-participant.dto';
 import { JoinCampaignDto } from './dto/join-campaign.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Participant } from './entities/participant.entity';
@@ -72,5 +72,28 @@ export class ParticipantController {
   @ApiBearerAuth()
   getProfile(@CurrentUser() participant: Participant) {
     return this.participantService.getProfile(participant.id);
+  }
+
+  @Get('campaigns')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get participating campaigns' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a paginated list of campaigns the participant has joined.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiBearerAuth()
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getParticipatingCampaigns(
+    @CurrentUser() participant: Participant,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.participantService.getParticipatingCampaigns(
+      participant.id,
+      +page,
+      +limit,
+    );
   }
 }
