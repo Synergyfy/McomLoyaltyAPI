@@ -37,7 +37,7 @@ export class ParticipantCampaignBalanceController {
     private readonly pointEarningService: PointEarningService,
     private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
     private readonly transactionCodeService: TransactionCodeService,
-  ) {}
+  ) { }
 
   @Get('my-balance')
   @ApiOperation({
@@ -98,6 +98,50 @@ export class ParticipantCampaignBalanceController {
   @Roles(Role.Participant)
   async isJoined(@CurrentUser() user: User, @Body() dto: IsJoinedDto) {
     return this.participantCampaignBalanceService.isJoined(user.id, dto.campaignId);
+  }
+
+  @Get('history')
+  @ApiOperation({
+    summary: 'Get all transaction history for the participant',
+    description: 'Returns a paginated list of all point transactions across all campaigns.',
+  })
+  @ApiQuery({ type: PaginationDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns transaction history.',
+  })
+  @Roles(Role.Participant)
+  async getAllHistory(@CurrentUser() user: User, @Query() query: PaginationDto) {
+    return this.participantCampaignBalanceService.getAllHistory(
+      user.id,
+      query.page || 1,
+      query.limit || 10,
+    );
+  }
+
+  @Get('history/:campaignId')
+  @ApiOperation({
+    summary: 'Get transaction history for a specific campaign',
+    description: 'Returns a paginated list of point transactions for a specific campaign.',
+  })
+  @ApiQuery({ type: PaginationDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns transaction history for the campaign.',
+  })
+  @ApiResponse({ status: 400, description: 'Participant is not participating in this campaign.' })
+  @Roles(Role.Participant)
+  async getHistoryForCampaign(
+    @CurrentUser() user: User,
+    @Param('campaignId') campaignId: string,
+    @Query() query: PaginationDto,
+  ) {
+    return this.participantCampaignBalanceService.getHistoryForCampaign(
+      user.id,
+      campaignId,
+      query.page || 1,
+      query.limit || 10,
+    );
   }
 
   @Post('award-points')

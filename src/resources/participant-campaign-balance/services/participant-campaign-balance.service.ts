@@ -6,6 +6,7 @@ import { ParticipantCampaignBalance } from '../entities/participant-campaign-bal
 import { TransactionCode, TransactionCodeStatus, TransactionType } from '../entities/transaction-code.entity';
 import { PointEarningService } from './point-earning.service';
 import { RedemptionService } from './redemption.service';
+import { PointHistory } from '../entities/point-history.entity';
 
 @Injectable()
 export class ParticipantCampaignBalanceService {
@@ -16,10 +17,12 @@ export class ParticipantCampaignBalanceService {
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
     @InjectRepository(TransactionCode)
     private readonly transactionCodeRepository: Repository<TransactionCode>,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly pointEarningService: PointEarningService,
     private readonly redemptionService: RedemptionService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async getParticipantBalance(participantId: string) {
     const participant = await this.participantRepository.findOne({
@@ -75,6 +78,60 @@ export class ParticipantCampaignBalanceService {
     });
 
     return { isJoined: count > 0 };
+  }
+
+  async getHistoryForCampaign(
+    participantId: string,
+    campaignId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    // Check if participant is joined
+    const isJoined = await this.isJoined(participantId, campaignId);
+    if (!isJoined.isJoined) {
+      throw new BadRequestException('You are not participating in this campaign');
+    }
+
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: {
+        participant: { id: participantId },
+        campaign: { id: campaignId },
+      },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: ['campaign', 'reward', 'business'],
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getAllHistory(
+    participantId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: {
+        participant: { id: participantId },
+      },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: ['campaign', 'reward', 'business'],
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
   async claimCode(participantId: string, code: string, campaignId: string) {
@@ -135,8 +192,8 @@ export class ParticipantCampaignBalanceService {
           manager // Pass manager
         );
       } else {
-         if (!transactionCode.reward) throw new BadRequestException('This code is not linked to a reward');
-         return this.redemptionService.redeemReward(
+        if (!transactionCode.reward) throw new BadRequestException('This code is not linked to a reward');
+        return this.redemptionService.redeemReward(
           performerId,
           performerType,
           participantId,
