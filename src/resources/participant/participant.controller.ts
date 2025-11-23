@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get } from '@nestjs/common';
 import { ParticipantService } from './participant.service';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { LoginParticipantDto } from './dto/login-participant.dto';
@@ -11,7 +11,7 @@ import { Participant } from './entities/participant.entity';
 @ApiTags('Participant')
 @Controller('participant')
 export class ParticipantController {
-  constructor(private readonly participantService: ParticipantService) {}
+  constructor(private readonly participantService: ParticipantService) { }
 
   @Public()
   @Post('signup')
@@ -59,5 +59,18 @@ export class ParticipantController {
       participant.id,
       joinCampaignDto.campaignId,
     );
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get participant profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the participant profile and campaign balances.',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiBearerAuth()
+  getProfile(@CurrentUser() participant: Participant) {
+    return this.participantService.getProfile(participant.id);
   }
 }

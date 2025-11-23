@@ -206,4 +206,53 @@ export class ParticipantService {
     });
     return { data, total };
   }
+
+  async getProfile(participantId: string) {
+    const participant = await this.participantRepository.findOne({
+      where: { id: participantId },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('Participant not found');
+    }
+
+    const campaignBalances = await this.participantCampaignBalanceRepository.find({
+      where: { participant: { id: participantId } },
+      relations: ['campaign'],
+    });
+
+    // Calculate point utilization
+    const { totalEarned } = await this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .select('SUM(ph.points)', 'totalEarned')
+      .where('ph.participant_id = :participantId', { participantId })
+      .andWhere('ph.type IN (:...types)', { types: [PointHistoryType.EARN, PointHistoryType.MATCHING] })
+      .getRawOne();
+
+    const { totalRedeemed } = await this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .select('SUM(ph.points)', 'totalRedeemed')
+      .where('ph.participant_id = :participantId', { participantId })
+      .andWhere('ph.type = :type', { type: PointHistoryType.REDEEM })
+      .getRawOne();
+
+    const earned = Number(totalEarned) || 0;
+    const redeemed = Number(totalRedeemed) || 0;
+    const utilization = earned > 0 ? (redeemed / earned) * 100 : 0;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...result } = participant;
+
+    return {
+      ...result,
+      point_utilization: Math.round(utilization * 100) / 100, // Round to 2 decimal places
+      total_points_earned: earned,
+      total_points_redeemed: redeemed,
+      campaign_balances: campaignBalances.map((balance) => ({
+        campaign_id: balance.campaign.id,
+        campaign_name: balance.campaign.name,
+        balance: balance.campaign_balance,
+      })),
+    };
+  }
 }
