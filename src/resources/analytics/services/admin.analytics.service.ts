@@ -79,14 +79,14 @@ export class AdminAnalyticsService {
   async getTopBusinesses(): Promise<TopBusinessDto[]> {
     const topBusinesses = await this.businessRepository
       .createQueryBuilder('business')
-      .leftJoin('business.campaigns', 'campaign')
+      .leftJoin('business.businessCampaigns', 'bc')
       .select('business.id', 'id')
       .addSelect('business.name', 'name')
-      .addSelect('SUM(campaign.total_points_earned)', 'totalPointsEarned')
-      .addSelect('SUM(campaign.total_points_redeemed)', 'totalPointsRedeemed')
+      .addSelect('SUM(bc.total_points_earned)', 'totalPointsEarned')
+      .addSelect('SUM(bc.total_points_redeemed)', 'totalPointsRedeemed')
       .groupBy('business.id')
       .orderBy(
-        'SUM(campaign.total_points_earned) + SUM(campaign.total_points_redeemed)',
+        'SUM(bc.total_points_earned) + SUM(bc.total_points_redeemed)',
         'DESC',
       )
       .limit(10)

@@ -13,6 +13,7 @@ import { ParticipantCampaignBalanceService } from './services/participant-campai
 import { TransactionCode } from './entities/transaction-code.entity';
 import { Business } from '../business/entities/business.entity';
 import { TransactionCodeService } from './services/transaction-code.service';
+import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TransactionCodeService } from './services/transaction-code.service';
       Participant,
       BusinessReward,
       Campaign,
+      BusinessCampaign,
       TransactionCode,
       Business,
     ]),

@@ -8,6 +8,8 @@ import { User } from '../../../common/interfaces/user.interface';
 import { Role } from '../../../common/role.enum';
 import { Staff } from '../../staff/entities/staff.entity';
 import { Business } from '../../business/entities/business.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { Campaign } from '../../campaign/entities/campaign.entity';
 
 @Injectable()
 export class TransactionCodeService {
@@ -18,6 +20,10 @@ export class TransactionCodeService {
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
+    @InjectRepository(Campaign)
+    private readonly campaignRepository: Repository<Campaign>,
   ) {}
 
   async generateCode(dto: GenerateCodeDto, user: User): Promise<TransactionCode> {
@@ -35,10 +41,22 @@ export class TransactionCodeService {
       code,
       type: dto.type,
       points: dto.points,
-      campaign: { id: dto.campaignId },
       expires_at: new Date(dto.expiresAt),
       status: TransactionCodeStatus.ACTIVE,
     });
+
+    // Check if campaignId refers to BusinessCampaign or Campaign
+    const businessCampaign = await this.businessCampaignRepository.findOne({ where: { id: dto.campaignId } });
+    if (businessCampaign) {
+      transactionCode.businessCampaign = businessCampaign;
+      // transactionCode.campaign = businessCampaign.campaign; // Optional: Link to original campaign if needed
+    } else {
+      const campaign = await this.campaignRepository.findOne({ where: { id: dto.campaignId } });
+      if (!campaign) {
+        throw new BadRequestException('Campaign not found');
+      }
+      transactionCode.campaign = campaign;
+    }
 
     if (dto.rewardId) {
       transactionCode.reward = { id: dto.rewardId } as any;

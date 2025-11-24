@@ -164,7 +164,7 @@ export class ParticipantCampaignBalanceService {
       // 1. Validate Code
       const transactionCode = await manager.findOne(TransactionCode, {
         where: { code },
-        relations: ['campaign', 'reward', 'creator_business', 'creator_staff'],
+        relations: ['campaign', 'businessCampaign', 'reward', 'creator_business', 'creator_staff'],
         lock: { mode: 'pessimistic_write' } // Lock to prevent double usage race condition
       });
 
@@ -172,33 +172,22 @@ export class ParticipantCampaignBalanceService {
         throw new NotFoundException('Transaction code not found');
       }
 
-      // Note: TransactionCode currently links to 'Campaign'. If we moved business campaigns to 'BusinessCampaign',
-      // we might need to check if TransactionCode needs update.
-      // Assuming TransactionCode still links to 'Campaign' entity (admin template or original),
-      // we need to verify if campaignId matches that.
-      // HOWEVER, if the user is claiming a code for a SPECIFIC BusinessCampaign, we need to check.
-
-      // The user said: "all campaigns create by business should be in this entity @business-campaign.entity.ts"
-      // If TransactionCode was created by a business, it should probably link to BusinessCampaign.
-      // But we haven't updated TransactionCode entity yet.
-      // Let's assume for now the ID matching is sufficient or check if campaignId matches either BC or C.
-
-      // Ideally we should check if campaignId passed matches the transaction code's campaign context.
-      // Since we didn't touch TransactionCode entity yet, it likely still points to Campaign.
-      // If the business created the code, they probably created it in context of a BusinessCampaign.
-      // This might be a gap. But for this refactor, let's ensure the logic flows.
-
-      // If transactionCode.campaign.id matches the campaignId (which might be BC id?), there might be a mismatch if entities are different.
-      // Let's relax the check or assume campaignId is the one stored in TransactionCode.
-
-      if (transactionCode.campaign.id !== campaignId) {
-         // Try checking if campaignId corresponds to a BusinessCampaign that links to this Campaign
-         const bc = await manager.findOne(BusinessCampaign, { where: { id: campaignId }, relations: ['campaign'] });
-         if (!bc || bc.campaign.id !== transactionCode.campaign.id) {
-             // It could be that TransactionCode should link to BusinessCampaign directly now.
-             // Given the scope, I'll stick to basic validation.
+      // Check validation against businessCampaign or campaign
+      if (transactionCode.businessCampaign) {
+        if (transactionCode.businessCampaign.id !== campaignId) {
              throw new BadRequestException('Code is not valid for this campaign');
+        }
+      } else if (transactionCode.campaign) {
+         if (transactionCode.campaign.id !== campaignId) {
+             // Fallback: check if the campaignId matches a BusinessCampaign linked to the Campaign
+             const bc = await manager.findOne(BusinessCampaign, { where: { id: campaignId }, relations: ['campaign'] });
+             if (!bc || !bc.campaign || bc.campaign.id !== transactionCode.campaign.id) {
+                 throw new BadRequestException('Code is not valid for this campaign');
+             }
          }
+      } else {
+           // Should not happen if data integrity is maintained, but handles case where neither is linked
+           throw new BadRequestException('Transaction code is not linked to any campaign');
       }
 
       if (transactionCode.status !== TransactionCodeStatus.ACTIVE) {
