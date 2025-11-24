@@ -14,25 +14,7 @@ import { Reward } from '../../rewards/entities/reward.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { BusinessCampaign } from './business-campaign.entity';
-
-export enum CampaignType {
-  QR_CODE = 'qr_code',
-  REFERRAL = 'referral',
-  SOCIAL_OR_EMAIL = 'social_or_email',
-  SPECIAL_OCCASION = 'special_occasion',
-}
-
-export enum AudienceType {
-  MEMBERS = 'members',
-  BADGE_LEVEL = 'badge_level',
-  TARGET_WISHLIST = 'target_wishlist',
-}
-
-export enum RewardType {
-  REGULAR = 'regular',
-  MATCHING = 'matching',
-  BOTH = 'both',
-}
+import { CampaignType, AudienceType, RewardType } from './campaign-enums';
 
 @Entity('campaigns')
 export class Campaign extends AbstractBaseEntity {

@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToMany, JoinTable, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 import { Role } from '../../../common/role.enum';
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
@@ -25,6 +26,10 @@ export class Participant extends AbstractBaseEntity {
   @ManyToMany(() => Campaign, (campaign) => campaign.participants)
   @JoinTable()
   campaigns: Campaign[];
+
+  @ManyToMany(() => BusinessCampaign, (businessCampaign) => businessCampaign.participants)
+  @JoinTable()
+  businessCampaigns: BusinessCampaign[];
 
   @OneToMany(
     () => ParticipantCampaignBalance,

@@ -14,6 +14,7 @@ import { Admin } from '../admin/entities/admin.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { Staff } from '../staff/entities/staff.entity';
 
 describe('CampaignService', () => {
   let service: CampaignService;
@@ -119,16 +120,37 @@ describe('CampaignService', () => {
         {
           provide: getRepositoryToken(BusinessCampaign),
           useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
+            create: jest.fn().mockImplementation((dto) => dto),
+            save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
             findOne: jest.fn(),
             findAndCount: jest.fn(),
+            createQueryBuilder: jest.fn(() => ({
+                leftJoin: jest.fn().mockReturnThis(),
+                leftJoinAndSelect: jest.fn().mockReturnThis(),
+                where: jest.fn().mockReturnThis(),
+                andWhere: jest.fn().mockReturnThis(),
+                select: jest.fn().mockReturnThis(),
+                addSelect: jest.fn().mockReturnThis(),
+                orderBy: jest.fn().mockReturnThis(),
+                skip: jest.fn().mockReturnThis(),
+                take: jest.fn().mockReturnThis(),
+                getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+                getRawOne: jest.fn().mockResolvedValue({}),
+                getCount: jest.fn().mockResolvedValue(0),
+                getRawMany: jest.fn().mockResolvedValue([]),
+            })),
           },
         },
         {
           provide: getRepositoryToken(Participant),
           useValue: mockParticipantRepository,
         },
+        {
+            provide: getRepositoryToken(Staff),
+            useValue: {
+                findOne: jest.fn()
+            }
+        }
       ],
     }).compile();
 
@@ -189,7 +211,10 @@ describe('CampaignService', () => {
 
       const result = await service.create(createCampaignDto, currentUser);
 
-      expect(result).toEqual(campaign);
+      expect(result).toEqual(expect.objectContaining({
+        ...campaign,
+        business: expect.objectContaining({ id: 'business-id' }),
+      }));
     });
 
     it('should create a campaign for a business', async () => {
@@ -231,7 +256,12 @@ describe('CampaignService', () => {
 
       const result = await service.create(createCampaignDto, currentUser);
 
-      expect(result).toEqual(campaign);
+      expect(result).toEqual(expect.objectContaining({
+          ...createCampaignDto,
+          business: expect.objectContaining({ id: 'business-id' }),
+          rewards: rewards,
+          uniqueCode: expect.any(String)
+      }));
     });
 
     it('should generate a unique code for a business-created campaign', async () => {
@@ -304,8 +334,13 @@ describe('CampaignService', () => {
       } as Business;
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
 
-      const campaigns = [[{ id: 'campaign-1' }], 1] as [Campaign[], number];
-      mockCampaignRepository.findAndCount.mockResolvedValue(campaigns);
+      const campaigns = [[{ id: 'bc-1' }], 1] as [any[], number];
+      // We need to access the BusinessCampaignRepository from the module or mock it directly in the test set up logic
+      // Since we passed a value, we can update that value reference if we had it, but we passed an object literal.
+      // However, we can use the spyOn or get the mock instance.
+
+      const businessCampaignRepo = businessCampaignRepository;
+      (businessCampaignRepo.findAndCount as jest.Mock).mockResolvedValue(campaigns);
 
       const result = await service.findAll(currentUser, paginationDto);
 
@@ -557,7 +592,8 @@ describe('CampaignService', () => {
         paginationDto,
       );
 
-      expect(result.data).toEqual([businessCampaigns[0][0].campaign]);
+      // Now it returns the businessCampaign objects
+      expect(result.data).toEqual(businessCampaigns[0]);
     });
   });
 
@@ -586,7 +622,9 @@ describe('CampaignService', () => {
         getCount: jest.fn().mockResolvedValue(1),
         getRawMany: jest.fn().mockResolvedValue(campaigns),
       };
-      (campaignRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQueryBuilder);
+
+      // It uses businessCampaignRepository now
+      (businessCampaignRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQueryBuilder);
 
       const result = await service.getCampaignAnalytics(
         'business-id',
