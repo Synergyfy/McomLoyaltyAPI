@@ -10,6 +10,7 @@ import { Business } from '../../business/entities/business.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../entities/participant-campaign-balance.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 import {
   PointHistory,
   PointHistoryType,
@@ -29,6 +30,8 @@ export class PointEarningService {
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly dataSource: DataSource,
@@ -77,17 +80,39 @@ export class PointEarningService {
         throw new NotFoundException('Participant not found');
       }
 
-      const campaign = await manager.findOne(Campaign, {
+      // Determine if it is a BusinessCampaign or Campaign
+      let businessCampaign: BusinessCampaign | null = null;
+      let campaign: Campaign | null = null;
+
+      // First check BusinessCampaign
+      businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
+        relations: ['business'],
       });
-      if (!campaign) {
+
+      if (!businessCampaign) {
+          // Fallback to Campaign if not found in BusinessCampaign (though mostly it should be BC)
+           campaign = await manager.findOne(Campaign, {
+            where: { id: campaignId },
+          });
+      }
+
+      if (!campaign && !businessCampaign) {
         throw new NotFoundException('Campaign not found');
       }
 
+      const activeCampaign = businessCampaign || campaign;
+
+      // Check if business matches
+      if (businessCampaign && businessCampaign.business.id !== business.id) {
+         throw new BadRequestException('This campaign does not belong to the performing business');
+      }
+       // If it's a regular Campaign (admin template), business might not be directly linked or null, but typically we award on claimed ones (BC)
+
       if (
-        (campaign.reward_type === 'matching' ||
-          campaign.reward_type === 'both') &&
-        campaign.matching_points_disabled_by_admin
+        (activeCampaign.reward_type === 'matching' ||
+          activeCampaign.reward_type === 'both') &&
+        activeCampaign.matching_points_disabled_by_admin
       ) {
         throw new BadRequestException(
           'Matching points awards are currently disabled for this campaign.',
@@ -95,26 +120,30 @@ export class PointEarningService {
       }
 
       if (
-        campaign.reward_type === 'regular' ||
-        campaign.reward_type === 'both'
+        activeCampaign.reward_type === 'regular' ||
+        activeCampaign.reward_type === 'both'
       ) {
         if (
-          campaign.regular_points_threshold !== null &&
-          campaign.total_points_earned + points >
-            campaign.regular_points_threshold
+          activeCampaign.regular_points_threshold !== null &&
+          activeCampaign.total_points_earned + points >
+            activeCampaign.regular_points_threshold
         ) {
           throw new BadRequestException(
             'Campaign regular points threshold reached.',
           );
         }
 
+        const whereCondition: any = { participant: { id: participantId } };
+        if (businessCampaign) {
+            whereCondition.businessCampaign = { id: campaignId };
+        } else {
+            whereCondition.campaign = { id: campaignId };
+        }
+
         let participantCampaignBalance = await manager.findOne(
           ParticipantCampaignBalance,
           {
-            where: {
-              participant: { id: participantId },
-              campaign: { id: campaignId },
-            },
+            where: whereCondition,
           },
         );
 
@@ -122,35 +151,55 @@ export class PointEarningService {
           participantCampaignBalance =
             this.participantCampaignBalanceRepository.create({
               participant,
-              campaign,
               campaign_balance: 0,
             });
+
+           if (businessCampaign) {
+               participantCampaignBalance.businessCampaign = businessCampaign;
+               // Keep campaign null or link to original?
+               // The entity has both as nullable.
+               // Maybe link campaign to original if available in BC
+               if (businessCampaign.campaign) {
+                    participantCampaignBalance.campaign = businessCampaign.campaign;
+               }
+           } else {
+               participantCampaignBalance.campaign = campaign;
+           }
         }
         participantCampaignBalance.campaign_balance += points;
         participant.global_total_points += points;
-        campaign.total_points_earned += points;
+        activeCampaign.total_points_earned += points;
         await manager.save(participantCampaignBalance);
 
         const regularPointHistory = this.pointHistoryRepository.create({
           type: PointHistoryType.EARN,
           points,
           participant,
-          campaign,
           initiated_by_staff: staff,
           business: business,
           description: sourceDescription,
         });
+
+        if (businessCampaign) {
+            regularPointHistory.businessCampaign = businessCampaign;
+            if (businessCampaign.campaign) {
+                 regularPointHistory.campaign = businessCampaign.campaign;
+            }
+        } else {
+            regularPointHistory.campaign = campaign;
+        }
+
         await manager.save(regularPointHistory);
       }
 
       if (
-        campaign.reward_type === 'matching' ||
-        campaign.reward_type === 'both'
+        activeCampaign.reward_type === 'matching' ||
+        activeCampaign.reward_type === 'both'
       ) {
         if (
-          campaign.matching_points_threshold !== null &&
-          campaign.total_matching_points_earned + points >
-            campaign.matching_points_threshold
+          activeCampaign.matching_points_threshold !== null &&
+          activeCampaign.total_matching_points_earned + points >
+            activeCampaign.matching_points_threshold
         ) {
           throw new BadRequestException(
             'Campaign matching points threshold reached.',
@@ -158,22 +207,35 @@ export class PointEarningService {
         }
 
         participant.matching_points += points;
-        campaign.total_matching_points_earned += points;
+        activeCampaign.total_matching_points_earned += points;
 
         const matchingPointHistory = this.pointHistoryRepository.create({
           type: PointHistoryType.MATCHING,
           points,
           participant,
-          campaign,
           initiated_by_staff: staff,
           business: business,
-          description: sourceDescription || `Matching points for campaign: ${campaign.name}`,
+          description: sourceDescription || `Matching points for campaign: ${activeCampaign.name}`,
         });
+
+        if (businessCampaign) {
+            matchingPointHistory.businessCampaign = businessCampaign;
+            if (businessCampaign.campaign) {
+                 matchingPointHistory.campaign = businessCampaign.campaign;
+            }
+        } else {
+            matchingPointHistory.campaign = campaign;
+        }
+
         await manager.save(matchingPointHistory);
       }
 
       await manager.save(participant);
-      await manager.save(campaign);
+      if (businessCampaign) {
+          await manager.save(BusinessCampaign, businessCampaign);
+      } else {
+          await manager.save(Campaign, campaign);
+      }
 
       return participant;
     };

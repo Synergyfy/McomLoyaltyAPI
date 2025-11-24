@@ -7,6 +7,7 @@ import { Participant } from '../../participant/entities/participant.entity';
 import { BusinessReward } from '../../rewards/entities/business-reward.entity';
 import { ParticipantCampaignBalance } from '../entities/participant-campaign-balance.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
 import { PointHistory, PointHistoryType } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
@@ -78,30 +79,49 @@ export class RedemptionService {
         throw new NotFoundException('Reward not found');
       }
 
-      const campaign = await manager.findOne(Campaign, {
+      let businessCampaign: BusinessCampaign | null = null;
+      let campaign: Campaign | null = null;
+
+      businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
         relations: ['business', 'rewards'],
       });
 
-      if (!campaign) {
+      if (!businessCampaign) {
+         campaign = await manager.findOne(Campaign, {
+          where: { id: campaignId },
+          relations: ['business', 'rewards'],
+        });
+      }
+
+      if (!campaign && !businessCampaign) {
         throw new NotFoundException('Campaign not found');
       }
 
-      if (!campaign.business || business.id !== campaign.business.id) {
+      const activeCampaign = businessCampaign || campaign;
+
+      if (!activeCampaign.business || business.id !== activeCampaign.business.id) {
         throw new BadRequestException('This campaign does not belong to the performing business');
       }
 
-      if (campaign.disabled) {
+      if (activeCampaign.disabled) {
         throw new BadRequestException('Campaign is not active');
       }
 
-      const isRewardInCampaign = campaign.rewards.some((r) => r.id === reward.id);
+      const isRewardInCampaign = activeCampaign.rewards.some((r) => r.id === reward.id);
       if (!isRewardInCampaign) {
         throw new BadRequestException('Reward is not available in this campaign');
       }
 
+      const whereCondition: any = { participant: { id: participantId } };
+      if (businessCampaign) {
+          whereCondition.businessCampaign = { id: campaignId };
+      } else {
+          whereCondition.campaign = { id: campaignId };
+      }
+
       const participantCampaignBalance = await manager.findOne(ParticipantCampaignBalance, {
-        where: { participant: { id: participantId }, campaign: { id: campaignId } },
+        where: whereCondition,
       });
 
       if (!participantCampaignBalance) {
@@ -114,13 +134,12 @@ export class RedemptionService {
 
       participantCampaignBalance.campaign_balance -= reward.points_required;
       participant.global_total_points -= reward.points_required;
-      campaign.total_points_redeemed += reward.points_required;
+      activeCampaign.total_points_redeemed += reward.points_required;
 
       const pointHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.REDEEM,
         points: reward.points_required,
         participant,
-        campaign: campaign,
         reward: reward,
         initiated_by_staff: staff,
         business: business,
@@ -128,9 +147,22 @@ export class RedemptionService {
         description: sourceDescription,
       });
 
+      if (businessCampaign) {
+          pointHistory.businessCampaign = businessCampaign;
+          if (businessCampaign.campaign) {
+              pointHistory.campaign = businessCampaign.campaign;
+          }
+      } else {
+          pointHistory.campaign = campaign;
+      }
+
       await manager.save(participantCampaignBalance);
       await manager.save(participant);
-      await manager.save(campaign);
+      if (businessCampaign) {
+          await manager.save(BusinessCampaign, activeCampaign);
+      } else {
+          await manager.save(Campaign, activeCampaign);
+      }
       await manager.save(pointHistory);
 
       return participantCampaignBalance;

@@ -60,12 +60,12 @@ export class CampaignService {
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
     currentUser: Business | Admin,
-  ): Promise<Campaign> {
+  ): Promise<Campaign | BusinessCampaign> {
     const campaignData = { ...createCampaignDto };
-    const campaign = this.campaignRepository.create(campaignData);
     let rewards: Reward[] = [];
 
     if (currentUser.role === Role.Admin) {
+      const campaign = this.campaignRepository.create(campaignData);
       const { business_id, reward_ids } =
         createCampaignDto as CreateCampaignAdminDto;
       if (business_id) {
@@ -83,9 +83,13 @@ export class CampaignService {
           id: In(reward_ids),
         });
       }
+      campaign.rewards = rewards;
+      return this.campaignRepository.save(campaign);
     } else {
-      campaign.business = currentUser as Business;
-      campaign.uniqueCode = nanoid(9);
+      // Business creating a campaign -> BusinessCampaign
+      const businessCampaign = this.businessCampaignRepository.create(campaignData);
+      businessCampaign.business = currentUser as Business;
+      businessCampaign.uniqueCode = nanoid(9);
       const { business_reward_ids } = createCampaignDto as CreateCampaignDto;
       if (business_reward_ids) {
         const businessRewards = await this.businessRewardRepository.find({
@@ -94,9 +98,9 @@ export class CampaignService {
         });
         rewards = businessRewards.map((br) => br.reward);
       }
+      businessCampaign.rewards = rewards;
+      return this.businessCampaignRepository.save(businessCampaign);
     }
-    campaign.rewards = rewards;
-    return this.campaignRepository.save(campaign);
   }
 
   async findAll(
@@ -106,24 +110,32 @@ export class CampaignService {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
-    let where: any = {};
     if (currentUser.role === Role.Business) {
-      where = { business: { id: currentUser.id } };
+      const [data, total] = await this.businessCampaignRepository.findAndCount({
+        where: { business: { id: currentUser.id } },
+        relations: ['business', 'rewards'],
+        skip,
+        take: limit,
+      });
+      return {
+        data: data as any,
+        total,
+        page,
+        limit,
+      };
+    } else {
+      const [data, total] = await this.campaignRepository.findAndCount({
+        relations: ['business', 'rewards'],
+        skip,
+        take: limit,
+      });
+      return {
+        data,
+        total,
+        page,
+        limit,
+      };
     }
-
-    const [data, total] = await this.campaignRepository.findAndCount({
-      where,
-      relations: ['business', 'rewards'],
-      skip,
-      take: limit,
-    });
-
-    return {
-      data,
-      total,
-      page,
-      limit,
-    };
   }
 
   async findClaimableCampaigns(
@@ -161,7 +173,7 @@ export class CampaignService {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.campaignRepository.findAndCount({
+    const [data, total] = await this.businessCampaignRepository.findAndCount({
       where: { business: { id: businessId } },
       relations: ['business', 'rewards'],
       order: { created_at: 'DESC' },
@@ -170,7 +182,7 @@ export class CampaignService {
     });
 
     return {
-      data,
+      data: data as any,
       total,
       page,
       limit,
@@ -223,7 +235,31 @@ export class CampaignService {
     };
   }
 
-  async findOne(id: string, currentUser?: User): Promise<Campaign> {
+  async findOne(id: string, currentUser?: User): Promise<Campaign | BusinessCampaign> {
+    const businessCampaign = await this.businessCampaignRepository.findOne({
+      where: { id },
+      relations: ['business', 'rewards'],
+    });
+
+    if (businessCampaign) {
+      if (!currentUser) {
+        return businessCampaign;
+      }
+      if (currentUser.role === Role.Business && businessCampaign.business.id !== currentUser.id) {
+        throw new UnauthorizedException();
+      }
+      if (currentUser.role === Role.Staff) {
+        const staff = await this.staffRepository.findOne({
+          where: { id: currentUser.id },
+          relations: ['business'],
+        });
+        if (!staff || !staff.business || staff.business.id !== businessCampaign.business.id) {
+          throw new UnauthorizedException();
+        }
+      }
+      return businessCampaign;
+    }
+
     const campaign = await this.campaignRepository.findOne({
       where: { id },
       relations: ['business', 'rewards'],
@@ -243,42 +279,7 @@ export class CampaignService {
       currentUser.role === Role.Business &&
       campaign.business?.id !== currentUser.id
     ) {
-      // Check if it's a claimed campaign
-      const claimed = await this.businessCampaignRepository.findOne({
-        where: {
-          campaign: { id: campaign.id },
-          business: { id: currentUser.id },
-        },
-      });
-      if (!claimed) {
-        throw new UnauthorizedException();
-      }
-    }
-
-    // If Staff, check business association
-    if (currentUser.role === Role.Staff) {
-      const staff = await this.staffRepository.findOne({
-        where: { id: currentUser.id },
-        relations: ['business'],
-      });
-
-      if (!staff || !staff.business) {
-        throw new UnauthorizedException('Staff not found or no business linked');
-      }
-
-      const businessId = staff.business.id;
-      if (campaign.business?.id !== businessId) {
-        // Check if it's a claimed campaign
-        const claimed = await this.businessCampaignRepository.findOne({
-          where: {
-            campaign: { id: campaign.id },
-            business: { id: businessId },
-          },
-        });
-        if (!claimed) {
-          throw new UnauthorizedException();
-        }
-      }
+      throw new UnauthorizedException();
     }
 
     return campaign;
@@ -288,7 +289,7 @@ export class CampaignService {
     id: string,
     updateCampaignDto: UpdateCampaignDto,
     currentUser: Business | Admin,
-  ): Promise<Campaign> {
+  ): Promise<Campaign | BusinessCampaign> {
     const campaign = await this.findOne(id, currentUser);
     const { reward_ids, business_reward_ids, ...campaignData } =
       updateCampaignDto;
@@ -312,12 +313,21 @@ export class CampaignService {
 
     campaign.rewards = rewards;
     Object.assign(campaign, campaignData);
-    return this.campaignRepository.save(campaign);
+
+    if (campaign instanceof BusinessCampaign) {
+       return this.businessCampaignRepository.save(campaign);
+    } else {
+       return this.campaignRepository.save(campaign);
+    }
   }
 
   async remove(id: string, currentUser: Business | Admin): Promise<void> {
     const campaign = await this.findOne(id, currentUser);
-    await this.campaignRepository.remove(campaign);
+    if (campaign instanceof BusinessCampaign) {
+       await this.businessCampaignRepository.remove(campaign);
+    } else {
+       await this.campaignRepository.remove(campaign);
+    }
   }
 
   async findOngoingCampaigns(): Promise<Campaign[]> {
@@ -356,39 +366,49 @@ export class CampaignService {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.campaignRepository
-      .createQueryBuilder('campaign')
-      .leftJoinAndSelect('campaign.rewards', 'rewards')
-      .leftJoinAndSelect('campaign.business', 'business')
-      .leftJoin(
-        'campaign.businessCampaigns',
-        'bc',
-        'bc.business_id = :businessId',
-        { businessId },
-      )
-      .addSelect(
-        (subQuery) =>
-          subQuery
-            .select('COUNT(DISTINCT ph.participant_id)', 'participant_count')
-            .from(PointHistory, 'ph')
-            .where('ph.campaign_id = campaign.id')
-            .andWhere('ph.business_id = :businessId', { businessId }),
-        'participantCount',
-      )
-      .where('(campaign.business_id = :businessId OR bc.id IS NOT NULL)', {
-        businessId,
-      })
-      .andWhere('campaign.start_date <= NOW()')
-      .andWhere('campaign.end_date >= NOW()')
-      .andWhere('campaign.disabled = :disabled', { disabled: false })
-      .orderBy('campaign.created_at', 'DESC')
-      .take(limit);
+    // Query BusinessCampaigns for this business
+    const [data, total] = await this.businessCampaignRepository.findAndCount({
+        where: {
+            business: { id: businessId },
+            start_date: LessThanOrEqual(new Date()),
+            end_date: MoreThanOrEqual(new Date()),
+            disabled: false
+        },
+        relations: ['business', 'rewards'],
+        order: { created_at: 'DESC' },
+        skip,
+        take: limit
+    });
 
-    const total = await qb.getCount();
+    // We need participant count.
+    // Since we can't easily do this with findAndCount and subqueries in one go for mapped entities easily in typeorm without qb,
+    // let's use QB or post-process.
+
+    // Let's stick to QB for efficiency
+    const qb = this.businessCampaignRepository.createQueryBuilder('bc')
+        .leftJoinAndSelect('bc.business', 'business')
+        .leftJoinAndSelect('bc.rewards', 'rewards')
+        .where('bc.business_id = :businessId', { businessId })
+        .andWhere('bc.start_date <= NOW()')
+        .andWhere('bc.end_date >= NOW()')
+        .andWhere('bc.disabled = :disabled', { disabled: false })
+        .addSelect(
+            (subQuery) =>
+              subQuery
+                .select('COUNT(DISTINCT ph.participant_id)', 'participant_count')
+                .from(PointHistory, 'ph')
+                .where('ph.business_campaign_id = bc.id'),
+            'participantCount',
+          )
+        .orderBy('bc.created_at', 'DESC')
+        .skip(skip)
+        .take(limit);
+
+    const totalCount = await qb.getCount();
     const { entities, raw } = await qb.getRawAndEntities();
 
-    const data = entities.map((entity) => {
-      const rawResult = raw.find((r) => r.campaign_id === entity.id);
+    const result = entities.map((entity) => {
+      const rawResult = raw.find((r) => r.bc_id === entity.id);
       const participantCount = rawResult
         ? parseInt(rawResult.participantCount, 10)
         : 0;
@@ -396,8 +416,8 @@ export class CampaignService {
     });
 
     return {
-      data: data as any, // Cast to any to avoid type error with extra property
-      total,
+      data: result as any,
+      total: totalCount,
       page,
       limit,
     };
@@ -407,6 +427,10 @@ export class CampaignService {
     currentUser: User,
     query: string,
   ): Promise<Campaign[]> {
+      // Return type says Campaign[], but we probably want BusinessCampaign[] if applicable.
+      // But we can return mix or just change return type to any[] or (Campaign|BusinessCampaign)[]
+      // For now, let's see if we can query BusinessCampaigns
+
     let businessId: string;
 
     if (currentUser.role === Role.Business) {
@@ -433,40 +457,32 @@ export class CampaignService {
       throw new NotFoundException('Participant not found');
     }
 
-    // Find campaigns where the participant has a balance or history for this business
-    // We can use ParticipantCampaignBalance as it links participant and campaign
-    // But we need to ensure the campaign belongs to or is claimed by the business
-
-    const qb = this.campaignRepository
-      .createQueryBuilder('campaign')
-      .leftJoinAndSelect('campaign.rewards', 'rewards')
-      .leftJoinAndSelect('campaign.business', 'business')
-      .leftJoin(
-        'campaign.businessCampaigns',
-        'bc',
-        'bc.business_id = :businessId',
-        { businessId },
-      )
+    // Find BusinessCampaigns where the participant has a balance
+    const qb = this.businessCampaignRepository
+      .createQueryBuilder('bc')
+      .leftJoinAndSelect('bc.rewards', 'rewards')
+      .leftJoinAndSelect('bc.business', 'business')
       .innerJoin(
-        'campaign.participantCampaignBalances',
+        'bc.participantCampaignBalances',
         'pcb',
         'pcb.participantId = :participantId',
         { participantId: participant.id },
       )
-      .where('(campaign.business_id = :businessId OR bc.id IS NOT NULL)', {
-        businessId,
-      })
-      .andWhere('campaign.disabled = :disabled', { disabled: false });
+      .where('bc.business_id = :businessId', { businessId })
+      .andWhere('bc.disabled = :disabled', { disabled: false });
 
-    return qb.getMany();
+    return qb.getMany() as any;
   }
 
   async toggleCampaignStatus(
     id: string,
     currentUser: Business | Admin,
-  ): Promise<Campaign> {
+  ): Promise<Campaign | BusinessCampaign> {
     const campaign = await this.findOne(id, currentUser);
     campaign.disabled = !campaign.disabled;
+    if (campaign instanceof BusinessCampaign) {
+        return this.businessCampaignRepository.save(campaign);
+    }
     return this.campaignRepository.save(campaign);
   }
 
@@ -495,11 +511,11 @@ export class CampaignService {
 
     const qb = this.pointHistoryRepository
       .createQueryBuilder('ph')
-      .leftJoin('ph.campaign', 'c')
-      .where('c.business_id = :businessId', { businessId });
+      .leftJoin('ph.businessCampaign', 'bc') // Changed to businessCampaign
+      .where('ph.business_id = :businessId', { businessId });
 
     if (campaignId) {
-      qb.andWhere('c.id = :campaignId', { campaignId });
+      qb.andWhere('bc.id = :campaignId', { campaignId });
     }
 
     const pointHistories = await qb.getMany();
@@ -530,6 +546,7 @@ export class CampaignService {
   ): Promise<BusinessCampaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
+      relations: ['rewards'],
     });
 
     if (!campaign) {
@@ -560,6 +577,35 @@ export class CampaignService {
       business,
       campaign,
       uniqueCode: nanoid(9),
+      name: campaign.name,
+      campaign_type: campaign.campaign_type,
+      campaign_message: campaign.campaign_message,
+      start_date: campaign.start_date,
+      end_date: campaign.end_date,
+      quantity: campaign.quantity,
+      audience_type: campaign.audience_type,
+      banner_url: campaign.banner_url,
+      logo_url: campaign.logo_url,
+      cta_text: campaign.cta_text,
+      cta_background_color: campaign.cta_background_color,
+      cta_text_color: campaign.cta_text_color,
+      text_color: campaign.text_color,
+      background_color: campaign.background_color,
+      signUpPoint: campaign.signUpPoint,
+      reward_type: campaign.reward_type,
+      regular_points_threshold: campaign.regular_points_threshold,
+      matching_points_threshold: campaign.matching_points_threshold,
+      matching_points_disabled_by_admin: campaign.matching_points_disabled_by_admin,
+      earn_point_page_title: campaign.earn_point_page_title,
+      earn_point_page_description: campaign.earn_point_page_description,
+      redeem_reward_page_title: campaign.redeem_reward_page_title,
+      redeem_reward_page_description: campaign.redeem_reward_page_description,
+      contact_us_page_title: campaign.contact_us_page_title,
+      contact_us_page_description: campaign.contact_us_page_description,
+      contact_email: campaign.contact_email,
+      contact_phone_number: campaign.contact_phone_number,
+      footer_text: campaign.footer_text,
+      rewards: campaign.rewards,
     });
 
     return this.businessCampaignRepository.save(businessCampaign);
@@ -573,15 +619,15 @@ export class CampaignService {
     const skip = (page - 1) * limit;
 
     const [data, total] = await this.businessCampaignRepository.findAndCount({
-      where: { business: { id: businessId } },
-      relations: ['campaign', 'campaign.rewards'],
+      where: { business: { id: businessId }, campaign: Not(IsNull()) }, // Filter only claimed ones (linked to campaign) if needed
+      relations: ['campaign', 'rewards'], // rewards are on BusinessCampaign now
       order: { created_at: 'DESC' },
       skip,
       take: limit,
     });
 
     return {
-      data: data.map((bc) => bc.campaign),
+      data: data as any,
       total,
       page,
       limit,
@@ -595,35 +641,27 @@ export class CampaignService {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
-    const qb = this.campaignRepository
-      .createQueryBuilder('campaign')
-      .leftJoin('campaign.business', 'business')
+    // Query BusinessCampaigns instead of Campaigns
+    const qb = this.businessCampaignRepository
+      .createQueryBuilder('bc')
+      .leftJoin('bc.business', 'business')
       .leftJoin('business.sector', 'sector')
-      .leftJoin(
-        'campaign.businessCampaigns',
-        'bc',
-        'bc.business_id = :businessId',
-        {
-          businessId,
-        },
-      )
-      .where('business.id = :businessId OR bc.id IS NOT NULL', { businessId });
+      .where('bc.business_id = :businessId', { businessId });
 
     const total = await qb.getCount();
 
-    qb.select('campaign.id', 'id')
-      .addSelect('campaign.name', 'name')
-      .addSelect('campaign.start_date', 'start_date')
-      .addSelect('campaign.end_date', 'end_date')
-      .addSelect('campaign.disabled', 'disabled')
+    qb.select('bc.id', 'id')
+      .addSelect('bc.name', 'name')
+      .addSelect('bc.start_date', 'start_date')
+      .addSelect('bc.end_date', 'end_date')
+      .addSelect('bc.disabled', 'disabled')
       .addSelect('sector.name', 'sector')
       .addSelect(
         (subQuery) =>
           subQuery
             .select('COUNT(DISTINCT ph.participant_id)')
             .from(PointHistory, 'ph')
-            .where('ph.campaign_id = campaign.id')
-            .andWhere('ph.business_id = :businessId', { businessId }),
+            .where('ph.business_campaign_id = bc.id'),
         'total_participants',
       )
       .addSelect(
@@ -631,8 +669,7 @@ export class CampaignService {
           subQuery
             .select('COALESCE(SUM(ph.points), 0)')
             .from(PointHistory, 'ph')
-            .where('ph.campaign_id = campaign.id')
-            .andWhere('ph.business_id = :businessId', { businessId })
+            .where('ph.business_campaign_id = bc.id')
             .andWhere("ph.type = 'EARN'"),
         'total_points_awarded',
       )
@@ -641,12 +678,11 @@ export class CampaignService {
           subQuery
             .select('COUNT(ph.id)')
             .from(PointHistory, 'ph')
-            .where('ph.campaign_id = campaign.id')
-            .andWhere('ph.business_id = :businessId', { businessId })
+            .where('ph.business_campaign_id = bc.id')
             .andWhere("ph.type = 'REDEEM'"),
         'total_rewards_redeemed',
       )
-      .orderBy('campaign.created_at', 'DESC')
+      .orderBy('bc.created_at', 'DESC')
       .skip(skip)
       .take(limit);
 
@@ -689,7 +725,7 @@ export class CampaignService {
   ): Promise<any> {
     const analyticsQuery = this.pointHistoryRepository
       .createQueryBuilder('ph')
-      .where('ph.campaign_id = :campaignId', { campaignId })
+      .where('ph.business_campaign_id = :campaignId', { campaignId })
       .andWhere('ph.business_id = :businessId', { businessId })
       .select([
         'COUNT(DISTINCT ph.participant_id) AS total_participants',
@@ -708,7 +744,7 @@ export class CampaignService {
       FROM
         point_histories ph
       WHERE
-        ph.campaign_id = $1
+        ph.business_campaign_id = $1
         AND ph.business_id = $2
         AND ph.created_at >= NOW() - INTERVAL '7 days'
       GROUP BY
@@ -722,7 +758,7 @@ export class CampaignService {
     const rankedParticipantsQuery = this.participantRepository
       .createQueryBuilder('p')
       .leftJoin('p.pointHistories', 'ph')
-      .where('ph.campaign_id = :campaignId', { campaignId })
+      .where('ph.business_campaign_id = :campaignId', { campaignId })
       .andWhere('ph.business_id = :businessId', { businessId })
       .select([
         'p.id',
@@ -738,7 +774,7 @@ export class CampaignService {
     const topRewardsQuery = this.rewardRepository
       .createQueryBuilder('r')
       .leftJoin('r.pointHistories', 'ph')
-      .where('ph.campaign_id = :campaignId', { campaignId })
+      .where('ph.business_campaign_id = :campaignId', { campaignId })
       .andWhere('ph.business_id = :businessId', { businessId })
       .andWhere("ph.type = 'REDEEM'")
       .select([
@@ -783,7 +819,7 @@ export class CampaignService {
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({
       where: { business: { id: businessId } },
-      relations: ['participant', 'reward', 'campaign'],
+      relations: ['participant', 'reward', 'campaign', 'businessCampaign'], // added businessCampaign
       order: { created_at: 'DESC' },
       skip,
       take: limit,
@@ -799,13 +835,16 @@ export class CampaignService {
         details = `${ph.type} ${ph.points} points`;
       }
 
+      // Use BusinessCampaign name if available
+      const campaignName = ph.businessCampaign ? ph.businessCampaign.name : (ph.campaign ? ph.campaign.name : 'Unknown');
+
       return {
         participantId: ph.participant ? ph.participant.id : 'Unknown',
         participantName: ph.participant ? ph.participant.name : 'Unknown',
         activityType: ph.type,
         details,
         date: ph.created_at,
-        campaignName: ph.campaign ? ph.campaign.name : 'Unknown',
+        campaignName,
       };
     });
 
@@ -830,7 +869,7 @@ export class CampaignService {
         business: { id: businessId },
         participant: { id: participantId },
       },
-      relations: ['participant', 'reward', 'campaign'],
+      relations: ['participant', 'reward', 'campaign', 'businessCampaign'],
       order: { created_at: 'DESC' },
       skip,
       take: limit,
@@ -846,13 +885,15 @@ export class CampaignService {
         details = `${ph.type} ${ph.points} points`;
       }
 
+      const campaignName = ph.businessCampaign ? ph.businessCampaign.name : (ph.campaign ? ph.campaign.name : 'Unknown');
+
       return {
         participantId: ph.participant ? ph.participant.id : 'Unknown',
         participantName: ph.participant ? ph.participant.name : 'Unknown',
         activityType: ph.type,
         details,
         date: ph.created_at,
-        campaignName: ph.campaign ? ph.campaign.name : 'Unknown',
+        campaignName,
       };
     });
 
@@ -875,24 +916,23 @@ export class CampaignService {
     if (isUuid) {
       businessCampaign = await this.businessCampaignRepository.findOne({
         where: { id: identifier },
-        relations: ['campaign', 'business', 'campaign.rewards'],
+        relations: ['campaign', 'business', 'rewards'],
       });
     } else {
       businessCampaign = await this.businessCampaignRepository.findOne({
         where: { uniqueCode: identifier },
-        relations: ['campaign', 'business', 'campaign.rewards'],
+        relations: ['campaign', 'business', 'rewards'],
       });
     }
 
     if (businessCampaign) {
-      const c = businessCampaign.campaign;
       const now = new Date();
-      if (c.end_date < now) throw new BadRequestException('Campaign has expired');
-      if (c.disabled) throw new BadRequestException('Campaign is disabled');
+      if (businessCampaign.end_date < now) throw new BadRequestException('Campaign has expired');
+      if (businessCampaign.disabled) throw new BadRequestException('Campaign is disabled');
       return businessCampaign;
     }
 
-    // Try finding Campaign
+    // Try finding Campaign (admin templates, if public)
     if (isUuid) {
       campaign = await this.campaignRepository.findOne({
         where: { id: identifier },

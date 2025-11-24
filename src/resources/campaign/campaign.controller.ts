@@ -35,8 +35,6 @@ import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import {
   Campaign,
-  CampaignType,
-  AudienceType,
 } from './entities/campaign.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 
@@ -66,7 +64,12 @@ export class CampaignController {
   @ApiResponse({
     status: 201,
     description: 'The campaign has been successfully created.',
-    type: Campaign,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(Campaign) },
+        { $ref: getSchemaPath(BusinessCampaign) },
+      ],
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   create(
@@ -289,7 +292,12 @@ export class CampaignController {
   @ApiResponse({
     status: 200,
     description: 'The campaign has been successfully updated.',
-    type: Campaign,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(Campaign) },
+        { $ref: getSchemaPath(BusinessCampaign) },
+      ],
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
@@ -327,7 +335,12 @@ export class CampaignController {
   @ApiResponse({
     status: 200,
     description: 'The campaign status has been successfully toggled.',
-    type: Campaign,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(Campaign) },
+        { $ref: getSchemaPath(BusinessCampaign) },
+      ],
+    },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })

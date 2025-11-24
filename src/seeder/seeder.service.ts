@@ -7,9 +7,11 @@ import { Admin } from '../resources/admin/entities/admin.entity';
 import { Business } from '../resources/business/entities/business.entity';
 import {
   Campaign,
+} from '../resources/campaign/entities/campaign.entity';
+import {
   CampaignType,
   AudienceType,
-} from '../resources/campaign/entities/campaign.entity';
+} from '../resources/campaign/entities/campaign-enums';
 import { Category } from '../resources/category/entities/category.entity';
 import { Deal } from '../resources/deal/entities/deal.entity';
 import { Otp } from '../resources/otp/entities/otp.entity';

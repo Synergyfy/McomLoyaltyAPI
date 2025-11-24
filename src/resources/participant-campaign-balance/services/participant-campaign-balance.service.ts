@@ -7,6 +7,7 @@ import { TransactionCode, TransactionCodeStatus, TransactionType } from '../enti
 import { PointEarningService } from './point-earning.service';
 import { RedemptionService } from './redemption.service';
 import { PointHistory } from '../entities/point-history.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 
 @Injectable()
 export class ParticipantCampaignBalanceService {
@@ -19,6 +20,8 @@ export class ParticipantCampaignBalanceService {
     private readonly transactionCodeRepository: Repository<TransactionCode>,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     private readonly pointEarningService: PointEarningService,
     private readonly redemptionService: RedemptionService,
     private readonly dataSource: DataSource,
@@ -35,7 +38,7 @@ export class ParticipantCampaignBalanceService {
 
     const campaignBalances = await this.participantCampaignBalanceRepository.find({
       where: { participant: { id: participantId } },
-      relations: ['campaign'],
+      relations: ['campaign', 'businessCampaign'],
     });
 
     return {
@@ -43,17 +46,24 @@ export class ParticipantCampaignBalanceService {
         participant.global_total_points + participant.matching_points,
       matching_points: participant.matching_points,
       campaign_balances: campaignBalances.map((balance) => ({
-        campaign_id: balance.campaign.id,
-        campaign_name: balance.campaign.name,
+        campaign_id: balance.businessCampaign ? balance.businessCampaign.id : (balance.campaign ? balance.campaign.id : null),
+        campaign_name: balance.businessCampaign ? balance.businessCampaign.name : (balance.campaign ? balance.campaign.name : 'Unknown'),
         balance: balance.campaign_balance,
       })),
     };
   }
 
   async getParticipantBalanceForCampaign(participantId: string, campaignId: string) {
+    // Check both Campaign and BusinessCampaign logic
+    // Since we don't know if campaignId is BC or C, try to find PCB by one of them.
+    // Note: Typically campaignId passed here corresponds to the one the user is viewing.
+
     const campaignBalance = await this.participantCampaignBalanceRepository.findOne({
-      where: { participant: { id: participantId }, campaign: { id: campaignId } },
-      relations: ['campaign'],
+        where: [
+            { participant: { id: participantId }, campaign: { id: campaignId } },
+            { participant: { id: participantId }, businessCampaign: { id: campaignId } }
+        ],
+        relations: ['campaign', 'businessCampaign'],
     });
 
     if (!campaignBalance) {
@@ -62,19 +72,28 @@ export class ParticipantCampaignBalanceService {
       );
     }
 
+    const cId = campaignBalance.businessCampaign ? campaignBalance.businessCampaign.id : campaignBalance.campaign.id;
+    const cName = campaignBalance.businessCampaign ? campaignBalance.businessCampaign.name : campaignBalance.campaign.name;
+
     return {
-      campaign_id: campaignBalance.campaign.id,
-      campaign_name: campaignBalance.campaign.name,
+      campaign_id: cId,
+      campaign_name: cName,
       balance: campaignBalance.campaign_balance,
     };
   }
 
   async isJoined(participantId: string, campaignId: string): Promise<{ isJoined: boolean }> {
     const count = await this.participantCampaignBalanceRepository.count({
-      where: {
-        participant: { id: participantId },
-        campaign: { id: campaignId },
-      },
+      where: [
+        {
+          participant: { id: participantId },
+          campaign: { id: campaignId },
+        },
+        {
+           participant: { id: participantId },
+           businessCampaign: { id: campaignId }
+        }
+      ]
     });
 
     return { isJoined: count > 0 };
@@ -93,14 +112,20 @@ export class ParticipantCampaignBalanceService {
     }
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({
-      where: {
-        participant: { id: participantId },
-        campaign: { id: campaignId },
-      },
+      where: [
+          {
+            participant: { id: participantId },
+            campaign: { id: campaignId },
+          },
+          {
+            participant: { id: participantId },
+            businessCampaign: { id: campaignId }
+          }
+      ],
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
-      relations: ['campaign', 'reward', 'business'],
+      relations: ['campaign', 'businessCampaign', 'reward', 'business'],
     });
 
     return {
@@ -123,7 +148,7 @@ export class ParticipantCampaignBalanceService {
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
-      relations: ['campaign', 'reward', 'business'],
+      relations: ['campaign', 'businessCampaign', 'reward', 'business'],
     });
 
     return {
@@ -139,7 +164,7 @@ export class ParticipantCampaignBalanceService {
       // 1. Validate Code
       const transactionCode = await manager.findOne(TransactionCode, {
         where: { code },
-        relations: ['campaign', 'reward', 'creator_business', 'creator_staff'],
+        relations: ['campaign', 'businessCampaign', 'reward', 'creator_business', 'creator_staff'],
         lock: { mode: 'pessimistic_write' } // Lock to prevent double usage race condition
       });
 
@@ -147,8 +172,22 @@ export class ParticipantCampaignBalanceService {
         throw new NotFoundException('Transaction code not found');
       }
 
-      if (transactionCode.campaign.id !== campaignId) {
-        throw new BadRequestException('Code is not valid for this campaign');
+      // Check validation against businessCampaign or campaign
+      if (transactionCode.businessCampaign) {
+        if (transactionCode.businessCampaign.id !== campaignId) {
+             throw new BadRequestException('Code is not valid for this campaign');
+        }
+      } else if (transactionCode.campaign) {
+         if (transactionCode.campaign.id !== campaignId) {
+             // Fallback: check if the campaignId matches a BusinessCampaign linked to the Campaign
+             const bc = await manager.findOne(BusinessCampaign, { where: { id: campaignId }, relations: ['campaign'] });
+             if (!bc || !bc.campaign || bc.campaign.id !== transactionCode.campaign.id) {
+                 throw new BadRequestException('Code is not valid for this campaign');
+             }
+         }
+      } else {
+           // Should not happen if data integrity is maintained, but handles case where neither is linked
+           throw new BadRequestException('Transaction code is not linked to any campaign');
       }
 
       if (transactionCode.status !== TransactionCodeStatus.ACTIVE) {
@@ -168,18 +207,6 @@ export class ParticipantCampaignBalanceService {
 
       const performerId = transactionCode.creator_staff ? transactionCode.creator_staff.id : transactionCode.creator_business.id;
       const performerType = transactionCode.creator_staff ? 'Staff' : 'Business';
-
-      // 3. Award/Redeem (We need to adapt PointEarningService/RedemptionService to accept a manager)
-      // Since adapting them might be complex given they use repository injection,
-      // I will extract the core logic or move it here?
-      // Actually, let's look at PointEarningService. It uses dataSource.transaction.
-      // Nested transactions in TypeORM: if I call a method that starts a transaction from within a transaction, it might work or fail depending on driver.
-      // But better: I should modify PointEarningService to accept an optional EntityManager.
-
-      // For now, let's replicate the call but passing the manager is tricky without refactoring.
-      // Refactoring PointEarningService and RedemptionService is the clean way.
-
-      // Let's assume I refactor them to: awardPoints(..., manager?: EntityManager)
 
       if (transactionCode.type === TransactionType.EARN) {
         return this.pointEarningService.awardPoints(
