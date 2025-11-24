@@ -210,6 +210,18 @@ export class ParticipantService {
   async getProfile(participantId: string) {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
+      select: [
+        'id',
+        'name',
+        'email',
+        'role',
+        'uniqueCode',
+        'global_total_points',
+        'matching_points',
+        'isDisabled',
+        'created_at',
+        'updated_at',
+      ],
     });
 
     if (!participant) {
@@ -221,31 +233,25 @@ export class ParticipantService {
       relations: ['campaign'],
     });
 
-    // Calculate point utilization
-    const { totalEarned } = await this.pointHistoryRepository
+    // Calculate point utilization in a single query
+    const { totalEarned, totalRedeemed } = await this.pointHistoryRepository
       .createQueryBuilder('ph')
-      .select('SUM(ph.points)', 'totalEarned')
+      .select('SUM(CASE WHEN ph.type IN (:...earnTypes) THEN ph.points ELSE 0 END)', 'totalEarned')
+      .addSelect('SUM(CASE WHEN ph.type = :redeemType THEN ph.points ELSE 0 END)', 'totalRedeemed')
       .where('ph.participant_id = :participantId', { participantId })
-      .andWhere('ph.type IN (:...types)', { types: [PointHistoryType.EARN, PointHistoryType.MATCHING] })
-      .getRawOne();
-
-    const { totalRedeemed } = await this.pointHistoryRepository
-      .createQueryBuilder('ph')
-      .select('SUM(ph.points)', 'totalRedeemed')
-      .where('ph.participant_id = :participantId', { participantId })
-      .andWhere('ph.type = :type', { type: PointHistoryType.REDEEM })
+      .setParameters({
+        earnTypes: [PointHistoryType.EARN, PointHistoryType.MATCHING],
+        redeemType: PointHistoryType.REDEEM,
+      })
       .getRawOne();
 
     const earned = Number(totalEarned) || 0;
     const redeemed = Number(totalRedeemed) || 0;
     const utilization = earned > 0 ? (redeemed / earned) * 100 : 0;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = participant;
-
     return {
-      ...result,
-      point_utilization: Math.round(utilization * 100) / 100, // Round to 2 decimal places
+      ...participant,
+      point_utilization: Math.round(utilization * 100) / 100,
       total_points_earned: earned,
       total_points_redeemed: redeemed,
       campaign_balances: campaignBalances.map((balance) => ({
