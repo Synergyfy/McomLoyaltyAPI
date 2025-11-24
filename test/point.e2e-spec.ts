@@ -10,9 +10,11 @@ import { Sector } from '../src/resources/sector/entities/sector.entity';
 import { IsPasswordMatchingConstraint } from '../src/common/decorators/validation/is-password-matching.decorator';
 import {
   Campaign,
+} from '../src/resources/campaign/entities/campaign.entity';
+import {
   CampaignType,
   AudienceType,
-} from '../src/resources/campaign/entities/campaign.entity';
+} from '../src/resources/campaign/entities/campaign-enums';
 import { Participant } from '../src/resources/participant/entities/participant.entity';
 import { Point } from '../src/resources/point/entities/point.entity';
 import { PointHistory } from '../src/resources/point/entities/point-history.entity';

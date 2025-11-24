@@ -15,7 +15,7 @@ import {
   CampaignType,
   AudienceType,
   RewardType,
-} from '../entities/campaign.entity';
+} from '../entities/campaign-enums';
 
 export class BaseCampaignDto {
   @ApiProperty({ description: 'The name of the campaign.' })

@@ -36,10 +36,6 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 import {
   Campaign,
 } from './entities/campaign.entity';
-import {
-  CampaignType,
-  AudienceType,
-} from './entities/campaign-enums';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 
 @ApiTags('Campaigns')
