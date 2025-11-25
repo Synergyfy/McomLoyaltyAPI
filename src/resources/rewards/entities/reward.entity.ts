@@ -1,7 +1,6 @@
 import { Entity, Column, ManyToMany, JoinTable } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { RewardType } from '../enums/reward-type.enum';
-import { BadgeLevel } from '../enums/badge-level.enum';
 import { RewardSource } from '../enums/reward-source.enum';
 import { RewardAudience } from '../enums/reward-audience.enum';
 import { RewardStatus } from '../enums/reward-status.enum';
@@ -18,9 +17,6 @@ export class Reward extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: RewardType })
   reward_type: RewardType;
-
-  @Column({ type: 'enum', enum: BadgeLevel })
-  badge_level: BadgeLevel;
 
   @Column({ type: 'enum', enum: RewardSource })
   reward_source: RewardSource;

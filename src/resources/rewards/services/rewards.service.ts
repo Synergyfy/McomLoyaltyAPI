@@ -191,7 +191,6 @@ export class RewardsService {
       business: { id: businessId },
       title: reward.title,
       reward_type: reward.reward_type,
-      badge_level: reward.badge_level,
       reward_source: reward.reward_source,
       audience: reward.audience,
       expiry_datetime: reward.expiry_datetime,
