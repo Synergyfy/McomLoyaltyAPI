@@ -14,6 +14,11 @@ import { Sector } from '../src/resources/sector/entities/sector.entity';
 import { Campaign } from '../src/resources/campaign/entities/campaign.entity';
 import { Participant } from '../src/resources/participant/entities/participant.entity';
 import { HashService } from '../src/common/hash/hash.service';
+import { RewardType } from '../src/resources/rewards/enums/reward-type.enum';
+import { BadgeLevel } from '../src/resources/rewards/enums/badge-level.enum';
+import { RewardSource } from '../src/resources/rewards/enums/reward-source.enum';
+import { RewardAudience } from '../src/resources/rewards/enums/reward-audience.enum';
+import { RewardStatus } from '../src/resources/rewards/enums/reward-status.enum';
 
 describe('RewardsController (e2e)', () => {
   let app: INestApplication;
@@ -87,9 +92,6 @@ describe('RewardsController (e2e)', () => {
       email: 'business@example.com',
       password: 'businessPassword123',
       confirmPassword: 'businessPassword123',
-      phone: '1234567890',
-      address: '123 Test St',
-      sectorId: sector.id,
     });
     const businessLoginResponse = await request(app.getHttpServer())
       .post('/auth/login')
@@ -143,7 +145,40 @@ describe('RewardsController (e2e)', () => {
         description: 'Test Description',
         image: 'http://example.com/image.png',
         quantity: 10,
+        reward_type: RewardType.VOUCHER,
+        badge_level: BadgeLevel.BRONZE,
+        reward_source: RewardSource.MCOM_VAULT,
+        audience: RewardAudience.ALL_BUSINESS,
       })
       .expect(201);
+  });
+
+  it('/rewards/business/unadded-rewards (GET) - should return all unadded rewards, ignoring sector and tier', async () => {
+    // Create a reward available to a specific sector
+    const sectorSpecificReward = await rewardRepository.save({
+        title: 'Sector Reward',
+        points_required: 100,
+        value: 50,
+        description: 'A reward for a specific sector',
+        image: 'image_url',
+        quantity: 10,
+        status: RewardStatus.ACTIVE,
+        audience: RewardAudience.SPECIFIC_SECTORS,
+        sectors: [sector],
+        reward_type: RewardType.VOUCHER,
+        badge_level: BadgeLevel.BRONZE,
+        reward_source: RewardSource.MCOM_VAULT,
+        disabled: false,
+    });
+
+    // Business (without a sector) logs in
+    const response = await request(app.getHttpServer())
+        .get('/rewards/business/unadded-rewards')
+        .set('Authorization', `Bearer ${businessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toBeInstanceOf(Array);
+    expect(response.body.data.length).toBeGreaterThan(0);
+    expect(response.body.data.some(r => r.id === sectorSpecificReward.id)).toBe(true);
   });
 });
