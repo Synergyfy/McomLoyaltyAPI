@@ -2,6 +2,10 @@ import { Controller, Get, Post, Body, Param, UseGuards, Query, Put } from '@nest
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { ProgressionService } from './progression.service';
 import { ProgressionEntityType } from './entities/progression-history.entity';
+import { CreateBusinessLevelDto } from './dto/create-business-level.dto';
+import { UpdateBusinessLevelDto } from './dto/update-business-level.dto';
+import { CreateCustomerBadgeDto } from './dto/create-customer-badge.dto';
+import { UpdateCustomerBadgeDto } from './dto/update-customer-badge.dto';
 
 @ApiTags('Progression (Tiers & Badges)')
 @Controller('progression')
@@ -64,25 +68,25 @@ export class ProgressionController {
 
     @Put('admin/levels/:id')
     @ApiOperation({ summary: 'Update business level criteria' })
-    updateLevel(@Param('id') id: string, @Body() body: any) {
-        return this.progressionService.updateBusinessLevel(id, body);
+    updateLevel(@Param('id') id: string, @Body() dto: UpdateBusinessLevelDto) {
+        return this.progressionService.updateBusinessLevel(id, dto);
     }
 
     @Put('admin/badges/:id')
     @ApiOperation({ summary: 'Update customer badge criteria' })
-    updateBadge(@Param('id') id: string, @Body() body: any) {
-        return this.progressionService.updateCustomerBadge(id, body);
+    updateBadge(@Param('id') id: string, @Body() dto: UpdateCustomerBadgeDto) {
+        return this.progressionService.updateCustomerBadge(id, dto);
     }
 
     @Post('admin/levels')
     @ApiOperation({ summary: 'Create a new business level' })
-    createLevel(@Body() body: any) {
-        return this.progressionService.createBusinessLevel(body);
+    createLevel(@Body() dto: CreateBusinessLevelDto) {
+        return this.progressionService.createBusinessLevel(dto);
     }
 
     @Post('admin/badges')
     @ApiOperation({ summary: 'Create a new customer badge' })
-    createBadge(@Body() body: any) {
-        return this.progressionService.createCustomerBadge(body);
+    createBadge(@Body() dto: CreateCustomerBadgeDto) {
+        return this.progressionService.createCustomerBadge(dto);
     }
 }

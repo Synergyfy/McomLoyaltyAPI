@@ -8,6 +8,10 @@ import { CustomerProgression } from './entities/customer-progression.entity';
 import { ProgressionHistory, ProgressionEntityType, ProgressionChangeReason } from './entities/progression-history.entity';
 import { Business } from '../business/entities/business.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { CreateBusinessLevelDto } from './dto/create-business-level.dto';
+import { UpdateBusinessLevelDto } from './dto/update-business-level.dto';
+import { CreateCustomerBadgeDto } from './dto/create-customer-badge.dto';
+import { UpdateCustomerBadgeDto } from './dto/update-customer-badge.dto';
 
 @Injectable()
 export class ProgressionService implements OnModuleInit {
@@ -146,8 +150,8 @@ export class ProgressionService implements OnModuleInit {
         return progression;
     }
 
-    async updateBusinessLevel(id: string, data: Partial<BusinessLevel>) {
-        await this.businessLevelRepo.update(id, data);
+    async updateBusinessLevel(id: string, dto: UpdateBusinessLevelDto) {
+        await this.businessLevelRepo.update(id, dto);
         return this.businessLevelRepo.findOne({ where: { id } });
     }
 
@@ -226,18 +230,18 @@ export class ProgressionService implements OnModuleInit {
         return progression;
     }
 
-    async updateCustomerBadge(id: string, data: Partial<CustomerBadge>) {
-        await this.customerBadgeRepo.update(id, data);
+    async updateCustomerBadge(id: string, dto: UpdateCustomerBadgeDto) {
+        await this.customerBadgeRepo.update(id, dto);
         return this.customerBadgeRepo.findOne({ where: { id } });
     }
 
-    async createBusinessLevel(data: Partial<BusinessLevel>) {
-        const level = this.businessLevelRepo.create(data);
+    async createBusinessLevel(dto: CreateBusinessLevelDto) {
+        const level = this.businessLevelRepo.create(dto);
         return this.businessLevelRepo.save(level);
     }
 
-    async createCustomerBadge(data: Partial<CustomerBadge>) {
-        const badge = this.customerBadgeRepo.create(data);
+    async createCustomerBadge(dto: CreateCustomerBadgeDto) {
+        const badge = this.customerBadgeRepo.create(dto);
         return this.customerBadgeRepo.save(badge);
     }
 
