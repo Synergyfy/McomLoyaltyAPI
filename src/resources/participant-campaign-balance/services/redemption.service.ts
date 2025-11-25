@@ -79,46 +79,32 @@ export class RedemptionService {
         throw new NotFoundException('Reward not found');
       }
 
-      let businessCampaign: BusinessCampaign | null = null;
-      let campaign: Campaign | null = null;
-
-      businessCampaign = await manager.findOne(BusinessCampaign, {
+      const businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
-        relations: ['business', 'rewards'],
+        relations: ['business', 'rewards', 'campaign'],
       });
 
       if (!businessCampaign) {
-         campaign = await manager.findOne(Campaign, {
-          where: { id: campaignId },
-          relations: ['business', 'rewards'],
-        });
+        throw new NotFoundException('Business campaign not found');
       }
 
-      if (!campaign && !businessCampaign) {
-        throw new NotFoundException('Campaign not found');
-      }
-
-      const activeCampaign = businessCampaign || campaign;
-
-      if (!activeCampaign.business || business.id !== activeCampaign.business.id) {
+      if (!businessCampaign.business || business.id !== businessCampaign.business.id) {
         throw new BadRequestException('This campaign does not belong to the performing business');
       }
 
-      if (activeCampaign.disabled) {
+      if (businessCampaign.disabled) {
         throw new BadRequestException('Campaign is not active');
       }
 
-      const isRewardInCampaign = activeCampaign.rewards.some((r) => r.id === reward.id);
+      const isRewardInCampaign = businessCampaign.rewards.some((r) => r.id === reward.id);
       if (!isRewardInCampaign) {
         throw new BadRequestException('Reward is not available in this campaign');
       }
 
-      const whereCondition: any = { participant: { id: participantId } };
-      if (businessCampaign) {
-          whereCondition.businessCampaign = { id: campaignId };
-      } else {
-          whereCondition.campaign = { id: campaignId };
-      }
+      const whereCondition: any = {
+          participant: { id: participantId },
+          businessCampaign: { id: campaignId },
+        };
 
       const participantCampaignBalance = await manager.findOne(ParticipantCampaignBalance, {
         where: whereCondition,
@@ -134,7 +120,7 @@ export class RedemptionService {
 
       participantCampaignBalance.campaign_balance -= reward.points_required;
       participant.global_total_points -= reward.points_required;
-      activeCampaign.total_points_redeemed += reward.points_required;
+      businessCampaign.total_points_redeemed += reward.points_required;
 
       const pointHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.REDEEM,
@@ -159,22 +145,14 @@ export class RedemptionService {
         pointHistory.businessReward = businessReward;
       }
 
-      if (businessCampaign) {
-          pointHistory.businessCampaign = businessCampaign;
-          if (businessCampaign.campaign) {
-              pointHistory.campaign = businessCampaign.campaign;
-          }
-      } else {
-          pointHistory.campaign = campaign;
+      pointHistory.businessCampaign = businessCampaign;
+      if (businessCampaign.campaign) {
+          pointHistory.campaign = businessCampaign.campaign;
       }
 
       await manager.save(participantCampaignBalance);
       await manager.save(participant);
-      if (businessCampaign) {
-          await manager.save(BusinessCampaign, activeCampaign);
-      } else {
-          await manager.save(Campaign, activeCampaign);
-      }
+      await manager.save(BusinessCampaign, businessCampaign);
       await manager.save(pointHistory);
 
       return participantCampaignBalance;

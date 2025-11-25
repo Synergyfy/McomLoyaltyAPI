@@ -22,6 +22,7 @@ import { QrPlaqueScan } from '../resources/qr-plaques/entities/qr-plaque-scan.en
 import { Membership } from '../resources/membership/entities/membership.entity';
 import { Tier } from '../resources/tier/entities/tier.entity';
 import { Coupon } from '../resources/coupon/entities/coupon.entity';
+import { PaymentHistory } from '../resources/payment-history/entities/payment-history.entity';
 import { SeederService } from './seeder.service';
 
 @Module({
@@ -49,6 +50,7 @@ import { SeederService } from './seeder.service';
       Membership,
       Tier,
       Coupon,
+      PaymentHistory,
     ]),
   ],
   providers: [SeederService],

@@ -8,6 +8,7 @@ import { Role } from '../../common/role.enum';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
 import { Public } from '../../common/decorators/public.decorator';
+import { GrowthActivityChartDto } from '../analytics/dto/growth-activity-chart.dto';
 
 @ApiTags('QR Plaques')
 @Controller('qr-plaques')
@@ -39,8 +40,8 @@ export class QrPlaquesController {
     @Roles(Role.Admin)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get top 10 performing QR plaques (Admin only)' })
-    async getTopPerforming() {
-        return this.qrPlaquesService.getTopPerformingPlaques();
+    async getTopPerforming(@Query() query: GrowthActivityChartDto) {
+        return this.qrPlaquesService.getTopPerformingPlaques(query);
     }
 
     @Get('admin/all')

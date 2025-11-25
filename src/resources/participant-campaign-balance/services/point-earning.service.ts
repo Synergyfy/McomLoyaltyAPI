@@ -80,28 +80,16 @@ export class PointEarningService {
         throw new NotFoundException('Participant not found');
       }
 
-      // Determine if it is a BusinessCampaign or Campaign
-      let businessCampaign: BusinessCampaign | null = null;
-      let campaign: Campaign | null = null;
-
-      // First check BusinessCampaign
-      businessCampaign = await manager.findOne(BusinessCampaign, {
+      const businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
-        relations: ['business'],
+        relations: ['business', 'campaign'],
       });
 
       if (!businessCampaign) {
-          // Fallback to Campaign if not found in BusinessCampaign (though mostly it should be BC)
-           campaign = await manager.findOne(Campaign, {
-            where: { id: campaignId },
-          });
+        throw new NotFoundException('Business campaign not found');
       }
 
-      if (!campaign && !businessCampaign) {
-        throw new NotFoundException('Campaign not found');
-      }
-
-      const activeCampaign = businessCampaign || campaign;
+      const activeCampaign = businessCampaign;
 
       // Check if business matches
       if (businessCampaign && businessCampaign.business.id !== business.id) {
@@ -136,8 +124,6 @@ export class PointEarningService {
         const whereCondition: any = { participant: { id: participantId } };
         if (businessCampaign) {
             whereCondition.businessCampaign = { id: campaignId };
-        } else {
-            whereCondition.campaign = { id: campaignId };
         }
 
         let participantCampaignBalance = await manager.findOne(
@@ -156,14 +142,9 @@ export class PointEarningService {
 
            if (businessCampaign) {
                participantCampaignBalance.businessCampaign = businessCampaign;
-               // Keep campaign null or link to original?
-               // The entity has both as nullable.
-               // Maybe link campaign to original if available in BC
                if (businessCampaign.campaign) {
                     participantCampaignBalance.campaign = businessCampaign.campaign;
                }
-           } else {
-               participantCampaignBalance.campaign = campaign;
            }
         }
         participantCampaignBalance.campaign_balance += points;
@@ -185,8 +166,6 @@ export class PointEarningService {
             if (businessCampaign.campaign) {
                  regularPointHistory.campaign = businessCampaign.campaign;
             }
-        } else {
-            regularPointHistory.campaign = campaign;
         }
 
         await manager.save(regularPointHistory);
@@ -223,8 +202,6 @@ export class PointEarningService {
             if (businessCampaign.campaign) {
                  matchingPointHistory.campaign = businessCampaign.campaign;
             }
-        } else {
-            matchingPointHistory.campaign = campaign;
         }
 
         await manager.save(matchingPointHistory);
@@ -233,8 +210,6 @@ export class PointEarningService {
       await manager.save(participant);
       if (businessCampaign) {
           await manager.save(BusinessCampaign, businessCampaign);
-      } else {
-          await manager.save(Campaign, campaign);
       }
 
       return participant;
