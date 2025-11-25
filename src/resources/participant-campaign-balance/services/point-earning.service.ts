@@ -150,6 +150,13 @@ export class PointEarningService {
         participantCampaignBalance.campaign_balance += points;
         participant.global_total_points += points;
         activeCampaign.total_points_earned += points;
+        
+        // Update business totals
+        if (businessCampaign.business) {
+            businessCampaign.business.total_points_earned += points;
+            await manager.save(businessCampaign.business);
+        }
+
         await manager.save(participantCampaignBalance);
 
         const regularPointHistory = this.pointHistoryRepository.create({

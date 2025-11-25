@@ -122,6 +122,12 @@ export class RedemptionService {
       participant.global_total_points -= reward.points_required;
       businessCampaign.total_points_redeemed += reward.points_required;
 
+      // Update business totals
+      if (businessCampaign.business) {
+          businessCampaign.business.total_points_redeemed += reward.points_required;
+          await manager.save(businessCampaign.business);
+      }
+
       const pointHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.REDEEM,
         points: reward.points_required,

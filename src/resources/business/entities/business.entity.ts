@@ -106,4 +106,12 @@ export class Business extends AbstractBaseEntity {
   @ApiProperty({ description: 'The Stripe customer ID', required: false })
   @Column({ nullable: true })
   stripe_customer_id: string;
+
+  @ApiProperty({ description: 'Total points earned by participants in campaigns owned by this business', default: 0 })
+  @Column({ default: 0 })
+  total_points_earned: number;
+
+  @ApiProperty({ description: 'Total points redeemed by participants in campaigns owned by this business', default: 0 })
+  @Column({ default: 0 })
+  total_points_redeemed: number;
 }
