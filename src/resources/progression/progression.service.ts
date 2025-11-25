@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, NotFoundException } from '@nestjs/common';
+import { Injectable, OnModuleInit, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BusinessLevel } from './entities/business-level.entity';
@@ -248,11 +248,17 @@ export class ProgressionService implements OnModuleInit {
     }
 
     async createBusinessLevel(dto: CreateBusinessLevelDto) {
+        const existing = await this.businessLevelRepo.findOne({ where: { name: dto.name } });
+        if (existing) throw new ConflictException('A business level with this name already exists');
+
         const level = this.businessLevelRepo.create(dto);
         return this.businessLevelRepo.save(level);
     }
 
     async createCustomerBadge(dto: CreateCustomerBadgeDto) {
+        const existing = await this.customerBadgeRepo.findOne({ where: { name: dto.name } });
+        if (existing) throw new ConflictException('A customer badge with this name already exists');
+
         const badge = this.customerBadgeRepo.create(dto);
         return this.customerBadgeRepo.save(badge);
     }
