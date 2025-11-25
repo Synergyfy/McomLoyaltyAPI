@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Admin } from '../resources/admin/entities/admin.entity';
 import { Business } from '../resources/business/entities/business.entity';
 import { Campaign } from '../resources/campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../resources/campaign/entities/business-campaign.entity';
 import { Category } from '../resources/category/entities/category.entity';
 import { Deal } from '../resources/deal/entities/deal.entity';
 import { Otp } from '../resources/otp/entities/otp.entity';
@@ -29,6 +30,7 @@ import { SeederService } from './seeder.service';
       Admin,
       Business,
       Campaign,
+      BusinessCampaign,
       Category,
       Deal,
       Otp,

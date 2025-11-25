@@ -8,9 +8,11 @@ import { Business } from '../resources/business/entities/business.entity';
 import {
   Campaign,
 } from '../resources/campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../resources/campaign/entities/business-campaign.entity';
 import {
   CampaignType,
   AudienceType,
+  RewardType as CampaignRewardType,
 } from '../resources/campaign/entities/campaign-enums';
 import { Category } from '../resources/category/entities/category.entity';
 import { Deal } from '../resources/deal/entities/deal.entity';
@@ -38,6 +40,7 @@ import { RewardType } from '../resources/rewards/enums/reward-type.enum';
 import { BadgeLevel } from '../resources/rewards/enums/badge-level.enum';
 import { RewardSource } from '../resources/rewards/enums/reward-source.enum';
 import { RewardAudience } from '../resources/rewards/enums/reward-audience.enum';
+import { RewardStatus } from '../resources/rewards/enums/reward-status.enum';
 
 @Injectable()
 export class SeederService {
@@ -48,6 +51,8 @@ export class SeederService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Deal)
@@ -92,14 +97,17 @@ export class SeederService {
     const sectors = await this.sectorRepository.save([
       { name: 'Technology' },
       { name: 'Retail' },
+      { name: 'Hospitality' },
     ]);
     const categories = await this.categoryRepository.save([
       { name: 'Software', sector: sectors[0] },
       { name: 'Fashion', sector: sectors[1] },
+      { name: 'Dining', sector: sectors[2] },
     ]);
     const subcategories = await this.subCategoryRepository.save([
       { name: 'Web Development', category: categories[0] },
       { name: 'Clothing', category: categories[1] },
+      { name: 'Restaurants', category: categories[2] },
     ]);
     const hashedPassword = await bcrypt.hash('password', 10);
 
@@ -122,19 +130,40 @@ export class SeederService {
         }))
     );
 
+    // Create 50 Businesses
+    console.log('Creating businesses...');
     const businesses = await this.businessRepository.save(
-      Array.from({ length: 20 }, (_, i) => ({
+      Array.from({ length: 50 }, (_, i) => ({
         name: `Business ${i + 1}`,
         email: `business${i + 1}@example.com`,
         password: hashedPassword,
         uniqueCode: nanoid(9),
         affiliateCode: nanoid(9),
         subCategory: subcategories[i % subcategories.length],
+        sector: sectors[i % sectors.length],
       })),
     );
 
+    // Create Staff for each business
+    console.log('Creating staff...');
+    const staffs = [];
+    for (const business of businesses) {
+        const staffList = await this.staffRepository.save(
+            Array.from({ length: 2 }, (_, i) => ({
+                name: `Staff ${i + 1} of ${business.name}`,
+                email: `staff${i + 1}_${business.uniqueCode}@example.com`,
+                password: hashedPassword,
+                uniqueCode: nanoid(9),
+                business: business
+            }))
+        );
+        staffs.push(...staffList);
+    }
+
+    // Create Participants (200)
+    console.log('Creating participants...');
     const participants = await this.participantRepository.save(
-      Array.from({ length: 100 }, (_, i) => ({
+      Array.from({ length: 200 }, (_, i) => ({
         name: `Participant ${i + 1}`,
         email: `participant${i + 1}@example.com`,
         password: hashedPassword,
@@ -144,207 +173,273 @@ export class SeederService {
       })),
     );
 
-    const adminRewards = await this.rewardRepository.save(
+    // Admin Campaigns (Templates)
+    const adminCampaigns = await this.campaignRepository.save(
       Array.from({ length: 5 }, (_, i) => ({
-        title: `Admin Reward ${i + 1}`,
-        description: `Description for admin reward ${i + 1}`,
+        name: `Admin Template Campaign ${i + 1}`,
+        campaign_type: CampaignType.QR_CODE,
+        start_date: this.getDateDaysAgo(100),
+        end_date: this.getDateDaysAgo(-100), // Future
+        quantity: 10000,
+        audience_type: AudienceType.MEMBERS,
+        business: null,
+        campaign_message: `Message for admin campaign ${i + 1}`,
+        banner_url: 'https://placehold.co/600x400',
+        cta_text: 'Click Here',
+        cta_background_color: '#ffffff',
+        cta_text_color: '#000000',
+        text_color: '#000000',
+        background_color: '#ffffff',
+        uniqueCode: nanoid(9),
+      })),
+    );
+
+     const adminRewards = await this.rewardRepository.save(
+      Array.from({ length: 10 }, (_, i) => ({
+        title: `Generic Reward ${i + 1}`,
+        description: `Description for generic reward ${i + 1}`,
         points_required: 100 * (i + 1),
         value: 10 * (i + 1),
-        image: 'https://example.com/admin_reward.jpg',
+        image: 'https://placehold.co/100x100',
         reward_type: RewardType.PHYSICAL_PRODUCT,
         badge_level: BadgeLevel.BRONZE,
         reward_source: RewardSource.MCOM_VAULT,
         audience: RewardAudience.ALL_BUSINESS,
-      })),
-    );
-
-    const businessRewards = await this.rewardRepository.save(
-      Array.from({ length: 15 }, (_, i) => ({
-        title: `Business Reward ${i + 1}`,
-        description: `Description for business reward ${i + 1}`,
-        points_required: 150 * (i + 1),
-        value: 15 * (i + 1),
-        image: 'https://example.com/business_reward.jpg',
-        reward_type: RewardType.COUPON,
-        badge_level: BadgeLevel.SILVER,
-        reward_source: RewardSource.PARTNER,
-        audience: RewardAudience.ALL_BUSINESS,
-      })),
-    );
-
-    const adminCampaigns = await this.campaignRepository.save(
-      Array.from({ length: 3 }, (_, i) => ({
-        name: `Admin Campaign ${i + 1}`,
-        campaign_type: CampaignType.QR_CODE,
-        start_date: new Date(),
-        end_date: new Date(new Date().getFullYear() + 1, 1, 1),
         quantity: 1000,
-        audience_type: AudienceType.MEMBERS,
-        business: null,
-        campaign_message: `Message for admin campaign ${i + 1}`,
-        banner_url: 'https://example.com/banner.jpg',
-        cta_text: 'Click Here',
-        cta_background_color: '#ffffff',
-        cta_text_color: '#000000',
-        text_color: '#000000',
-        background_color: '#ffffff',
+        status: RewardStatus.ACTIVE
       })),
     );
 
-    const businessCampaigns = await this.campaignRepository.save(
-      Array.from({ length: 10 }, (_, i) => ({
-        name: `Business Campaign ${i + 1}`,
-        campaign_type: CampaignType.QR_CODE,
-        start_date: new Date(),
-        end_date: new Date(new Date().getFullYear() + 1, 1, 1),
-        quantity: 500,
-        audience_type: AudienceType.MEMBERS,
-        business: businesses[i % businesses.length],
-        campaign_message: `Message for business campaign ${i + 1}`,
-        banner_url: 'https://example.com/banner.jpg',
-        cta_text: 'Click Here',
-        cta_background_color: '#ffffff',
-        cta_text_color: '#000000',
-        text_color: '#000000',
-        background_color: '#ffffff',
-      })),
-    );
-
-    // Ensure every campaign has MULTIPLE rewards linked
-    const allCampaigns = [...adminCampaigns, ...businessCampaigns];
-
-    for (const campaign of allCampaigns) {
-        const rewardsToAssign = campaign.business ? businessRewards : adminRewards;
-        const shuffled = [...rewardsToAssign].sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, 3);
-
-        // Update ManyToMany Relation
-        campaign.rewards = selected;
+    // Link Admin Rewards to Admin Campaigns
+    for (const campaign of adminCampaigns) {
+        campaign.rewards = adminRewards.slice(0, 3);
         await this.campaignRepository.save(campaign);
-
-        // Also create BusinessReward entries as before (metadata/catalogue)
-        for (const reward of selected) {
-             const exists = await this.businessRewardRepository.findOne({
-                 where: {
-                     campaign: { id: campaign.id },
-                     reward: { id: reward.id }
-                 }
-             });
-
-             if (!exists) {
-                await this.businessRewardRepository.save({
-                    business: campaign.business || businesses[0],
-                    campaign,
-                    reward,
-                    point_required: 100 + Math.floor(Math.random() * 500),
-                });
-             }
-        }
     }
+
+    console.log('Creating business campaigns...');
+    // Business Campaigns (Mix of custom and claimed)
+    // We will focus on BusinessCampaign entity as that's what Analytics uses
+    const allBusinessCampaigns: BusinessCampaign[] = [];
 
     for (const business of businesses) {
-        for (const campaign of adminCampaigns) {
-            const shuffled = [...adminRewards].sort(() => 0.5 - Math.random());
-            const selected = shuffled.slice(0, 2);
+        // Create 2 custom campaigns per business
+        for(let i=0; i<2; i++) {
+             const customCampaign = await this.businessCampaignRepository.save({
+                business: business,
+                name: `${business.name} Campaign ${i+1}`,
+                uniqueCode: nanoid(9),
+                campaign_type: CampaignType.QR_CODE,
+                campaign_message: `Welcome to ${business.name}! Scan to earn.`,
+                start_date: this.getDateDaysAgo(90),
+                end_date: this.getDateDaysAgo(-90),
+                quantity: 1000,
+                audience_type: AudienceType.MEMBERS,
+                banner_url: 'https://placehold.co/600x400',
+                cta_text: 'Join Now',
+                cta_background_color: '#000',
+                cta_text_color: '#fff',
+                text_color: '#000',
+                background_color: '#fff',
+                total_points_earned: 0,
+                total_points_redeemed: 0,
+                reward_type: CampaignRewardType.REGULAR,
+             });
 
-            // For claimed admin campaigns, we might need to update the underlying campaign rewards?
-            // No, admin campaigns are shared templates.
-            // Businesses 'claim' them by creating 'BusinessCampaign' entity.
-            // Does 'BusinessCampaign' have rewards? No.
-            // When a business claims a campaign, they might want to customize rewards?
-            // The `CampaignService.claimCampaign` creates `BusinessCampaign`.
-            // It does NOT clone the campaign.
-            // So if `findClaimedCampaigns` returns `campaign`, it returns the SHARED campaign.
-            // So `campaign.rewards` will be the admin rewards we just assigned above.
-            // That should be sufficient for the user's request.
+             // Create custom rewards for this campaign
+             const customRewards = await this.rewardRepository.save(
+                 Array.from({ length: 2 }, (_, r) => ({
+                    title: `${business.name} Reward ${r + 1}`,
+                    description: `Exclusive from ${business.name}`,
+                    points_required: 200 * (r + 1),
+                    value: 20 * (r + 1),
+                    image: 'https://placehold.co/100x100',
+                    reward_type: RewardType.COUPON,
+                    badge_level: BadgeLevel.SILVER,
+                    reward_source: RewardSource.PARTNER,
+                    audience: RewardAudience.ALL_BUSINESS,
+                    status: RewardStatus.ACTIVE,
+                    quantity: 100
+                 }))
+             );
 
-            // But we also populate BusinessReward for completeness
-            for(const reward of selected) {
-                 await this.businessRewardRepository.save({
+             // Link rewards to BusinessCampaign
+             customCampaign.rewards = customRewards;
+             await this.businessCampaignRepository.save(customCampaign);
+
+             // Also populate BusinessReward for legacy/metadata support if needed
+             for (const reward of customRewards) {
+                  await this.businessRewardRepository.save({
                     business,
-                    campaign,
                     reward,
-                    point_required: 200,
-                });
-            }
+                    point_required: reward.points_required,
+                  });
+             }
+
+             allBusinessCampaigns.push(customCampaign);
         }
-    }
 
-    // Participants join campaigns and EARN points
-    for (const campaign of allCampaigns) {
-        const shuffledParticipants = [...participants].sort(() => 0.5 - Math.random());
-        const selectedParticipants = shuffledParticipants.slice(0, 20);
-
-        for (const participant of selectedParticipants) {
-            await this.participantCampaignBalanceRepository.save({
-                participant,
-                campaign,
-                campaign_balance: 5000,
-            });
-
-             await this.pointHistoryRepository.save({
-                type: PointHistoryType.EARN,
-                points: 5000,
-                participant,
-                campaign,
-                business: campaign.business || businesses[0],
-                description: 'Initial seed earning'
-            });
-        }
-    }
-
-    // Simulate point redemptions (REDEEM)
-    for (const participant of participants) {
-      for (let i = 0; i < 5; i++) {
-        const campaign =
-          allCampaigns[Math.floor(Math.random() * allCampaigns.length)];
-
-        const businessReward = await this.businessRewardRepository.findOne({
-          where: { campaign: { id: campaign.id } },
-          relations: ['reward', 'business'],
+        // Claim 1 Admin Template
+        const template = adminCampaigns[Math.floor(Math.random() * adminCampaigns.length)];
+        const claimedCampaign = await this.businessCampaignRepository.save({
+            business: business,
+            campaign: template, // Link to template
+            name: `${business.name} (Claimed) ${template.name}`,
+            uniqueCode: nanoid(9),
+            campaign_type: template.campaign_type,
+            campaign_message: template.campaign_message,
+            start_date: this.getDateDaysAgo(90),
+            end_date: this.getDateDaysAgo(-90),
+            quantity: template.quantity,
+            audience_type: template.audience_type,
+            banner_url: template.banner_url,
+            cta_text: template.cta_text,
+            cta_background_color: template.cta_background_color,
+            cta_text_color: template.cta_text_color,
+            text_color: template.text_color,
+            background_color: template.background_color,
+            total_points_earned: 0,
+            total_points_redeemed: 0,
+            reward_type: template.reward_type
         });
 
-        if (businessReward) {
-          await this.pointHistoryRepository.save({
-            type: PointHistoryType.REDEEM,
-            points: businessReward.point_required,
-            participant,
-            campaign,
-            reward: businessReward.reward,
-            business: businessReward.business,
-          });
-        }
-      }
+        // Link template rewards to this BusinessCampaign
+        claimedCampaign.rewards = template.rewards; // Copy rewards from template
+        await this.businessCampaignRepository.save(claimedCampaign);
+
+        allBusinessCampaigns.push(claimedCampaign);
     }
 
-    // QR Plaques
-    const plaques = [];
-    for(const business of businesses) {
-        for(let i=0; i<3; i++) {
-             const plaque = await this.qrPlaqueRepository.save({
-                 code: nanoid(9),
-                 assignedBusiness: business,
-                 status: QrPlaqueStatus.ACTIVE,
-                 link: `https://business${business.id}.com/menu`,
-                 assignedPartner: partners[i % partners.length]
-             });
-             plaques.push(plaque);
+    console.log('Generating historical data (Point History)...');
 
-             const scanCount = Math.floor(Math.random() * 50);
-             for(let j=0; j<scanCount; j++) {
-                 const date = new Date();
-                 date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+    // Historical Simulation: Past 90 Days
+    const days = 90;
+    const today = new Date();
 
-                 const scan = this.qrPlaqueScanRepository.create({
-                     qrPlaque: plaque,
-                     scannedAt: date
-                 });
-                 await this.qrPlaqueScanRepository.save(scan);
+    for (let d = days; d >= 0; d--) {
+        const currentDate = new Date();
+        currentDate.setDate(today.getDate() - d);
+        // Randomize time within the day
+        currentDate.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+
+        // 1. Random Participants join campaigns (EARN points or just join)
+        // Let's assume 10-20 joins per day across the system
+        const dailyJoins = Math.floor(Math.random() * 10) + 10;
+
+        for (let j = 0; j < dailyJoins; j++) {
+            const participant = participants[Math.floor(Math.random() * participants.length)];
+            const bizCampaign = allBusinessCampaigns[Math.floor(Math.random() * allBusinessCampaigns.length)];
+
+            // Check if already joined
+            let balance = await this.participantCampaignBalanceRepository.findOne({
+                where: {
+                    participant: { id: participant.id },
+                    businessCampaign: { id: bizCampaign.id }
+                }
+            });
+
+            if (!balance) {
+                // Join
+                const earnPoints = 100; // Sign up bonus
+                balance = await this.participantCampaignBalanceRepository.save({
+                    participant,
+                    businessCampaign: bizCampaign,
+                    campaign: bizCampaign.campaign, // Nullable if custom
+                    campaign_balance: earnPoints,
+                    created_at: currentDate
+                });
+
+                // Update BusinessCampaign total
+                bizCampaign.total_points_earned += earnPoints;
+                // No save here, batch update later or rely on memory? Better to save to keep consistency if queried.
+                // We'll save bizCampaign at end of loop or periodically?
+                // Let's save now to be safe, though slow.
+                await this.businessCampaignRepository.save(bizCampaign);
+
+                // Log History
+                await this.pointHistoryRepository.save({
+                    type: PointHistoryType.EARN,
+                    points: earnPoints,
+                    participant,
+                    businessCampaign: bizCampaign,
+                    campaign: bizCampaign.campaign,
+                    business: bizCampaign.business,
+                    description: 'Campaign Join Bonus',
+                    created_at: currentDate
+                });
+            } else {
+                // Already joined, maybe earn more points (Scan)
+                if (Math.random() > 0.5) {
+                    const earnPoints = 50 + Math.floor(Math.random() * 100);
+                    balance.campaign_balance += earnPoints;
+                    await this.participantCampaignBalanceRepository.save(balance);
+
+                    bizCampaign.total_points_earned += earnPoints;
+                    await this.businessCampaignRepository.save(bizCampaign);
+
+                    await this.pointHistoryRepository.save({
+                        type: PointHistoryType.EARN,
+                        points: earnPoints,
+                        participant,
+                        businessCampaign: bizCampaign,
+                        campaign: bizCampaign.campaign,
+                        business: bizCampaign.business,
+                        description: 'Scan Earn',
+                        created_at: currentDate
+                    });
+                }
+            }
+        }
+
+        // 2. Random Redemptions
+        // Let's assume 5-10 redemptions per day
+        const dailyRedemptions = Math.floor(Math.random() * 5) + 5;
+        for (let r = 0; r < dailyRedemptions; r++) {
+             // Pick a random participant
+             const participant = participants[Math.floor(Math.random() * participants.length)];
+
+             // Find a campaign they have balance in
+             const balance = await this.participantCampaignBalanceRepository.createQueryBuilder('pcb')
+                .leftJoinAndSelect('pcb.businessCampaign', 'bc')
+                .leftJoinAndSelect('bc.rewards', 'r')
+                .where('pcb.participantId = :pid', { pid: participant.id })
+                .andWhere('pcb.campaign_balance > 0')
+                .orderBy('RANDOM()')
+                .getOne();
+
+             if (balance && balance.businessCampaign && balance.businessCampaign.rewards.length > 0) {
+                 const reward = balance.businessCampaign.rewards[0]; // Just pick the first available
+                 if (balance.campaign_balance >= reward.points_required) {
+                     // Redeem
+                     balance.campaign_balance -= reward.points_required;
+                     await this.participantCampaignBalanceRepository.save(balance);
+
+                     const bizCampaign = balance.businessCampaign;
+                     bizCampaign.total_points_redeemed += reward.points_required;
+                     await this.businessCampaignRepository.save(bizCampaign);
+
+                     await this.pointHistoryRepository.save({
+                         type: PointHistoryType.REDEEM,
+                         points: reward.points_required,
+                         participant,
+                         businessCampaign: bizCampaign,
+                         campaign: bizCampaign.campaign,
+                         business: bizCampaign.business,
+                         reward: reward,
+                         description: `Redeemed ${reward.title}`,
+                         created_at: currentDate
+                     });
+                 }
              }
         }
     }
 
     console.log('Seeding completed successfully!');
+  }
+
+  private getDateDaysAgo(days: number): Date {
+      const date = new Date();
+      date.setDate(date.getDate() - days);
+      return date;
   }
 
   private async clearDatabase() {
@@ -353,6 +448,7 @@ export class SeederService {
       'admins',
       'businesses',
       'campaigns',
+      'business_campaigns',
       'categories',
       'deals',
       'otp',
@@ -370,7 +466,13 @@ export class SeederService {
       'qr_plaque_scans',
       'membership',
       'tier',
-      'coupon'
+      'coupon',
+      'business_campaigns_rewards_reward', // join tables
+      'campaigns_rewards_reward',
+      'reward_sectors_sectors',
+      'reward_tiers_tier',
+      'participants_campaigns_campaigns',
+      'participants_business_campaigns_business_campaigns'
     ];
 
     for (const tableName of tableNames) {
@@ -379,7 +481,7 @@ export class SeederService {
           `TRUNCATE TABLE "${tableName}" RESTART IDENTITY CASCADE;`,
         );
       } catch (error) {
-        // console.error(`Error truncating table ${tableName}:`, error.message);
+         console.error(`Error truncating table ${tableName}:`, error.message);
       }
     }
 
