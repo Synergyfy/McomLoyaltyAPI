@@ -13,6 +13,7 @@ import { CreateParticipantDto } from './dto/create-participant.dto';
 import { LoginParticipantDto } from './dto/login-participant.dto';
 import { Participant } from './entities/participant.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { AuthService } from 'src/auth/auth.service';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
@@ -29,6 +30,8 @@ export class ParticipantService {
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     private readonly authService: AuthService,
   ) { }
 
@@ -82,7 +85,6 @@ export class ParticipantService {
     const isPasswordValid = await bcrypt.compare(
       password,
       participant.password,
-
     );
 
     if (!isPasswordValid) {
@@ -99,43 +101,125 @@ export class ParticipantService {
   async joinCampaign(participantId: string, campaignId: string) {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
-      relations: ['campaigns'],
+      relations: ['campaigns', 'businessCampaigns'],
     });
+
+    if (!participant) {
+      throw new NotFoundException('Participant not found');
+    }
+
+    // 1. Try to find BusinessCampaign first
+    const businessCampaign = await this.businessCampaignRepository.findOne({
+      where: { id: campaignId },
+      relations: ['campaign'],
+    });
+
+    if (businessCampaign) {
+      if (businessCampaign.disabled) {
+        throw new BadRequestException('Campaign is disabled');
+      }
+      if (new Date(businessCampaign.end_date) < new Date()) {
+        throw new BadRequestException('Campaign has expired');
+      }
+
+      // Check if already joined
+      const alreadyJoined = participant.businessCampaigns.some(
+        (bc) => bc.id === businessCampaign.id,
+      );
+      if (!alreadyJoined) {
+        participant.businessCampaigns.push(businessCampaign);
+        await this.participantRepository.save(participant);
+      }
+
+      if (businessCampaign.signUpPoint) {
+        let participantCampaignBalance =
+          await this.participantCampaignBalanceRepository.findOne({
+            where: {
+              participant: { id: participant.id },
+              businessCampaign: { id: businessCampaign.id },
+            },
+          });
+
+        if (!participantCampaignBalance) {
+          participantCampaignBalance =
+            this.participantCampaignBalanceRepository.create({
+              participant,
+              businessCampaign,
+              campaign: businessCampaign.campaign,
+              campaign_balance: 0,
+            });
+        }
+
+        participantCampaignBalance.campaign_balance += businessCampaign.signUpPoint;
+        participant.global_total_points += businessCampaign.signUpPoint;
+        businessCampaign.total_points_earned += businessCampaign.signUpPoint;
+
+        await this.participantCampaignBalanceRepository.save(
+          participantCampaignBalance,
+        );
+        await this.participantRepository.save(participant);
+        await this.businessCampaignRepository.save(businessCampaign);
+
+        const pointHistory = this.pointHistoryRepository.create({
+          type: PointHistoryType.EARN,
+          points: businessCampaign.signUpPoint,
+          participant,
+          businessCampaign,
+          campaign: businessCampaign.campaign,
+        });
+
+        await this.pointHistoryRepository.save(pointHistory);
+      }
+
+      return { message: 'Successfully joined business campaign' };
+    }
+
+    // 2. Fallback to Campaign
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId },
     });
 
-    if (!participant || !campaign) {
-      throw new NotFoundException('Participant or Campaign not found');
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
     }
 
     if (campaign.end_date < new Date()) {
       throw new BadRequestException('Campaign has expired');
     }
 
-    participant.campaigns.push(campaign);
-    await this.participantRepository.save(participant);
+    const alreadyJoinedCampaign = participant.campaigns.some(
+      (c) => c.id === campaign.id,
+    );
+
+    if (!alreadyJoinedCampaign) {
+      participant.campaigns.push(campaign);
+      await this.participantRepository.save(participant);
+    }
 
     if (campaign.signUpPoint) {
-      let participantCampaignBalance = await this.participantCampaignBalanceRepository.findOne({
-        where: {
-          participant: { id: participant.id },
-          campaign: { id: campaign.id },
-        },
-      });
+      let participantCampaignBalance =
+        await this.participantCampaignBalanceRepository.findOne({
+          where: {
+            participant: { id: participant.id },
+            campaign: { id: campaign.id },
+          },
+        });
 
       if (!participantCampaignBalance) {
-        participantCampaignBalance = this.participantCampaignBalanceRepository.create({
-          participant,
-          campaign,
-          campaign_balance: 0,
-        });
+        participantCampaignBalance =
+          this.participantCampaignBalanceRepository.create({
+            participant,
+            campaign,
+            campaign_balance: 0,
+          });
       }
 
       participantCampaignBalance.campaign_balance += campaign.signUpPoint;
       participant.global_total_points += campaign.signUpPoint;
       campaign.total_points_earned += campaign.signUpPoint;
-      await this.participantCampaignBalanceRepository.save(participantCampaignBalance);
+      await this.participantCampaignBalanceRepository.save(
+        participantCampaignBalance,
+      );
       await this.participantRepository.save(participant);
       await this.campaignRepository.save(campaign);
 
@@ -152,7 +236,10 @@ export class ParticipantService {
     return { message: 'Successfully joined campaign' };
   }
 
-  async findAll(page: number, limit: number): Promise<{ data: Participant[], total: number }> {
+  async findAll(
+    page: number,
+    limit: number,
+  ): Promise<{ data: Participant[]; total: number }> {
     const [data, total] = await this.participantRepository.findAndCount({
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
@@ -161,7 +248,10 @@ export class ParticipantService {
     return { data, total };
   }
 
-  async findById(id: string, relations: string[] = []): Promise<Participant | undefined> {
+  async findById(
+    id: string,
+    relations: string[] = [],
+  ): Promise<Participant | undefined> {
     return this.participantRepository.findOne({ where: { id }, relations });
   }
 
@@ -178,7 +268,10 @@ export class ParticipantService {
     return this.participantRepository.save(participant);
   }
 
-  async removeFromCampaign(participantId: string, campaignId: string): Promise<void> {
+  async removeFromCampaign(
+    participantId: string,
+    campaignId: string,
+  ): Promise<void> {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
       relations: ['campaigns'],
@@ -228,16 +321,23 @@ export class ParticipantService {
       throw new NotFoundException('Participant not found');
     }
 
-    const campaignBalances = await this.participantCampaignBalanceRepository.find({
-      where: { participant: { id: participantId } },
-      relations: ['campaign'],
-    });
+    const campaignBalances =
+      await this.participantCampaignBalanceRepository.find({
+        where: { participant: { id: participantId } },
+        relations: ['campaign'],
+      });
 
     // Calculate point utilization in a single query
     const { totalEarned, totalRedeemed } = await this.pointHistoryRepository
       .createQueryBuilder('ph')
-      .select('SUM(CASE WHEN ph.type IN (:...earnTypes) THEN ph.points ELSE 0 END)', 'totalEarned')
-      .addSelect('SUM(CASE WHEN ph.type = :redeemType THEN ph.points ELSE 0 END)', 'totalRedeemed')
+      .select(
+        'SUM(CASE WHEN ph.type IN (:...earnTypes) THEN ph.points ELSE 0 END)',
+        'totalEarned',
+      )
+      .addSelect(
+        'SUM(CASE WHEN ph.type = :redeemType THEN ph.points ELSE 0 END)',
+        'totalRedeemed',
+      )
       .where('ph.participant_id = :participantId', { participantId })
       .setParameters({
         earnTypes: [PointHistoryType.EARN, PointHistoryType.MATCHING],
@@ -267,13 +367,14 @@ export class ParticipantService {
     page: number,
     limit: number,
   ) {
-    const [data, total] = await this.participantCampaignBalanceRepository.findAndCount({
-      where: { participant: { id: participantId } },
-      relations: ['campaign'],
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { created_at: 'DESC' },
-    });
+    const [data, total] =
+      await this.participantCampaignBalanceRepository.findAndCount({
+        where: { participant: { id: participantId } },
+        relations: ['campaign'],
+        skip: (page - 1) * limit,
+        take: limit,
+        order: { created_at: 'DESC' },
+      });
 
     return {
       data: data.map((item) => ({

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { GeneralAnalyticsDto } from './dto/general-analytics.dto';
@@ -17,66 +18,97 @@ export class AnalyticsService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-  ) {}
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
+  ) { }
 
   async getGeneralAnalytics(user: User): Promise<GeneralAnalyticsDto> {
     const businessId = user.id;
     const now = new Date();
 
-    const campaigns = await this.campaignRepository.find({
+    // Fetch BusinessCampaigns directly
+    const businessCampaigns = await this.businessCampaignRepository.find({
       where: { business: { id: businessId } },
       relations: ['participants'],
     });
 
-    const totalCampaigns = campaigns.length;
-    const activeCampaigns = campaigns.filter(
-      (c) => !c.disabled && new Date(c.start_date) <= now && new Date(c.end_date) >= now,
+    const totalCampaigns = businessCampaigns.length;
+
+    const activeCampaigns = businessCampaigns.filter(
+      (bc) =>
+        !bc.disabled &&
+        new Date(bc.start_date) <= now &&
+        new Date(bc.end_date) >= now,
     );
     const totalActiveCampaigns = activeCampaigns.length;
 
-    const campaignIds = campaigns.map((c) => c.id);
+    const businessCampaignIds = businessCampaigns.map((bc) => bc.id);
 
     let totalCustomers = 0;
-    if (campaignIds.length > 0) {
-        const uniqueParticipants = new Set<string>();
-        campaigns.forEach(campaign => {
-            campaign.participants.forEach(participant => {
-                uniqueParticipants.add(participant.id);
-            });
-        });
-        totalCustomers = uniqueParticipants.size;
+    if (businessCampaigns.length > 0) {
+      const uniqueParticipants = new Set<string>();
+      businessCampaigns.forEach((bc) => {
+        if (bc.participants) {
+          bc.participants.forEach((participant) => {
+            uniqueParticipants.add(participant.id);
+          });
+        }
+      });
+      totalCustomers = uniqueParticipants.size;
     }
 
+    // Calculate points from PointHistory using business_campaign_id
+    let totalPointsEarned = 0;
+    let totalPointsRedeemed = 0;
 
-    const totalPointsEarned = campaigns.reduce(
-      (sum, c) => sum + c.total_points_earned,
-      0,
-    );
-    const totalPointsRedeemed = campaigns.reduce(
-      (sum, c) => sum + c.total_points_redeemed,
-      0,
-    );
+    if (businessCampaignIds.length > 0) {
+      const earnedResult = await this.pointHistoryRepository
+        .createQueryBuilder('ph')
+        .select('SUM(ph.points)', 'total')
+        .where('ph.business_campaign_id IN (:...ids)', { ids: businessCampaignIds })
+        .andWhere('ph.type IN (:...types)', {
+          types: [PointHistoryType.EARN, PointHistoryType.MATCHING],
+        })
+        .getRawOne();
 
-    const totalRewardsRedeemed = await this.pointHistoryRepository.count({
-        where: {
-            campaign: { id: In(campaignIds) },
+      totalPointsEarned = parseInt(earnedResult.total, 10) || 0;
+
+      const redeemedResult = await this.pointHistoryRepository
+        .createQueryBuilder('ph')
+        .select('SUM(ph.points)', 'total')
+        .where('ph.business_campaign_id IN (:...ids)', { ids: businessCampaignIds })
+        .andWhere('ph.type = :type', { type: PointHistoryType.REDEEM })
+        .getRawOne();
+
+      totalPointsRedeemed = parseInt(redeemedResult.total, 10) || 0;
+    }
+
+    const totalRewardsRedeemed =
+      businessCampaignIds.length > 0
+        ? await this.pointHistoryRepository.count({
+          where: {
+            businessCampaign: { id: In(businessCampaignIds) },
             type: PointHistoryType.REDEEM,
-        }
-    });
+          },
+        })
+        : 0;
 
     const activeCampaignsWithCustomerCounts = activeCampaigns.map(
-      (campaign) => ({
-        name: campaign.name,
-        customerCount: campaign.participants.length,
+      (bc) => ({
+        name: bc.name,
+        customerCount: bc.participants ? bc.participants.length : 0,
       }),
     );
 
-    const lastTenActivities = await this.pointHistoryRepository.find({
-      where: { campaign: { id: In(campaignIds) } },
-      order: { created_at: 'DESC' },
-      take: 10,
-      relations: ['participant', 'campaign'],
-    });
+    const lastTenActivities =
+      businessCampaignIds.length > 0
+        ? await this.pointHistoryRepository.find({
+          where: { businessCampaign: { id: In(businessCampaignIds) } },
+          order: { created_at: 'DESC' },
+          take: 10,
+          relations: ['participant', 'businessCampaign'],
+        })
+        : [];
 
     return {
       totalCustomers,
@@ -147,19 +179,19 @@ export class AnalyticsService {
     const data: { [key: string]: ChartData } = {};
 
     earnedPoints.forEach(row => {
-        const date = new Date(row.date).toISOString().split('T')[0];
-        if (!data[date]) {
-            data[date] = { date, pointsEarned: 0, pointsRedeemed: 0 };
-        }
-        data[date].pointsEarned = parseInt(row.points, 10);
+      const date = new Date(row.date).toISOString().split('T')[0];
+      if (!data[date]) {
+        data[date] = { date, pointsEarned: 0, pointsRedeemed: 0 };
+      }
+      data[date].pointsEarned = parseInt(row.points, 10);
     });
 
     redeemedPoints.forEach(row => {
-        const date = new Date(row.date).toISOString().split('T')[0];
-        if (!data[date]) {
-            data[date] = { date, pointsEarned: 0, pointsRedeemed: 0 };
-        }
-        data[date].pointsRedeemed = parseInt(row.points, 10);
+      const date = new Date(row.date).toISOString().split('T')[0];
+      if (!data[date]) {
+        data[date] = { date, pointsEarned: 0, pointsRedeemed: 0 };
+      }
+      data[date].pointsRedeemed = parseInt(row.points, 10);
     });
 
     return { data: Object.values(data) };

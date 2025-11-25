@@ -6,6 +6,7 @@ import { BusinessCampaign } from '../../campaign/entities/business-campaign.enti
 import { Business } from '../../business/entities/business.entity';
 import { Staff } from '../../staff/entities/staff.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
+import { BusinessReward } from '../../rewards/entities/business-reward.entity';
 
 export enum PointHistoryType {
   EARN = 'EARN',
@@ -36,6 +37,10 @@ export class PointHistory extends AbstractBaseEntity {
   @ManyToOne(() => Reward, { nullable: true })
   @JoinColumn({ name: 'reward_id' })
   reward: Reward;
+
+  @ManyToOne(() => BusinessReward, { nullable: true })
+  @JoinColumn({ name: 'business_reward_id' })
+  businessReward: BusinessReward;
 
   @ManyToOne(() => Staff, { nullable: true })
   @JoinColumn({ name: 'initiated_by_staff_id' })

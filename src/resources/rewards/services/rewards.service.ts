@@ -17,7 +17,7 @@ import { RewardAudience } from '../enums/reward-audience.enum';
 import { Membership } from '../../membership/entities/membership.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Tier } from '../../tier/entities/tier.entity';
-import { In } from 'typeorm';
+import { In, Brackets } from 'typeorm';
 
 @Injectable()
 export class RewardsService {
@@ -34,7 +34,7 @@ export class RewardsService {
     private readonly sectorRepository: Repository<Sector>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
-  ) {}
+  ) { }
 
   // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
@@ -189,6 +189,17 @@ export class RewardsService {
       ...createBusinessRewardDto,
       reward,
       business: { id: businessId },
+      title: reward.title,
+      reward_type: reward.reward_type,
+      badge_level: reward.badge_level,
+      reward_source: reward.reward_source,
+      audience: reward.audience,
+      expiry_datetime: reward.expiry_datetime,
+      status: reward.status,
+      value: reward.value,
+      description: reward.description,
+      image: reward.image,
+      disabled: reward.disabled,
     });
 
     return this.businessRewardRepository.save(businessReward);
@@ -217,5 +228,94 @@ export class RewardsService {
       reward: { id: rewardId },
       business: { id: businessId },
     });
+  }
+
+  async getUnaddedRewards(
+    businessId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: Reward[]; total: number }> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['sector'],
+    });
+
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const membership = await this.membershipRepository.findOne({
+      where: { user_id: businessId, user_type: 'business' },
+      relations: ['tier'],
+    });
+
+    // Get IDs of rewards already added by the business
+    const addedRewards = await this.businessRewardRepository.find({
+      where: { business: { id: businessId } },
+      relations: ['reward'],
+      select: ['reward'],
+    });
+    const addedRewardIds = addedRewards
+      .map((br) => br.reward?.id)
+      .filter((id) => id !== undefined);
+
+    const queryBuilder = this.rewardRepository.createQueryBuilder('reward');
+
+    queryBuilder
+      .leftJoinAndSelect('reward.sectors', 'sector')
+      .leftJoinAndSelect('reward.tiers', 'tier')
+      .where('reward.status = :status', { status: RewardStatus.ACTIVE })
+      .andWhere('reward.disabled = :disabled', { disabled: false });
+
+    if (addedRewardIds.length > 0) {
+      queryBuilder.andWhere('reward.id NOT IN (:...addedRewardIds)', {
+        addedRewardIds,
+      });
+    }
+
+    // Filter by Audience
+    // 1. ALL: No extra filter needed (or explicit check)
+    // 2. SPECIFIC_SECTORS: Must match business sector
+    // 3. SPECIFIC_TIERS: Must match business tier
+
+    // We can construct a complex WHERE clause to handle audience logic
+    // (audience = ALL) OR (audience = SECTORS AND sector.id = business.sector.id) ...
+
+    queryBuilder.andWhere(
+      new Brackets((qb) => {
+        qb.where('reward.audience = :audienceAll', {
+          audienceAll: RewardAudience.ALL_BUSINESS,
+        })
+          .orWhere(
+            'reward.audience = :audienceSectors AND sector.id = :sectorId',
+            {
+              audienceSectors: RewardAudience.SPECIFIC_SECTORS,
+              sectorId: business.sector.id,
+            },
+          )
+          .orWhere(
+            'reward.audience = :audienceTiers AND tier.id = :tierId',
+            {
+              audienceTiers: RewardAudience.SPECIFIC_TIERS,
+              tierId: membership?.tier?.id,
+            },
+          );
+      }),
+    );
+
+    // Also check expiry
+    queryBuilder.andWhere(
+      '(reward.expiry_datetime IS NULL OR reward.expiry_datetime > :now)',
+      { now: new Date() },
+    );
+
+    queryBuilder
+      .orderBy('reward.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return { data, total };
   }
 }
