@@ -290,7 +290,7 @@ export class RewardsService {
             'reward.audience = :audienceSectors AND sector.id = :sectorId',
             {
               audienceSectors: RewardAudience.SPECIFIC_SECTORS,
-              sectorId: business.sector.id,
+              sectorId: business.sector?.id,
             },
           )
           .orWhere(
