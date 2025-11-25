@@ -155,6 +155,12 @@ export class ProgressionService implements OnModuleInit {
         return this.businessLevelRepo.findOne({ where: { id } });
     }
 
+    async deleteBusinessLevel(id: string) {
+        const level = await this.businessLevelRepo.findOne({ where: { id } });
+        if (!level) throw new NotFoundException('Business level not found');
+        return this.businessLevelRepo.delete(id);
+    }
+
     // --- Customer Logic ---
 
     async getCustomerProgression(participantId: string) {
@@ -233,6 +239,12 @@ export class ProgressionService implements OnModuleInit {
     async updateCustomerBadge(id: string, dto: UpdateCustomerBadgeDto) {
         await this.customerBadgeRepo.update(id, dto);
         return this.customerBadgeRepo.findOne({ where: { id } });
+    }
+
+    async deleteCustomerBadge(id: string) {
+        const badge = await this.customerBadgeRepo.findOne({ where: { id } });
+        if (!badge) throw new NotFoundException('Customer badge not found');
+        return this.customerBadgeRepo.delete(id);
     }
 
     async createBusinessLevel(dto: CreateBusinessLevelDto) {

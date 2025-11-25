@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Put, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { ProgressionService } from './progression.service';
 import { ProgressionEntityType } from './entities/progression-history.entity';
@@ -76,6 +76,18 @@ export class ProgressionController {
     @ApiOperation({ summary: 'Update customer badge criteria' })
     updateBadge(@Param('id') id: string, @Body() dto: UpdateCustomerBadgeDto) {
         return this.progressionService.updateCustomerBadge(id, dto);
+    }
+
+    @Delete('admin/levels/:id')
+    @ApiOperation({ summary: 'Delete business level' })
+    deleteLevel(@Param('id') id: string) {
+        return this.progressionService.deleteBusinessLevel(id);
+    }
+
+    @Delete('admin/badges/:id')
+    @ApiOperation({ summary: 'Delete customer badge' })
+    deleteBadge(@Param('id') id: string) {
+        return this.progressionService.deleteCustomerBadge(id);
     }
 
     @Post('admin/levels')
