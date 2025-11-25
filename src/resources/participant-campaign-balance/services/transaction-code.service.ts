@@ -45,18 +45,15 @@ export class TransactionCodeService {
       status: TransactionCodeStatus.ACTIVE,
     });
 
-    // Check if campaignId refers to BusinessCampaign or Campaign
-    const businessCampaign = await this.businessCampaignRepository.findOne({ where: { id: dto.campaignId } });
-    if (businessCampaign) {
-      transactionCode.businessCampaign = businessCampaign;
-      // transactionCode.campaign = businessCampaign.campaign; // Optional: Link to original campaign if needed
-    } else {
-      const campaign = await this.campaignRepository.findOne({ where: { id: dto.campaignId } });
-      if (!campaign) {
-        throw new BadRequestException('Campaign not found');
-      }
-      transactionCode.campaign = campaign;
+    const businessCampaign = await this.businessCampaignRepository.findOne({
+      where: { id: dto.campaignId },
+    });
+
+    if (!businessCampaign) {
+      throw new BadRequestException('Business campaign not found');
     }
+
+    transactionCode.businessCampaign = businessCampaign;
 
     if (dto.rewardId) {
       transactionCode.reward = { id: dto.rewardId } as any;

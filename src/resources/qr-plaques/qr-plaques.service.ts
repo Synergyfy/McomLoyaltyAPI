@@ -9,7 +9,7 @@ import { MailService } from '../../mail/mail.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
 import { GrowthActivityChartDto } from '../analytics/dto/growth-activity-chart.dto';
-import * as moment from 'moment';
+import moment from 'moment';
 
 @Injectable()
 export class QrPlaquesService {
