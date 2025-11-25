@@ -37,7 +37,7 @@ export class AuthService {
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-  ) {}
+  ) { }
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.userService.findOne(email);
@@ -185,6 +185,7 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    console.log(user);
     return { uniqueCode: user.uniqueCode };
   }
 }
