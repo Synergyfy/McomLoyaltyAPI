@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Admin } from '../resources/admin/entities/admin.entity';
 import { Business } from '../resources/business/entities/business.entity';
 import { Campaign } from '../resources/campaign/entities/campaign.entity';
+import { BusinessCampaign } from '../resources/campaign/entities/business-campaign.entity';
 import { Category } from '../resources/category/entities/category.entity';
 import { Deal } from '../resources/deal/entities/deal.entity';
 import { Otp } from '../resources/otp/entities/otp.entity';
@@ -21,6 +22,7 @@ import { QrPlaqueScan } from '../resources/qr-plaques/entities/qr-plaque-scan.en
 import { Membership } from '../resources/membership/entities/membership.entity';
 import { Tier } from '../resources/tier/entities/tier.entity';
 import { Coupon } from '../resources/coupon/entities/coupon.entity';
+import { PaymentHistory } from '../resources/payment-history/entities/payment-history.entity';
 import { SeederService } from './seeder.service';
 
 @Module({
@@ -29,6 +31,7 @@ import { SeederService } from './seeder.service';
       Admin,
       Business,
       Campaign,
+      BusinessCampaign,
       Category,
       Deal,
       Otp,
@@ -47,6 +50,7 @@ import { SeederService } from './seeder.service';
       Membership,
       Tier,
       Coupon,
+      PaymentHistory,
     ]),
   ],
   providers: [SeederService],

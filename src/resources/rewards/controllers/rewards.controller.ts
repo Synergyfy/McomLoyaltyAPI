@@ -11,7 +11,7 @@ import { Role } from '../../../common/role.enum';
 @ApiTags('rewards')
 @Controller('rewards')
 export class RewardsController {
-  constructor(private readonly rewardsService: RewardsService) {}
+  constructor(private readonly rewardsService: RewardsService) { }
 
   // Admin endpoints
   @ApiOperation({ summary: 'Admin: Create a new reward' })
@@ -85,6 +85,15 @@ export class RewardsController {
   @Get('business/my-added-rewards')
   async getMyBusinessRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
     return this.rewardsService.getBusinessRewards(user.id, page, limit);
+  }
+
+  @ApiOperation({ summary: 'Business: Get rewards not yet added by the business' })
+  @ApiResponse({ status: 200, description: 'Return rewards available to be added.' })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Get('business/unadded-rewards')
+  async getUnaddedRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
+    return this.rewardsService.getUnaddedRewards(user.id, page, limit);
   }
 
   @ApiOperation({ summary: 'Business: Add a reward to business' })

@@ -8,6 +8,7 @@ import { Campaign } from '../campaign/entities/campaign.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
+import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 
 @Module({
   imports: [
@@ -16,10 +17,11 @@ import { ParticipantCampaignBalance } from '../participant-campaign-balance/enti
       Campaign,
       PointHistory,
       ParticipantCampaignBalance,
+      BusinessCampaign,
     ]),
     AuthModule,
   ],
   controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],
 })
-export class ParticipantModule {}
+export class ParticipantModule { }

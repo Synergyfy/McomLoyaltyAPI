@@ -147,6 +147,18 @@ export class RedemptionService {
         description: sourceDescription,
       });
 
+      // Try to find BusinessReward to link
+      const businessReward = await manager.findOne(BusinessReward, {
+        where: {
+          reward: { id: reward.id },
+          business: { id: business.id },
+        },
+      });
+
+      if (businessReward) {
+        pointHistory.businessReward = businessReward;
+      }
+
       if (businessCampaign) {
           pointHistory.businessCampaign = businessCampaign;
           if (businessCampaign.campaign) {

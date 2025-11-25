@@ -17,7 +17,7 @@ import { RewardAudience } from '../enums/reward-audience.enum';
 import { Membership } from '../../membership/entities/membership.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Tier } from '../../tier/entities/tier.entity';
-import { In } from 'typeorm';
+import { In, Brackets } from 'typeorm';
 
 @Injectable()
 export class RewardsService {
@@ -34,7 +34,7 @@ export class RewardsService {
     private readonly sectorRepository: Repository<Sector>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
-  ) {}
+  ) { }
 
   // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
@@ -189,6 +189,17 @@ export class RewardsService {
       ...createBusinessRewardDto,
       reward,
       business: { id: businessId },
+      title: reward.title,
+      reward_type: reward.reward_type,
+      badge_level: reward.badge_level,
+      reward_source: reward.reward_source,
+      audience: reward.audience,
+      expiry_datetime: reward.expiry_datetime,
+      status: reward.status,
+      value: reward.value,
+      description: reward.description,
+      image: reward.image,
+      disabled: reward.disabled,
     });
 
     return this.businessRewardRepository.save(businessReward);
@@ -217,5 +228,48 @@ export class RewardsService {
       reward: { id: rewardId },
       business: { id: businessId },
     });
+  }
+
+  async getUnaddedRewards(
+    businessId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: Reward[]; total: number }> {
+    // Get IDs of rewards already added by the business
+    const addedRewards = await this.businessRewardRepository.find({
+      where: { business: { id: businessId } },
+      relations: ['reward'],
+      select: ['reward'],
+    });
+    const addedRewardIds = addedRewards
+      .map((br) => br.reward?.id)
+      .filter((id) => id !== undefined);
+
+    const queryBuilder = this.rewardRepository.createQueryBuilder('reward');
+
+    queryBuilder
+      .where('reward.status = :status', { status: RewardStatus.ACTIVE })
+      .andWhere('reward.disabled = :disabled', { disabled: false });
+
+    if (addedRewardIds.length > 0) {
+      queryBuilder.andWhere('reward.id NOT IN (:...addedRewardIds)', {
+        addedRewardIds,
+      });
+    }
+
+    // Also check expiry
+    queryBuilder.andWhere(
+      '(reward.expiry_datetime IS NULL OR reward.expiry_datetime > :now)',
+      { now: new Date() },
+    );
+
+    queryBuilder
+      .orderBy('reward.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return { data, total };
   }
 }
