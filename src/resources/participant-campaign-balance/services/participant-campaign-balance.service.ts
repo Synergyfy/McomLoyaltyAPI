@@ -161,16 +161,22 @@ export class ParticipantCampaignBalanceService {
 
   async claimCode(participantId: string, code: string, campaignId: string) {
     return await this.dataSource.transaction(async (manager) => {
-      // 1. Validate Code
-      const transactionCode = await manager.findOne(TransactionCode, {
-        where: { code },
-        relations: ['campaign', 'businessCampaign', 'reward', 'creator_business', 'creator_staff'],
-        lock: { mode: 'pessimistic_write' } // Lock to prevent double usage race condition
-      });
+      // 1. Lock and fetch the transaction code first
+      const rawCode = await manager.createQueryBuilder(TransactionCode, 'tc')
+        .where('tc.code = :code', { code })
+        .setLock('pessimistic_write')
+        .getOne();
 
-      if (!transactionCode) {
+      if (!rawCode) {
         throw new NotFoundException('Transaction code not found');
       }
+
+      // 2. Now, fetch the full data with relations
+      const transactionCode = await manager.findOne(TransactionCode, {
+        where: { id: rawCode.id },
+        relations: ['campaign', 'businessCampaign', 'reward', 'creator_business', 'creator_staff'],
+      });
+
 
       // Check validation against businessCampaign or campaign
       if (transactionCode.businessCampaign) {
