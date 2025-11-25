@@ -41,6 +41,15 @@ import { BadgeLevel } from '../resources/rewards/enums/badge-level.enum';
 import { RewardSource } from '../resources/rewards/enums/reward-source.enum';
 import { RewardAudience } from '../resources/rewards/enums/reward-audience.enum';
 import { RewardStatus } from '../resources/rewards/enums/reward-status.enum';
+import { TierStatus } from '../resources/tier/entities/tier-status.enum';
+import {
+  MembershipStatus,
+} from '../resources/membership/entities/membership.entity';
+import {
+  PaymentHistory,
+  PaymentProvider,
+  PaymentStatus,
+} from '../resources/payment-history/entities/payment-history.entity';
 
 @Injectable()
 export class SeederService {
@@ -89,6 +98,8 @@ export class SeederService {
     private readonly tierRepository: Repository<Tier>,
     @InjectRepository(Coupon)
     private readonly couponRepository: Repository<Coupon>,
+    @InjectRepository(PaymentHistory)
+    private readonly paymentHistoryRepository: Repository<PaymentHistory>,
   ) {}
 
   async seed() {
@@ -119,6 +130,30 @@ export class SeederService {
       },
     ]);
 
+    const tiers = await this.tierRepository.save([
+      {
+        name: 'Bronze',
+        status: TierStatus.PUBLISHED,
+        monthly_price: 10,
+        quarterly_price: 25,
+        annual_price: 90,
+      },
+      {
+        name: 'Silver',
+        status: TierStatus.PUBLISHED,
+        monthly_price: 20,
+        quarterly_price: 50,
+        annual_price: 180,
+      },
+      {
+        name: 'Gold',
+        status: TierStatus.PUBLISHED,
+        monthly_price: 30,
+        quarterly_price: 75,
+        annual_price: 270,
+      },
+    ]);
+
     const partners = await this.partnerRepository.save(
         Array.from({ length: 5 }, (_, i) => ({
             name: `Partner ${i + 1}`,
@@ -143,6 +178,56 @@ export class SeederService {
         sector: sectors[i % sectors.length],
       })),
     );
+
+    // Assign Memberships and create Payment History
+    for (const [index, business] of businesses.entries()) {
+      const tier = tiers[index % tiers.length];
+      const membership = await this.membershipRepository.save({
+        user_id: business.id,
+        user_type: 'business',
+        tier: tier,
+        status: MembershipStatus.ACTIVE,
+        start_date: this.getDateDaysAgo(30),
+        end_date: this.getDateDaysAgo(-335),
+      });
+      await this.paymentHistoryRepository.save({
+        user_id: business.id,
+        membership: membership,
+        amount: tier.monthly_price,
+        provider: PaymentProvider.STRIPE,
+        status: PaymentStatus.SUCCESS,
+      });
+    }
+
+    // Create QR Plaques and Scans
+    const qrPlaques = await this.qrPlaqueRepository.save(
+      Array.from({ length: 20 }, (_, i) => ({
+        code: nanoid(9),
+        status: QrPlaqueStatus.ACTIVE,
+        assignedPartner: partners[i % partners.length],
+        assignedBusiness: businesses[i % businesses.length],
+      })),
+    );
+
+    for (const plaque of qrPlaques) {
+      await this.qrPlaqueScanRepository.save(
+        Array.from({ length: Math.floor(Math.random() * 20) + 5 }, () => ({
+          qrPlaque: plaque,
+          scannedAt: this.getDateDaysAgo(Math.floor(Math.random() * 90)),
+        })),
+      );
+    }
+
+    // Create Referrals
+    for (let i = 0; i < businesses.length; i++) {
+      if (i > 0) {
+        await this.referralRepository.save({
+          referrer: businesses[i - 1],
+          referred: businesses[i],
+          status: 'completed',
+        });
+      }
+    }
 
     // Create Staff for each business
     console.log('Creating staff...');
@@ -269,8 +354,8 @@ export class SeederService {
              // Also populate BusinessReward for legacy/metadata support if needed
              for (const reward of customRewards) {
                   await this.businessRewardRepository.save({
-                    business,
-                    reward,
+                    business: business,
+                    reward: reward,
                     point_required: reward.points_required,
                   });
              }
@@ -466,6 +551,7 @@ export class SeederService {
       'qr_plaque_scans',
       'membership',
       'tier',
+      'payment_histories',
       'coupon',
       'business_campaigns_rewards_reward', // join tables
       'campaigns_rewards_reward',
