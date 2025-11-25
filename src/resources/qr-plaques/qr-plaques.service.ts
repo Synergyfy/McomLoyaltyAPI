@@ -8,7 +8,8 @@ import { Partner } from '../partner/entities/partner.entity';
 import { MailService } from '../../mail/mail.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
-import * as moment from 'moment';
+import { GrowthActivityChartDto } from '../analytics/dto/growth-activity-chart.dto';
+import moment from 'moment';
 
 @Injectable()
 export class QrPlaquesService {
@@ -240,8 +241,12 @@ export class QrPlaquesService {
         return finalResult;
     }
 
-    async getTopPerformingPlaques(limit: number = 10) {
-        const results = await this.qrPlaqueScanRepository.createQueryBuilder('scan')
+    async getTopPerformingPlaques(query: GrowthActivityChartDto, limit: number = 10) {
+        const { startDate, endDate } = query;
+        const start = startDate ? moment(startDate).startOf('day').toDate() : moment().subtract(30, 'days').startOf('day').toDate();
+        const end = endDate ? moment(endDate).endOf('day').toDate() : moment().endOf('day').toDate();
+
+        const queryBuilder = this.qrPlaqueScanRepository.createQueryBuilder('scan')
             .leftJoinAndSelect('scan.qrPlaque', 'plaque')
             .leftJoinAndSelect('plaque.assignedPartner', 'partner')
             .leftJoinAndSelect('plaque.assignedBusiness', 'business')
@@ -251,13 +256,15 @@ export class QrPlaquesService {
                 'plaque.status AS status',
                 'business.name AS business_name'
             ])
+            .where('scan.scanned_at BETWEEN :start AND :end', { start, end })
             .groupBy('plaque.id')
             .addGroupBy('partner.name')
             .addGroupBy('plaque.status')
             .addGroupBy('business.name')
             .orderBy('total_scans', 'DESC')
-            .limit(limit)
-            .getRawMany();
+            .limit(limit);
+
+        const results = await queryBuilder.getRawMany();
 
         return results.map(row => ({
             ownerName: row.partner_name || null,

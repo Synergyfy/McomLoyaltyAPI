@@ -235,20 +235,6 @@ export class RewardsService {
     page: number,
     limit: number,
   ): Promise<{ data: Reward[]; total: number }> {
-    const business = await this.businessRepository.findOne({
-      where: { id: businessId },
-      relations: ['sector'],
-    });
-
-    if (!business) {
-      throw new NotFoundException('Business not found');
-    }
-
-    const membership = await this.membershipRepository.findOne({
-      where: { user_id: businessId, user_type: 'business' },
-      relations: ['tier'],
-    });
-
     // Get IDs of rewards already added by the business
     const addedRewards = await this.businessRewardRepository.find({
       where: { business: { id: businessId } },
@@ -262,8 +248,6 @@ export class RewardsService {
     const queryBuilder = this.rewardRepository.createQueryBuilder('reward');
 
     queryBuilder
-      .leftJoinAndSelect('reward.sectors', 'sector')
-      .leftJoinAndSelect('reward.tiers', 'tier')
       .where('reward.status = :status', { status: RewardStatus.ACTIVE })
       .andWhere('reward.disabled = :disabled', { disabled: false });
 
@@ -272,36 +256,6 @@ export class RewardsService {
         addedRewardIds,
       });
     }
-
-    // Filter by Audience
-    // 1. ALL: No extra filter needed (or explicit check)
-    // 2. SPECIFIC_SECTORS: Must match business sector
-    // 3. SPECIFIC_TIERS: Must match business tier
-
-    // We can construct a complex WHERE clause to handle audience logic
-    // (audience = ALL) OR (audience = SECTORS AND sector.id = business.sector.id) ...
-
-    queryBuilder.andWhere(
-      new Brackets((qb) => {
-        qb.where('reward.audience = :audienceAll', {
-          audienceAll: RewardAudience.ALL_BUSINESS,
-        })
-          .orWhere(
-            'reward.audience = :audienceSectors AND sector.id = :sectorId',
-            {
-              audienceSectors: RewardAudience.SPECIFIC_SECTORS,
-              sectorId: business.sector.id,
-            },
-          )
-          .orWhere(
-            'reward.audience = :audienceTiers AND tier.id = :tierId',
-            {
-              audienceTiers: RewardAudience.SPECIFIC_TIERS,
-              tierId: membership?.tier?.id,
-            },
-          );
-      }),
-    );
 
     // Also check expiry
     queryBuilder.andWhere(

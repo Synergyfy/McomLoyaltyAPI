@@ -79,26 +79,16 @@ export class RedemptionService {
         throw new NotFoundException('Reward not found');
       }
 
-      let businessCampaign: BusinessCampaign | null = null;
-      let campaign: Campaign | null = null;
-
-      businessCampaign = await manager.findOne(BusinessCampaign, {
+      const businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
-        relations: ['business', 'rewards'],
+        relations: ['business', 'rewards', 'campaign'],
       });
 
       if (!businessCampaign) {
-         campaign = await manager.findOne(Campaign, {
-          where: { id: campaignId },
-          relations: ['business', 'rewards'],
-        });
+        throw new NotFoundException('Business campaign not found');
       }
 
-      if (!campaign && !businessCampaign) {
-        throw new NotFoundException('Campaign not found');
-      }
-
-      const activeCampaign = businessCampaign || campaign;
+      const activeCampaign = businessCampaign;
 
       if (!activeCampaign.business || business.id !== activeCampaign.business.id) {
         throw new BadRequestException('This campaign does not belong to the performing business');
