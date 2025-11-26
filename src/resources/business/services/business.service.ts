@@ -11,6 +11,7 @@ import { HashService } from '../../../common/hash/hash.service';
 import { SectorService } from '../../sector/services/sector.service';
 import { CategoryService } from '../../category/category.service';
 import { SubcategoryService } from '../../subcategory/subcategory.service';
+import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 
 @Injectable()
 export class BusinessService {
@@ -23,7 +24,7 @@ export class BusinessService {
     private readonly sectorService: SectorService,
     private readonly categoryService: CategoryService,
     private readonly subcategoryService: SubcategoryService,
-  ) {}
+  ) { }
 
   private async generateAffiliateCode(): Promise<string> {
     let affiliateCode: string;
@@ -176,13 +177,26 @@ export class BusinessService {
     return this.businessRepository.findOne({ where: { id }, relations });
   }
 
-  async findAll(page: number, limit: number): Promise<{ data: Business[], total: number }> {
+  async findAll(page: number, limit: number): Promise<PaginationResult<Business>> {
     const [data, total] = await this.businessRepository.findAndCount({
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total };
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 
   async update(id: string, updateBusinessDto: UpdateBusinessDto): Promise<Business> {

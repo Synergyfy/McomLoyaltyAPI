@@ -6,7 +6,9 @@ import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { WishlistItem } from './entities/wishlist-item.entity';
 import { WishlistAggregate } from './entities/wishlist-aggregate.entity';
 import { Category } from '../category/entities/category.entity';
+import { Business } from '../business/entities/business.entity';
 import { Participant } from '../participant/entities/participant.entity';
+import { Role } from '../../common/role.enum';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
@@ -16,6 +18,8 @@ export class WishlistService {
     private readonly wishlistItemRepository: Repository<WishlistItem>,
     @InjectRepository(WishlistAggregate)
     private readonly wishlistAggregateRepository: Repository<WishlistAggregate>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
     private readonly dataSource: DataSource,
   ) { }
 
@@ -89,11 +93,34 @@ export class WishlistService {
 
   async getWishlistInsights(
     paginationDto: PaginationDto,
+    user: { id: string; role: Role },
   ): Promise<{ data: WishlistAggregate[]; total: number; page: number; limit: number }> {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
+    const where: any = {};
+
+    if (user.role === Role.Business) {
+      const business = await this.businessRepository.findOne({
+        where: { id: user.id },
+        relations: ['category'],
+      });
+
+      if (business && business.category) {
+        where.category = { id: business.category.id };
+      } else {
+        // If business has no category, return empty result
+        return {
+          data: [],
+          total: 0,
+          page,
+          limit,
+        };
+      }
+    }
+
     const [data, total] = await this.wishlistAggregateRepository.findAndCount({
+      where,
       relations: ['category'],
       take: limit,
       skip,

@@ -19,6 +19,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 import { MailService } from '../../mail/mail.service';
+import { PaginationResult } from '../../common/interfaces/pagination-result.interface';
 
 @Injectable()
 export class ParticipantService {
@@ -131,7 +132,7 @@ export class ParticipantService {
       if (!alreadyJoined) {
         participant.businessCampaigns.push(businessCampaign);
         await this.participantRepository.save(participant);
-        
+
         // Send email notification
         try {
           await this.mailService.sendCampaignJoinedEmail(
@@ -266,13 +267,26 @@ export class ParticipantService {
   async findAll(
     page: number,
     limit: number,
-  ): Promise<{ data: Participant[]; total: number }> {
+  ): Promise<PaginationResult<Participant>> {
     const [data, total] = await this.participantRepository.findAndCount({
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total };
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 
   async findById(

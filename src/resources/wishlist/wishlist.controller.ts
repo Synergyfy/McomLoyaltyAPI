@@ -8,6 +8,8 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Participant } from '../participant/entities/participant.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
+import { Role } from 'src/common/role.enum';
+
 @ApiTags('wishlist')
 @Controller('wishlist')
 export class WishlistController {
@@ -47,8 +49,11 @@ export class WishlistController {
   @Get('business/wishlist-insights')
   @ApiOperation({ summary: 'Get aggregated wishlist insights for businesses' })
   @ApiResponse({ status: 200, description: 'Paginated aggregated wishlist data.' })
-  getWishlistInsights(@Query() paginationDto: PaginationDto) {
-    return this.wishlistService.getWishlistInsights(paginationDto);
+  getWishlistInsights(
+    @Query() paginationDto: PaginationDto,
+    @CurrentUser() user: { id: string; role: Role },
+  ) {
+    return this.wishlistService.getWishlistInsights(paginationDto, user);
   }
 
   @Get('my-wishlist')
