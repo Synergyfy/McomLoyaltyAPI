@@ -77,7 +77,6 @@ describe('RewardsService', () => {
       description: 'Test Description',
       image: 'image-url',
       reward_type: RewardType.VOUCHER,
-      badge_level: BadgeLevel.BRONZE,
       reward_source: RewardSource.MCOM_VAULT,
       audience: RewardAudience.ALL_BUSINESS,
       status: RewardStatus.ACTIVE,

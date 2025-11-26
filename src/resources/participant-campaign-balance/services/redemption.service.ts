@@ -11,6 +11,7 @@ import { BusinessCampaign } from '../../campaign/entities/business-campaign.enti
 import { Reward } from '../../rewards/entities/reward.entity';
 import { PointHistory, PointHistoryType } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
+import { MailService } from '../../../mail/mail.service';
 
 @Injectable()
 export class RedemptionService {
@@ -30,6 +31,7 @@ export class RedemptionService {
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
   ) {}
 
   // Helper to find performer (Staff or Business)
@@ -160,6 +162,20 @@ export class RedemptionService {
       await manager.save(participant);
       await manager.save(BusinessCampaign, businessCampaign);
       await manager.save(pointHistory);
+
+      // Send email notification
+      try {
+        await this.mailService.sendRewardRedeemedEmail(
+          participant.email,
+          reward.title,
+          reward.points_required,
+          business.name,
+          businessCampaign.name,
+          participantCampaignBalance.campaign_balance
+        );
+      } catch (error) {
+        console.error('Failed to send reward redeemed email:', error);
+      }
 
       return participantCampaignBalance;
     };

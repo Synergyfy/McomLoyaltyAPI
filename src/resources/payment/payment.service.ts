@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Stripe from 'stripe';
@@ -19,6 +19,8 @@ import { VerifySubscriptionDto } from './dto/verify-subscription.dto';
 
 @Injectable()
 export class PaymentService {
+  private readonly logger = new Logger(PaymentService.name);
+
   constructor(
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
@@ -88,10 +90,56 @@ export class PaymentService {
 
   async verifyPaypalPayment(verifyPaymentDto: VerifyPaymentDto, user: any) {
     const capture = await this.paypalService.capturePayment(verifyPaymentDto.transaction_id);
-    if (capture.result.status === 'COMPLETED') {
-      const tier = await this.tierRepository.findOne({ where: { id: capture.result.purchaseUnits[0].referenceId } });
+    // Use 'any' to bypass strict type checking for the potentially loose SDK response structure
+    const result = capture.result as any; 
+
+    this.logger.debug(`PayPal Capture Result: ${JSON.stringify(result)}`);
+
+    if (result.status === 'COMPLETED') {
+      // Handle both camelCase (SDK) and snake_case (Raw API) possibilities
+      const purchaseUnits = result.purchaseUnits || result.purchase_units;
+
+      if (!purchaseUnits || purchaseUnits.length === 0) {
+          this.logger.error('PayPal capture result missing purchase_units');
+          throw new BadRequestException('Invalid PayPal response: missing purchase information');
+      }
+
+      const purchaseUnit = purchaseUnits[0];
+      
+      // Retrieve Reference ID (Tier ID)
+      const tierId = purchaseUnit.referenceId || purchaseUnit.reference_id;
+
+      if (!tierId) {
+          this.logger.error('PayPal capture result missing reference_id');
+          throw new BadRequestException('Invalid PayPal response: missing tier information');
+      }
+
+      const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+      if (!tier) {
+          throw new NotFoundException(`Tier with ID ${tierId} not found`);
+      }
+
+      // Retrieve Plan Type (Description)
+      const planType = purchaseUnit.description as PlanType;
+      
+      // Retrieve Amount
+      // In a captured order, amount is typically inside payments.captures[0].amount
+      let amountValue: string | undefined;
+
+      if (purchaseUnit.payments && purchaseUnit.payments.captures && purchaseUnit.payments.captures.length > 0) {
+          amountValue = purchaseUnit.payments.captures[0].amount?.value;
+      } else if (purchaseUnit.amount) {
+          // Fallback to top-level amount if available (unlikely for capture response but good for safety)
+          amountValue = purchaseUnit.amount.value;
+      }
+
+      if (!amountValue) {
+           this.logger.error('PayPal capture result missing amount value', result);
+           throw new BadRequestException('Invalid PayPal response: missing amount');
+      }
+
+      // Calculate Expiration
       const expiresAt = new Date();
-      const planType = capture.result.purchaseUnits[0].description as PlanType;
       if (planType === PlanType.ANNUAL) {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       } else if (planType === PlanType.QUARTERLY) {
@@ -104,14 +152,14 @@ export class PaymentService {
         user,
         tier,
         planType,
-        parseFloat(capture.result.purchaseUnits[0].amount.value),
+        parseFloat(amountValue),
         PaymentProvider.PAYPAL,
-        capture.result.id,
+        result.id,
         false,
         expiresAt,
       );
     }
-    return { status: capture.result.status };
+    return { status: result.status };
   }
 
   async verifyPaypalSubscription(verifySubscriptionDto: VerifySubscriptionDto, user: any) {
