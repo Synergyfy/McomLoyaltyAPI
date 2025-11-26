@@ -14,6 +14,7 @@ import { TransactionCode } from './entities/transaction-code.entity';
 import { Business } from '../business/entities/business.entity';
 import { TransactionCodeService } from './services/transaction-code.service';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
+import { MailModule } from '../../mail/mail.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { BusinessCampaign } from '../campaign/entities/business-campaign.entity'
       TransactionCode,
       Business,
     ]),
+    MailModule,
   ],
   providers: [
     RedemptionService,

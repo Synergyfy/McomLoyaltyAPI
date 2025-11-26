@@ -16,6 +16,7 @@ import {
   PointHistoryType,
 } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
+import { MailService } from '../../../mail/mail.service';
 
 @Injectable()
 export class PointEarningService {
@@ -35,6 +36,7 @@ export class PointEarningService {
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
   ) {}
 
   // Helper to find performer (Staff or Business)
@@ -176,6 +178,19 @@ export class PointEarningService {
         }
 
         await manager.save(regularPointHistory);
+
+        // Send email notification
+        try {
+          await this.mailService.sendPointsEarnedEmail(
+            participant.email,
+            points,
+            business.name,
+            businessCampaign.name,
+            participantCampaignBalance.campaign_balance
+          );
+        } catch (error) {
+          console.error('Failed to send points earned email:', error);
+        }
       }
 
       if (
