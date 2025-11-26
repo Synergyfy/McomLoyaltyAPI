@@ -91,7 +91,7 @@ export class PaymentService {
   async verifyPaypalPayment(verifyPaymentDto: VerifyPaymentDto, user: any) {
     const capture = await this.paypalService.capturePayment(verifyPaymentDto.transaction_id);
     // Use 'any' to bypass strict type checking for the potentially loose SDK response structure
-    const result = capture.result as any; 
+    const result = capture.result as any;
 
     this.logger.debug(`PayPal Capture Result: ${JSON.stringify(result)}`);
 
@@ -100,42 +100,42 @@ export class PaymentService {
       const purchaseUnits = result.purchaseUnits || result.purchase_units;
 
       if (!purchaseUnits || purchaseUnits.length === 0) {
-          this.logger.error('PayPal capture result missing purchase_units');
-          throw new BadRequestException('Invalid PayPal response: missing purchase information');
+        this.logger.error('PayPal capture result missing purchase_units');
+        throw new BadRequestException('Invalid PayPal response: missing purchase information');
       }
 
       const purchaseUnit = purchaseUnits[0];
-      
+
       // Retrieve Reference ID (Tier ID)
       const tierId = purchaseUnit.referenceId || purchaseUnit.reference_id;
 
       if (!tierId) {
-          this.logger.error('PayPal capture result missing reference_id');
-          throw new BadRequestException('Invalid PayPal response: missing tier information');
+        this.logger.error('PayPal capture result missing reference_id');
+        throw new BadRequestException('Invalid PayPal response: missing tier information');
       }
 
       const tier = await this.tierRepository.findOne({ where: { id: tierId } });
       if (!tier) {
-          throw new NotFoundException(`Tier with ID ${tierId} not found`);
+        throw new NotFoundException(`Tier with ID ${tierId} not found`);
       }
 
       // Retrieve Plan Type (Description)
       const planType = purchaseUnit.description as PlanType;
-      
+
       // Retrieve Amount
       // In a captured order, amount is typically inside payments.captures[0].amount
       let amountValue: string | undefined;
 
       if (purchaseUnit.payments && purchaseUnit.payments.captures && purchaseUnit.payments.captures.length > 0) {
-          amountValue = purchaseUnit.payments.captures[0].amount?.value;
+        amountValue = purchaseUnit.payments.captures[0].amount?.value;
       } else if (purchaseUnit.amount) {
-          // Fallback to top-level amount if available (unlikely for capture response but good for safety)
-          amountValue = purchaseUnit.amount.value;
+        // Fallback to top-level amount if available (unlikely for capture response but good for safety)
+        amountValue = purchaseUnit.amount.value;
       }
 
       if (!amountValue) {
-           this.logger.error('PayPal capture result missing amount value', result);
-           throw new BadRequestException('Invalid PayPal response: missing amount');
+        this.logger.error('PayPal capture result missing amount value', result);
+        throw new BadRequestException('Invalid PayPal response: missing amount');
       }
 
       // Calculate Expiration
@@ -168,70 +168,70 @@ export class PaymentService {
 
     // Check status - 'ACTIVE' is the standard active status for PayPal subscriptions
     if (subscription.status !== 'ACTIVE' && subscription.status !== 'APPROVAL_PENDING') {
-         // Depending on flow, APPROVAL_PENDING might mean user just returned from PayPal but it's not yet processed fully?
-         // Usually after return_url, it should be ACTIVE if auto-approved, or we might need to activate it?
-         // If User Action is SUBSCRIBE_NOW, it should be active upon return.
-         // Let's assume ACTIVE is required.
-         if (subscription.status !== 'ACTIVE') {
-             throw new BadRequestException(`Subscription status is ${subscription.status}`);
-         }
+      // Depending on flow, APPROVAL_PENDING might mean user just returned from PayPal but it's not yet processed fully?
+      // Usually after return_url, it should be ACTIVE if auto-approved, or we might need to activate it?
+      // If User Action is SUBSCRIBE_NOW, it should be active upon return.
+      // Let's assume ACTIVE is required.
+      if (subscription.status !== 'ACTIVE') {
+        throw new BadRequestException(`Subscription status is ${subscription.status}`);
+      }
     }
 
     if (subscription.status === 'ACTIVE') {
-        // We need to find which tier this plan corresponds to.
-        const planId = subscription.plan_id;
-        // Inefficient but robust: Find tier by any of the plan IDs
-        const tier = await this.tierRepository.findOne({
-            where: [
-                { paypal_monthly_plan_id: planId },
-                { paypal_quarterly_plan_id: planId },
-                { paypal_annual_plan_id: planId }
-            ]
-        });
+      // We need to find which tier this plan corresponds to.
+      const planId = subscription.plan_id;
+      // Inefficient but robust: Find tier by any of the plan IDs
+      const tier = await this.tierRepository.findOne({
+        where: [
+          { paypal_monthly_plan_id: planId },
+          { paypal_quarterly_plan_id: planId },
+          { paypal_annual_plan_id: planId }
+        ]
+      });
 
-        if (!tier) {
-            throw new NotFoundException('Tier matching this subscription plan not found');
-        }
+      if (!tier) {
+        throw new NotFoundException('Tier matching this subscription plan not found');
+      }
 
-        // Determine PlanType
-        let planType: PlanType;
-        if (tier.paypal_monthly_plan_id === planId) planType = PlanType.MONTHLY;
-        else if (tier.paypal_quarterly_plan_id === planId) planType = PlanType.QUARTERLY;
-        else if (tier.paypal_annual_plan_id === planId) planType = PlanType.ANNUAL;
-        else throw new BadRequestException('Plan type mismatch');
+      // Determine PlanType
+      let planType: PlanType;
+      if (tier.paypal_monthly_plan_id === planId) planType = PlanType.MONTHLY;
+      else if (tier.paypal_quarterly_plan_id === planId) planType = PlanType.QUARTERLY;
+      else if (tier.paypal_annual_plan_id === planId) planType = PlanType.ANNUAL;
+      else throw new BadRequestException('Plan type mismatch');
 
-        // Calculate expiration
-        // If next_billing_time is available, use it. Otherwise calculate based on planType.
-        let expiresAt: Date;
-        if (subscription.billing_info && subscription.billing_info.next_billing_time) {
-             expiresAt = new Date(subscription.billing_info.next_billing_time);
-        } else {
-             expiresAt = new Date();
-             if (planType === PlanType.ANNUAL) expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-             else if (planType === PlanType.QUARTERLY) expiresAt.setMonth(expiresAt.getMonth() + 3);
-             else expiresAt.setMonth(expiresAt.getMonth() + 1);
-        }
+      // Calculate expiration
+      // If next_billing_time is available, use it. Otherwise calculate based on planType.
+      let expiresAt: Date;
+      if (subscription.billing_info && subscription.billing_info.next_billing_time) {
+        expiresAt = new Date(subscription.billing_info.next_billing_time);
+      } else {
+        expiresAt = new Date();
+        if (planType === PlanType.ANNUAL) expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        else if (planType === PlanType.QUARTERLY) expiresAt.setMonth(expiresAt.getMonth() + 3);
+        else expiresAt.setMonth(expiresAt.getMonth() + 1);
+      }
 
-        // For amount, we can try to get it from subscription details or tier price
-        // subscription.billing_info.last_payment.amount.value might exist if paid
-        // Or just use tier price as fallback
-        let amount = 0;
-        if (subscription.billing_info?.last_payment?.amount?.value) {
-             amount = parseFloat(subscription.billing_info.last_payment.amount.value);
-        } else {
-             amount = this._calculateAmountForSubscription(tier, planType);
-        }
+      // For amount, we can try to get it from subscription details or tier price
+      // subscription.billing_info.last_payment.amount.value might exist if paid
+      // Or just use tier price as fallback
+      let amount = 0;
+      if (subscription.billing_info?.last_payment?.amount?.value) {
+        amount = parseFloat(subscription.billing_info.last_payment.amount.value);
+      } else {
+        amount = this._calculateAmountForSubscription(tier, planType);
+      }
 
-        await this._createOrUpdateMembership(
-            user,
-            tier,
-            planType,
-            amount,
-            PaymentProvider.PAYPAL,
-            subscriptionId,
-            false,
-            expiresAt
-        );
+      await this._createOrUpdateMembership(
+        user,
+        tier,
+        planType,
+        amount,
+        PaymentProvider.PAYPAL,
+        subscriptionId,
+        false,
+        expiresAt
+      );
     }
 
     return { status: subscription.status };
@@ -244,48 +244,48 @@ export class PaymentService {
     }
 
     if (subscribeDto.provider === PaymentProvider.PAYPAL) {
-        const planId = this._getPaypalPlanIdForPlan(tier, subscribeDto.plan_type);
-        if (!planId) {
-            throw new BadRequestException('Invalid plan type or PayPal plan not configured for this tier');
-        }
-        if (!subscribeDto.return_url || !subscribeDto.cancel_url) {
-            throw new BadRequestException('Return URL and Cancel URL are required for PayPal subscriptions');
-        }
+      const planId = this._getPaypalPlanIdForPlan(tier, subscribeDto.plan_type);
+      if (!planId) {
+        throw new BadRequestException('Invalid plan type or PayPal plan not configured for this tier');
+      }
+      if (!subscribeDto.return_url || !subscribeDto.cancel_url) {
+        throw new BadRequestException('Return URL and Cancel URL are required for PayPal subscriptions');
+      }
 
-        // Create PayPal Subscription
-        const subscription = await this.paypalService.createSubscription(
-            planId,
-            subscribeDto.return_url,
-            subscribeDto.cancel_url
-        );
+      // Create PayPal Subscription
+      const subscription = await this.paypalService.createSubscription(
+        planId,
+        subscribeDto.return_url,
+        subscribeDto.cancel_url
+      );
 
-        return {
-            status: 'Subscription initiated',
-            subscriptionId: subscription.subscriptionId,
-            approvalUrl: subscription.approvalUrl
-        };
+      return {
+        status: 'Subscription initiated',
+        subscriptionId: subscription.subscriptionId,
+        approvalUrl: subscription.approvalUrl
+      };
     } else {
-        // Default to Stripe
-        let stripeCustomerId = business.stripe_customer_id;
-        if (!stripeCustomerId) {
-            if (!subscribeDto.payment_token) {
-                throw new BadRequestException('Payment token required for Stripe subscription');
-            }
-            const customer = await this.stripeService.createCustomer(business.name, business.email, subscribeDto.payment_token);
-            stripeCustomerId = customer.id;
-            await this.businessRepository.update(business.id, { stripe_customer_id: stripeCustomerId });
+      // Default to Stripe
+      let stripeCustomerId = business.stripe_customer_id;
+      if (!stripeCustomerId) {
+        if (!subscribeDto.payment_token) {
+          throw new BadRequestException('Payment token required for Stripe subscription');
         }
+        const customer = await this.stripeService.createCustomer(business.name, business.email, subscribeDto.payment_token);
+        stripeCustomerId = customer.id;
+        await this.businessRepository.update(business.id, { stripe_customer_id: stripeCustomerId });
+      }
 
-        const priceId = this._getPriceIdForPlan(tier, subscribeDto.plan_type);
-        if (!priceId) {
-            throw new BadRequestException('Invalid plan type for this tier');
-        }
+      const priceId = this._getPriceIdForPlan(tier, subscribeDto.plan_type);
+      if (!priceId) {
+        throw new BadRequestException('Invalid plan type for this tier');
+      }
 
-        const trialPeriodDays = subscribeDto.is_trial ? 14 : undefined;
+      const trialPeriodDays = subscribeDto.is_trial ? 14 : undefined;
 
-        await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
+      await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
 
-        return { status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful' };
+      return { status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful' };
     }
   }
 
@@ -379,7 +379,7 @@ export class PaymentService {
 
     if (!isTrial) {
       const paymentHistory = this.paymentHistoryRepository.create({
-        user_id: user.id,
+        user: { id: user.id } as Business,
         user_type: user.role,
         membership,
         amount,

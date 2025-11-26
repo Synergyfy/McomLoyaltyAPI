@@ -1,4 +1,5 @@
-import { Entity, Column, ManyToOne } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Business } from '../../business/entities/business.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Membership } from '../../membership/entities/membership.entity';
 
@@ -15,8 +16,10 @@ export enum PaymentStatus {
 
 @Entity()
 export class PaymentHistory extends AbstractBaseEntity {
-  @Column()
-  user_id: string;
+  // TODO: change user_id to user
+  @ManyToOne(() => Business)
+  @JoinColumn({ name: 'user_id' })
+  user: Business;
 
   @Column()
   user_type: string;
