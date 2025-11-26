@@ -163,7 +163,10 @@ export class RedemptionService {
       await manager.save(BusinessCampaign, businessCampaign);
       await manager.save(pointHistory);
 
-      // Send email notification
+      // Send email notifications
+      const businessOwner = businessCampaign.business;
+
+      // To Participant
       try {
         await this.mailService.sendRewardRedeemedEmail(
           participant.email,
@@ -174,7 +177,24 @@ export class RedemptionService {
           participantCampaignBalance.campaign_balance
         );
       } catch (error) {
-        console.error('Failed to send reward redeemed email:', error);
+        console.error('Failed to send reward redeemed email to participant:', error);
+      }
+
+      // To Business Owner
+      if (businessOwner) {
+        try {
+          await this.mailService.sendBusinessActivityEmail(
+            businessOwner.email,
+            'REDEEM',
+            reward.points_required,
+            participant.name,
+            staff ? staff.name : business.name,
+            businessCampaign.name,
+            sourceDescription || `Redeemed: ${reward.title}`
+          );
+        } catch (error) {
+          console.error('Failed to send activity email to business owner:', error);
+        }
       }
 
       return participantCampaignBalance;

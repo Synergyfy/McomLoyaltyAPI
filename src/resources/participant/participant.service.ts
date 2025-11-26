@@ -18,6 +18,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { AuthService } from 'src/auth/auth.service';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
+import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class ParticipantService {
@@ -33,6 +34,7 @@ export class ParticipantService {
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     private readonly authService: AuthService,
+    private readonly mailService: MailService,
   ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
@@ -111,7 +113,7 @@ export class ParticipantService {
     // 1. Try to find BusinessCampaign first
     const businessCampaign = await this.businessCampaignRepository.findOne({
       where: { id: campaignId },
-      relations: ['campaign'],
+      relations: ['campaign', 'business'],
     });
 
     if (businessCampaign) {
@@ -129,6 +131,18 @@ export class ParticipantService {
       if (!alreadyJoined) {
         participant.businessCampaigns.push(businessCampaign);
         await this.participantRepository.save(participant);
+        
+        // Send email notification
+        try {
+          await this.mailService.sendCampaignJoinedEmail(
+            participant.email,
+            businessCampaign.name,
+            businessCampaign.business ? businessCampaign.business.name : 'Mcom Loyalty',
+            businessCampaign.signUpPoint || 0
+          );
+        } catch (error) {
+          console.error('Failed to send campaign joined email:', error);
+        }
       }
 
       if (businessCampaign.signUpPoint) {
@@ -177,6 +191,7 @@ export class ParticipantService {
     // 2. Fallback to Campaign
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId },
+      relations: ['business'],
     });
 
     if (!campaign) {
@@ -194,6 +209,18 @@ export class ParticipantService {
     if (!alreadyJoinedCampaign) {
       participant.campaigns.push(campaign);
       await this.participantRepository.save(participant);
+
+      // Send email notification
+      try {
+        await this.mailService.sendCampaignJoinedEmail(
+          participant.email,
+          campaign.name,
+          campaign.business ? campaign.business.name : 'Mcom Loyalty',
+          campaign.signUpPoint || 0
+        );
+      } catch (error) {
+        console.error('Failed to send campaign joined email:', error);
+      }
     }
 
     if (campaign.signUpPoint) {
