@@ -1,7 +1,8 @@
 
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { WishlistService } from './wishlist.service';
 import { CreateWishlistDto } from './dto/create-wishlist.dto';
+import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Participant } from '../participant/entities/participant.entity';
@@ -10,7 +11,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 @ApiTags('wishlist')
 @Controller('wishlist')
 export class WishlistController {
-  constructor(private readonly wishlistService: WishlistService) {}
+  constructor(private readonly wishlistService: WishlistService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a wishlist item' })
@@ -21,6 +22,26 @@ export class WishlistController {
     @CurrentUser() participant: Participant,
   ) {
     return this.wishlistService.create(createWishlistDto, participant);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a wishlist item' })
+  @ApiResponse({ status: 200, description: 'The wishlist item has been successfully updated.' })
+  @ApiResponse({ status: 404, description: 'Wishlist item not found.' })
+  update(
+    @Param('id') id: string,
+    @Body() updateWishlistDto: UpdateWishlistDto,
+    @CurrentUser() participant: Participant,
+  ) {
+    return this.wishlistService.update(id, updateWishlistDto, participant);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a wishlist item' })
+  @ApiResponse({ status: 200, description: 'The wishlist item has been successfully deleted.' })
+  @ApiResponse({ status: 404, description: 'Wishlist item not found.' })
+  remove(@Param('id') id: string, @CurrentUser() participant: Participant) {
+    return this.wishlistService.remove(id, participant);
   }
 
   @Get('business/wishlist-insights')
