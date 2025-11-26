@@ -1,4 +1,3 @@
-
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -17,7 +16,7 @@ export class WishlistService {
     @InjectRepository(WishlistAggregate)
     private readonly wishlistAggregateRepository: Repository<WishlistAggregate>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async create(
     createWishlistDto: CreateWishlistDto,
@@ -95,7 +94,7 @@ export class WishlistService {
       take: limit,
       skip,
       order: {
-        createdAt: 'DESC',
+        created_at: 'DESC',
       },
     });
 
