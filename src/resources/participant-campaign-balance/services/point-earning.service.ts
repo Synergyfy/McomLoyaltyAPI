@@ -179,7 +179,10 @@ export class PointEarningService {
 
         await manager.save(regularPointHistory);
 
-        // Send email notification
+        // Send email notifications
+        const businessOwner = businessCampaign.business;
+        
+        // To Participant
         try {
           await this.mailService.sendPointsEarnedEmail(
             participant.email,
@@ -189,7 +192,24 @@ export class PointEarningService {
             participantCampaignBalance.campaign_balance
           );
         } catch (error) {
-          console.error('Failed to send points earned email:', error);
+          console.error('Failed to send points earned email to participant:', error);
+        }
+
+        // To Business Owner
+        if (businessOwner) {
+          try {
+            await this.mailService.sendBusinessActivityEmail(
+              businessOwner.email,
+              'EARN',
+              points,
+              participant.name,
+              staff ? staff.name : business.name,
+              businessCampaign.name,
+              sourceDescription || 'Points Awarded'
+            );
+          } catch (error) {
+            console.error('Failed to send activity email to business owner:', error);
+          }
         }
       }
 

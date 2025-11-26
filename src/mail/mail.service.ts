@@ -127,4 +127,91 @@ export class MailService {
       `,
     });
   }
+
+  async sendBusinessActivityEmail(email: string, activityType: 'EARN' | 'REDEEM', points: number, participantName: string, staffName: string, campaignName: string, details: string) {
+    const title = activityType === 'EARN' ? 'Points Awarded' : 'Reward Redeemed';
+    const color = activityType === 'EARN' ? '#10b981' : '#ea580c'; // Green for earn, Orange for redeem
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `New Activity: ${title}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #333; margin: 0; font-size: 24px; font-weight: 700;">New Campaign Activity</h2>
+            <p style="color: #666; margin-top: 10px; font-size: 16px;">${campaignName}</p>
+          </div>
+          
+          <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; border-left: 4px solid ${color}; margin-bottom: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: bold; color: #333; font-size: 18px;">${title}</span>
+              <span style="font-weight: bold; color: ${color}; font-size: 18px;">${activityType === 'EARN' ? '+' : '-'}${points} Pts</span>
+            </div>
+            <p style="margin: 0; color: #64748b; font-size: 14px;">${details}</p>
+          </div>
+
+          <div style="color: #333333; font-size: 15px; line-height: 1.6;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #666;">Participant:</td>
+                <td style="padding: 8px 0; font-weight: 600; text-align: right;">${participantName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; border-top: 1px solid #eee;">Processed By:</td>
+                <td style="padding: 8px 0; font-weight: 600; text-align: right; border-top: 1px solid #eee;">${staffName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666; border-top: 1px solid #eee;">Date:</td>
+                <td style="padding: 8px 0; font-weight: 600; text-align: right; border-top: 1px solid #eee;">${new Date().toLocaleString()}</td>
+              </tr>
+            </table>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="font-size: 14px; color: #888; text-align: center;">
+              <strong>The Mcom Loyalty Team</strong>
+            </p>
+          </div>
+        </div>
+      `,
+    });
+  }
+
+  async sendCampaignJoinedEmail(email: string, campaignName: string, businessName: string, signUpPoints: number) {
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `Welcome to ${campaignName}!`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #ea580c; margin: 0; font-size: 28px; font-weight: 700;">Welcome Aboard!</h2>
+            <p style="color: #666; margin-top: 10px; font-size: 16px;">You've joined a new campaign</p>
+          </div>
+          
+          <div style="color: #333333; font-size: 16px; line-height: 1.6;">
+            <p>Hello,</p>
+            <p>You have successfully joined the <strong>${campaignName}</strong> campaign at <strong>${businessName}</strong>.</p>
+            
+            ${signUpPoints > 0 ? `
+            <div style="text-align: center; margin: 35px 0;">
+              <div style="display: inline-block; padding: 15px 30px; background-color: #fff7ed; border-radius: 8px; border: 1px solid #ea580c;">
+                <span style="display: block; color: #ea580c; font-size: 24px; font-weight: bold;">+${signUpPoints} Points</span>
+                <span style="display: block; color: #666; font-size: 12px; margin-top: 4px;">Sign-up Bonus</span>
+              </div>
+            </div>
+            ` : ''}
+            
+            <p>Start engaging with ${businessName} to earn more points and unlock exclusive rewards!</p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="font-size: 14px; color: #888; text-align: center;">
+              Best regards,<br>
+              <strong>The Mcom Loyalty Team</strong>
+            </p>
+          </div>
+        </div>
+      `,
+    });
+  }
 }

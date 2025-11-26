@@ -9,6 +9,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { AuthModule } from 'src/auth/auth.module';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
+import { MailModule } from '../../mail/mail.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BusinessCampaign } from '../campaign/entities/business-campaign.entity'
       BusinessCampaign,
     ]),
     AuthModule,
+    MailModule,
   ],
   controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],
