@@ -14,7 +14,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Relationship, Occasion, Season, Priority } from '../entities/wishlist-enums';
-import { IsOneOfTwoRequired } from 'src/common/decorators/is-one-of-two-required.decorator';
+import { IsOneOfTwoRequired } from '../../../common/decorators/is-one-of-two-required.decorator';
 
 export class CreateWishlistDto {
   @ApiProperty({ example: 'Running Shoes' })
