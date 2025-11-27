@@ -15,6 +15,7 @@ import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 import { CampaignType, AudienceType, RewardType } from './campaign-enums';
+import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
 
 @Entity('business_campaigns')
 export class BusinessCampaign extends AbstractBaseEntity {
@@ -146,4 +147,11 @@ export class BusinessCampaign extends AbstractBaseEntity {
 
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.businessCampaign)
   pointHistories: PointHistory[];
+
+  @ManyToOne(() => WishlistAggregate, { nullable: true })
+  @JoinColumn({ name: 'wishlist_aggregate_id' })
+  wishlistAggregate: WishlistAggregate;
+
+  @Column({ type: 'int', nullable: true })
+  initial_audience_size: number;
 }

@@ -37,6 +37,7 @@ import {
   Campaign,
 } from './entities/campaign.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
+import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
@@ -77,6 +78,34 @@ export class CampaignController {
     @CurrentUser() currentUser: Business | Admin,
   ) {
     return this.campaignService.create(createCampaignDto, currentUser);
+  }
+
+  @Post('from-wishlist')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin, Role.Business)
+  @ApiOperation({
+    summary: 'Create a new campaign from a wishlist aggregate',
+    description: 'Accessible by Admins and Business Owners.',
+  })
+  @ApiBody({ type: CreateCampaignFromWishlistDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The campaign has been successfully created.',
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(Campaign) },
+        { $ref: getSchemaPath(BusinessCampaign) },
+      ],
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Wishlist aggregate not found.' })
+  createFromWishlist(
+    @Body() createCampaignDto: CreateCampaignFromWishlistDto,
+    @CurrentUser() currentUser: Business | Admin,
+  ) {
+    return this.campaignService.createFromWishlist(createCampaignDto, currentUser);
   }
 
   @Get()
