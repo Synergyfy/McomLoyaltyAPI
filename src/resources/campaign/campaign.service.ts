@@ -198,7 +198,7 @@ export class CampaignService {
 
     // Assuming we have a way to generate a deep link or URL to the campaign
     // For now, we'll just point to a generic campaign page or the app
-    const ctaLink = `https://mcomloyalty.com/campaigns/${createdCampaign.id}`; // Replace with actual deep link logic
+    const ctaLink = `https://mcomloyalty.vercel.app/campaigns/${createdCampaign.id}`; // Replace with actual deep link logic
 
     for (const participant of participants) {
       if (participant.email) {
