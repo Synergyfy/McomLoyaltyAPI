@@ -9,7 +9,8 @@ import { RewardsModule } from '../rewards/rewards.module';
     imports: [
         MembershipModule,
         ProgressionModule,
-        RewardsModule,
+        ProgressionModule,
+        forwardRef(() => RewardsModule),
         forwardRef(() => CampaignModule),
     ],
     providers: [CapabilityService],
