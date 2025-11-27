@@ -12,6 +12,7 @@ import { SectorService } from '../../sector/services/sector.service';
 import { CategoryService } from '../../category/category.service';
 import { SubcategoryService } from '../../subcategory/subcategory.service';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
+import { PaymentHistoryService } from '../../payment-history/payment-history.service';
 
 @Injectable()
 export class BusinessService {
@@ -24,6 +25,7 @@ export class BusinessService {
     private readonly sectorService: SectorService,
     private readonly categoryService: CategoryService,
     private readonly subcategoryService: SubcategoryService,
+    private readonly paymentHistoryService: PaymentHistoryService,
   ) { }
 
   private async generateAffiliateCode(): Promise<string> {
@@ -230,5 +232,45 @@ export class BusinessService {
       data: paginatedParticipants,
       total: uniqueParticipants.length,
     };
+  }
+
+  async getOnboardingStatus(id: string): Promise<{ isOnboarded: boolean; missingFields: string[] }> {
+    const business = await this.findById(id, ['sector', 'category', 'subCategory']);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const missingFields = [];
+    if (!business.sector) missingFields.push('sector');
+    if (!business.category) missingFields.push('category');
+
+    return {
+      isOnboarded: missingFields.length === 0,
+      missingFields,
+    };
+  }
+
+  async getSubscriptionLevel(id: string): Promise<any> {
+    const payments = await this.paymentHistoryService.findByBusiness(id);
+    const latestPayment = payments[0];
+
+    if (!latestPayment || !latestPayment.membership) {
+      return {
+        tier: 'Free',
+        status: 'active',
+        features: [],
+      };
+    }
+
+    return {
+      tier: latestPayment.membership.tier?.name || 'Unknown',
+      status: latestPayment.membership.status,
+      expiresAt: latestPayment.membership.expires_at,
+      planType: latestPayment.membership.plan_type,
+    };
+  }
+
+  async getBillingHistory(id: string) {
+    return this.paymentHistoryService.findByBusiness(id);
   }
 }

@@ -229,11 +229,19 @@ export class CampaignService {
         skip,
         take: limit,
       });
+
+      const totalPages = Math.ceil(total / limit);
+      const next = page < totalPages ? Number(page) + 1 : null;
+      const previous = page > 1 ? Number(page) - 1 : null;
+
       return {
         data: data as any,
         total,
-        page,
-        limit,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        next,
+        previous,
       };
     } else {
       const [data, total] = await this.campaignRepository.findAndCount({
@@ -241,11 +249,19 @@ export class CampaignService {
         skip,
         take: limit,
       });
+
+      const totalPages = Math.ceil(total / limit);
+      const next = page < totalPages ? Number(page) + 1 : null;
+      const previous = page > 1 ? Number(page) - 1 : null;
+
       return {
         data,
         total,
-        page,
-        limit,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        next,
+        previous,
       };
     }
   }
@@ -270,11 +286,18 @@ export class CampaignService {
 
     const [data, total] = await qb.getManyAndCount();
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -293,11 +316,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data: data as any,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -314,11 +344,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -339,11 +376,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -527,11 +571,18 @@ export class CampaignService {
       return { ...entity, participantCount };
     });
 
+    const totalPages = Math.ceil(totalCount / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data: result as any,
       total: totalCount,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -609,11 +660,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -738,11 +796,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data: data as any,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -963,8 +1028,11 @@ export class CampaignService {
     return {
       data: activities,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+      next: page < Math.ceil(total / limit) ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
     };
   }
 
@@ -1012,8 +1080,11 @@ export class CampaignService {
     return {
       data: activities,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+      next: page < Math.ceil(total / limit) ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
     };
   }
 

@@ -8,5 +8,6 @@ import { PaymentHistory } from './entities/payment-history.entity';
   imports: [TypeOrmModule.forFeature([PaymentHistory])],
   controllers: [PaymentHistoryController],
   providers: [PaymentHistoryService],
+  exports: [PaymentHistoryService],
 })
-export class PaymentHistoryModule {}
+export class PaymentHistoryModule { }

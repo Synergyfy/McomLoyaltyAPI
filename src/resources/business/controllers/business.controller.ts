@@ -14,7 +14,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 @UseGuards(RolesGuard)
 @ApiBearerAuth()
 export class BusinessController {
-  constructor(private readonly businessService: BusinessService) {}
+  constructor(private readonly businessService: BusinessService) { }
 
   @Public()
   @Post('signup')
@@ -52,6 +52,30 @@ export class BusinessController {
   @ApiBody({ type: UpdateBusinessDto })
   async updateProfile(@Request() req, @Body(new ValidationPipe()) updateBusinessDto: UpdateBusinessDto) {
     return this.businessService.update(req.user.id, updateBusinessDto);
+  }
+
+  @Roles(Role.Business)
+  @Get('subscription')
+  @ApiOperation({ summary: 'Get business subscription level' })
+  @ApiResponse({ status: 200, description: 'Return business subscription details.' })
+  async getSubscription(@Request() req) {
+    return this.businessService.getSubscriptionLevel(req.user.id);
+  }
+
+  @Roles(Role.Business)
+  @Get('billing-history')
+  @ApiOperation({ summary: 'Get business billing history' })
+  @ApiResponse({ status: 200, description: 'Return business billing history.' })
+  async getBillingHistory(@Request() req) {
+    return this.businessService.getBillingHistory(req.user.id);
+  }
+
+  @Roles(Role.Business)
+  @Get('onboarding-status')
+  @ApiOperation({ summary: 'Get business onboarding status' })
+  @ApiResponse({ status: 200, description: 'Return business onboarding status.' })
+  async getOnboardingStatus(@Request() req) {
+    return this.businessService.getOnboardingStatus(req.user.id);
   }
 
   @Roles(Role.Business)

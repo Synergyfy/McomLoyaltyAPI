@@ -33,4 +33,13 @@ export class PaginatedCustomerActivityResponseDto {
 
     @ApiProperty({ example: 10 })
     limit: number;
+
+    @ApiProperty({ example: 5, description: 'Total number of pages' })
+    totalPages: number;
+
+    @ApiProperty({ example: 2, description: 'Next page number', nullable: true })
+    next: number | null;
+
+    @ApiProperty({ example: null, description: 'Previous page number', nullable: true })
+    previous: number | null;
 }

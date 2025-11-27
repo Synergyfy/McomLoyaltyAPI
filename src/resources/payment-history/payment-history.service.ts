@@ -8,9 +8,16 @@ export class PaymentHistoryService {
   constructor(
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
-  ) {}
+  ) { }
 
   async findAll() {
     return await this.paymentHistoryRepository.find();
+  }
+
+  async findByBusiness(businessId: string) {
+    return await this.paymentHistoryRepository.find({
+      where: { user: { id: businessId } },
+      order: { created_at: 'DESC' },
+    });
   }
 }

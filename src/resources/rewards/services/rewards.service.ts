@@ -18,6 +18,7 @@ import { Membership } from '../../membership/entities/membership.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Tier } from '../../tier/entities/tier.entity';
 import { In, Brackets } from 'typeorm';
+import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 
 @Injectable()
 export class RewardsService {
@@ -67,13 +68,26 @@ export class RewardsService {
   async getRewards(
     page: number,
     limit: number,
-  ): Promise<{ data: Reward[]; total: number }> {
+  ): Promise<PaginationResult<Reward>> {
     const [data, total] = await this.rewardRepository.findAndCount({
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total };
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 
   async updateReward(
@@ -208,7 +222,7 @@ export class RewardsService {
     businessId: string,
     page: number,
     limit: number,
-  ): Promise<{ data: BusinessReward[]; total: number }> {
+  ): Promise<PaginationResult<BusinessReward>> {
     const [data, total] = await this.businessRewardRepository.findAndCount({
       where: { business: { id: businessId } },
       relations: ['reward'],
@@ -216,7 +230,20 @@ export class RewardsService {
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total };
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 
   async removeRewardFromBusiness(
@@ -233,7 +260,7 @@ export class RewardsService {
     businessId: string,
     page: number,
     limit: number,
-  ): Promise<{ data: Reward[]; total: number }> {
+  ): Promise<PaginationResult<Reward>> {
     // Get IDs of rewards already added by the business
     const addedRewards = await this.businessRewardRepository.find({
       where: { business: { id: businessId } },
@@ -269,6 +296,18 @@ export class RewardsService {
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
-    return { data, total };
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 }

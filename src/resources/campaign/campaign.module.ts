@@ -11,6 +11,9 @@ import { Participant } from '../participant/entities/participant.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { Staff } from '../staff/entities/staff.entity';
+import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
+import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -23,7 +26,10 @@ import { Staff } from '../staff/entities/staff.entity';
       BusinessCampaign,
       BusinessReward,
       Staff,
+      WishlistAggregate,
+      WishlistItem,
     ]),
+    MailModule,
   ],
   controllers: [CampaignController, BusinessCampaignController],
   providers: [CampaignService],
