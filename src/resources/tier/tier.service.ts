@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tier } from './entities/tier.entity';
@@ -18,7 +18,7 @@ export class TierService {
     private readonly tierHistoryRepository: Repository<TierHistory>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
-  ) {}
+  ) { }
 
   private async createHistory(tier: Tier, admin: Admin) {
     const history = this.tierHistoryRepository.create({
@@ -30,6 +30,13 @@ export class TierService {
   }
 
   async create(createTierDto: CreateTierDto, admin: Admin) {
+    const existingTier = await this.tierRepository.findOne({
+      where: { name: createTierDto.name },
+    });
+    if (existingTier) {
+      throw new ConflictException('A tier with this name already exists');
+    }
+
     const tier = this.tierRepository.create(createTierDto);
     const savedTier = await this.tierRepository.save(tier);
     await this.createHistory(savedTier, admin);

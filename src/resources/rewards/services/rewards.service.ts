@@ -310,4 +310,14 @@ export class RewardsService {
       previous,
     };
   }
+
+  async countActiveBusinessRewards(businessId: string): Promise<number> {
+    return this.businessRewardRepository.count({
+      where: {
+        business: { id: businessId },
+        status: RewardStatus.ACTIVE,
+        disabled: false,
+      },
+    });
+  }
 }

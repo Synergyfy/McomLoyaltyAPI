@@ -13,6 +13,13 @@ export class MembershipService {
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
   ) { }
 
+  async findOneByUserId(userId: string) {
+    return await this.membershipRepository.findOne({
+      where: { user_id: userId },
+      relations: ['tier'],
+    });
+  }
+
   async getMyMembership(user: any) {
     return await this.membershipRepository.findOne({
       where: { user_id: user.id },

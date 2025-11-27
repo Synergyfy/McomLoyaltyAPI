@@ -7,11 +7,15 @@ import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
+import { CapabilityService, ActionType } from '../../capability/capability.service';
 
 @ApiTags('rewards')
 @Controller('rewards')
 export class RewardsController {
-  constructor(private readonly rewardsService: RewardsService) { }
+  constructor(
+    private readonly rewardsService: RewardsService,
+    private readonly capabilityService: CapabilityService,
+  ) { }
 
   // Admin endpoints
   @ApiOperation({ summary: 'Admin: Create a new reward' })
@@ -106,6 +110,7 @@ export class RewardsController {
     @Body() createBusinessRewardDto: CreateBusinessRewardDto,
     @CurrentUser() user: any,
   ) {
+    await this.capabilityService.checkPermission(user.id, ActionType.ADD_REWARD_TO_BUSINESS);
     return this.rewardsService.addRewardToBusiness(rewardId, user.id, createBusinessRewardDto);
   }
 

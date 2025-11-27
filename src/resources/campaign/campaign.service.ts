@@ -1137,4 +1137,21 @@ export class CampaignService {
 
     throw new NotFoundException('Campaign not found');
   }
+
+  async countActiveCampaigns(businessId: string): Promise<number> {
+    const now = new Date();
+    return this.businessCampaignRepository.count({
+      where: {
+        business: { id: businessId },
+        start_date: LessThanOrEqual(now),
+        end_date: MoreThanOrEqual(now),
+        disabled: false,
+      },
+    });
+  }
+
+  async countRewards(campaignId: string): Promise<number> {
+    const campaign = await this.findOne(campaignId);
+    return campaign.rewards ? campaign.rewards.length : 0;
+  }
 }

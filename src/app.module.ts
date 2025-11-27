@@ -36,6 +36,7 @@ import { PaymentModule } from './resources/payment/payment.module';
 import { ProgressionModule } from './resources/progression/progression.module';
 import { PartnerModule } from './resources/partner/partner.module';
 import { WishlistModule } from './resources/wishlist/wishlist.module';
+import { CapabilityModule } from './resources/capability/capability.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { WishlistModule } from './resources/wishlist/wishlist.module';
     ProgressionModule,
     PartnerModule,
     WishlistModule,
+    CapabilityModule,
   ],
   controllers: [AppController],
   providers: [

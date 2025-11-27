@@ -14,6 +14,8 @@ import { Staff } from '../staff/entities/staff.entity';
 import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
 import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
 import { MailModule } from 'src/mail/mail.module';
+import { CapabilityModule } from '../capability/capability.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -30,8 +32,10 @@ import { MailModule } from 'src/mail/mail.module';
       WishlistItem,
     ]),
     MailModule,
+    forwardRef(() => CapabilityModule),
   ],
   controllers: [CampaignController, BusinessCampaignController],
   providers: [CampaignService],
+  exports: [CampaignService],
 })
 export class CampaignModule { }

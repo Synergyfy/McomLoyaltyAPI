@@ -17,6 +17,8 @@ import { Business } from '../business/entities/business.entity';
 import { CampaignService } from './campaign.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
+import { CapabilityService, ActionType } from '../capability/capability.service';
+import { Campaign } from './entities/campaign.entity';
 
 @ApiTags('Business Campaigns')
 @ApiBearerAuth()
@@ -24,7 +26,10 @@ import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-re
 @Roles(Role.Business)
 @Controller('business/campaigns')
 export class BusinessCampaignController {
-  constructor(private readonly campaignService: CampaignService) { }
+  constructor(
+    private readonly campaignService: CampaignService,
+    private readonly capabilityService: CapabilityService,
+  ) { }
 
   @Get('claimable')
   @ApiOperation({ summary: 'Get all claimable campaigns for a business' })
@@ -44,6 +49,22 @@ export class BusinessCampaignController {
     @CurrentUser() business: Business,
     @Param('campaignId', ParseUUIDPipe) campaignId: string,
   ) {
+    // Fetch campaign to check rewards and ensure it's a template
+    const campaign = await this.campaignService.findOne(campaignId);
+
+    // Ensure it's a Campaign (not BusinessCampaign) and has no business (template)
+    // Note: findOne might return BusinessCampaign if ID matches, but claimCampaign service also checks.
+    // We just need reward count here.
+    let rewardCount = 0;
+    if (campaign instanceof Campaign) {
+      rewardCount = campaign.rewards?.length || 0;
+    }
+
+    await this.capabilityService.checkPermission(business.id, ActionType.CREATE_CAMPAIGN, {
+      isFromScratch: false,
+      rewardCount,
+    });
+
     return this.campaignService.claimCampaign(business.id, campaignId);
   }
 

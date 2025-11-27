@@ -9,5 +9,6 @@ import { PaymentHistory } from '../payment-history/entities/payment-history.enti
   imports: [TypeOrmModule.forFeature([Membership, PaymentHistory])],
   controllers: [MembershipController],
   providers: [MembershipService],
+  exports: [MembershipService],
 })
-export class MembershipModule {}
+export class MembershipModule { }
