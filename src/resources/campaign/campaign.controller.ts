@@ -38,11 +38,15 @@ import {
 } from './entities/campaign.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
+import { CapabilityService, ActionType } from '../capability/capability.service';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) { }
+  constructor(
+    private readonly campaignService: CampaignService,
+    private readonly capabilityService: CapabilityService,
+  ) { }
 
   @Post()
   @ApiBearerAuth()
@@ -73,10 +77,18 @@ export class CampaignController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  create(
+  async create(
     @Body() createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
     @CurrentUser() currentUser: Business | Admin,
   ) {
+    if ((currentUser as any).role === Role.Business) {
+      const isFromScratch = true; // Creating via this endpoint implies from scratch
+      const rewardCount = (createCampaignDto as CreateCampaignDto).business_reward_ids?.length || 0;
+      await this.capabilityService.checkPermission(currentUser.id, ActionType.CREATE_CAMPAIGN, {
+        isFromScratch,
+        rewardCount,
+      });
+    }
     return this.campaignService.create(createCampaignDto, currentUser);
   }
 
@@ -330,11 +342,17 @@ export class CampaignController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
-  update(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCampaignDto: UpdateCampaignDto,
     @CurrentUser() currentUser: Business | Admin,
   ) {
+    if ((currentUser as any).role === Role.Business && updateCampaignDto.business_reward_ids) {
+      const rewardCount = updateCampaignDto.business_reward_ids.length;
+      await this.capabilityService.checkPermission(currentUser.id, ActionType.UPDATE_CAMPAIGN, {
+        rewardCount,
+      });
+    }
     return this.campaignService.update(id, updateCampaignDto, currentUser);
   }
 

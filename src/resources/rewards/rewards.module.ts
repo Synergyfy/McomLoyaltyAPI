@@ -8,6 +8,8 @@ import { Business } from '../business/entities/business.entity';
 import { Membership } from '../membership/entities/membership.entity';
 import { Sector } from '../sector/entities/sector.entity';
 import { Tier } from '../tier/entities/tier.entity';
+import { CapabilityModule } from '../capability/capability.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -19,9 +21,10 @@ import { Tier } from '../tier/entities/tier.entity';
       Sector,
       Tier,
     ]),
+    forwardRef(() => CapabilityModule),
   ],
   controllers: [RewardsController],
   providers: [RewardsService],
   exports: [RewardsService],
 })
-export class RewardsModule {}
+export class RewardsModule { }

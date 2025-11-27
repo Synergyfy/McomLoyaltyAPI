@@ -198,7 +198,7 @@ export class CampaignService {
 
     // Assuming we have a way to generate a deep link or URL to the campaign
     // For now, we'll just point to a generic campaign page or the app
-    const ctaLink = `https://mcomloyalty.com/campaigns/${createdCampaign.id}`; // Replace with actual deep link logic
+    const ctaLink = `https://mcomloyalty.vercel.app/campaigns/${createdCampaign.id}`; // Replace with actual deep link logic
 
     for (const participant of participants) {
       if (participant.email) {
@@ -1136,5 +1136,22 @@ export class CampaignService {
     }
 
     throw new NotFoundException('Campaign not found');
+  }
+
+  async countActiveCampaigns(businessId: string): Promise<number> {
+    const now = new Date();
+    return this.businessCampaignRepository.count({
+      where: {
+        business: { id: businessId },
+        start_date: LessThanOrEqual(now),
+        end_date: MoreThanOrEqual(now),
+        disabled: false,
+      },
+    });
+  }
+
+  async countRewards(campaignId: string): Promise<number> {
+    const campaign = await this.findOne(campaignId);
+    return campaign.rewards ? campaign.rewards.length : 0;
   }
 }

@@ -1,6 +1,7 @@
-import { IsNotEmpty, IsString, IsNumber, IsArray, IsOptional, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, IsArray, IsOptional, IsEnum, IsObject } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TierStatus } from '../entities/tier-status.enum';
+import { TierConfig } from '../interfaces/tier-config.interface';
 
 export class CreateTierDto {
   @ApiProperty({
@@ -116,4 +117,29 @@ export class CreateTierDto {
   @IsOptional()
   @IsNumber()
   qrCodeCount?: number;
+
+  @ApiProperty({
+    description: 'Configuration for the tier capabilities',
+    required: false,
+    example: {
+      quotas: {
+        maxActiveCampaigns: 5,
+        maxActiveRewards: 10,
+        maxRewardsPerCampaign: 3,
+        monthlyPointsAllowance: 1000,
+      },
+      featureFlags: {
+        canCreateCampaignFromScratch: true,
+        canEditAdminTemplates: false,
+        hasAccessToAdvancedAnalytics: true,
+        hasAccessToCRM: false,
+      },
+      progressBonuses: {
+        pro_plus_campaign_bonus: 1,
+      },
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  configuration?: TierConfig;
 }

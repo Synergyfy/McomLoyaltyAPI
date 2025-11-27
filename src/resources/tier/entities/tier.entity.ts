@@ -1,6 +1,7 @@
 import { Entity, Column } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { TierStatus } from './tier-status.enum';
+import { TierConfig } from '../interfaces/tier-config.interface';
 
 @Entity()
 export class Tier extends AbstractBaseEntity {
@@ -46,4 +47,7 @@ export class Tier extends AbstractBaseEntity {
 
   @Column({ type: 'int', default: 0 })
   qrCodeCount: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  configuration: TierConfig;
 }
