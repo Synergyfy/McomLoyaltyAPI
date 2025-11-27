@@ -36,6 +36,11 @@ import { nanoid } from 'nanoid';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 import { PaginatedCampaignResponseDto } from './dto/paginated-campaign-response.dto';
 
+import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
+import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
+import { MailService } from 'src/mail/mail.service';
+import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
+
 @Injectable()
 export class CampaignService {
   constructor(
@@ -55,6 +60,11 @@ export class CampaignService {
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(WishlistAggregate)
+    private readonly wishlistAggregateRepository: Repository<WishlistAggregate>,
+    @InjectRepository(WishlistItem)
+    private readonly wishlistItemRepository: Repository<WishlistItem>,
+    private readonly mailService: MailService,
   ) { }
 
   async create(
@@ -103,6 +113,108 @@ export class CampaignService {
     }
   }
 
+  async createFromWishlist(
+    createCampaignDto: CreateCampaignFromWishlistDto,
+    currentUser: Business | Admin,
+  ): Promise<Campaign | BusinessCampaign> {
+    const { wishlistAggregateId, ...campaignData } = createCampaignDto;
+
+    const wishlistAggregate = await this.wishlistAggregateRepository.findOne({
+      where: { id: wishlistAggregateId },
+      relations: ['category'],
+    });
+
+    if (!wishlistAggregate) {
+      throw new NotFoundException('Wishlist aggregate not found');
+    }
+
+    // Find all participants who have this item in their wishlist
+    const wishlistItems = await this.wishlistItemRepository.find({
+      where: {
+        itemName: wishlistAggregate.itemName,
+        category: { id: wishlistAggregate.category.id },
+        marketingConsent: true,
+      },
+      relations: ['participant'],
+    });
+
+    const participants = wishlistItems
+      .map((item) => item.participant)
+      .filter(
+        (participant, index, self) =>
+          index === self.findIndex((p) => p.id === participant.id),
+      );
+
+    const initialAudienceSize = participants.length;
+
+    let createdCampaign: Campaign | BusinessCampaign;
+
+    if (currentUser.role === Role.Admin) {
+      const campaign = this.campaignRepository.create({
+        ...campaignData,
+        wishlistAggregate,
+        initial_audience_size: initialAudienceSize,
+      });
+
+      const { reward_ids } = createCampaignDto;
+
+      // If business_id was removed, we might want to infer it or leave it null.
+      // For now, removing the explicit assignment from DTO as requested.
+
+      if (reward_ids) {
+        const rewards = await this.rewardRepository.findBy({
+          id: In(reward_ids),
+        });
+        campaign.rewards = rewards;
+      }
+
+      createdCampaign = await this.campaignRepository.save(campaign);
+    } else {
+      const businessCampaign = this.businessCampaignRepository.create({
+        ...campaignData,
+        wishlistAggregate,
+        initial_audience_size: initialAudienceSize,
+      });
+      businessCampaign.business = currentUser as Business;
+      businessCampaign.uniqueCode = nanoid(9);
+
+      const { business_reward_ids } = createCampaignDto;
+      if (business_reward_ids) {
+        const businessRewards = await this.businessRewardRepository.find({
+          where: { id: In(business_reward_ids) },
+          relations: ['reward'],
+        });
+        businessCampaign.rewards = businessRewards.map((br) => br.reward);
+      }
+
+      createdCampaign = await this.businessCampaignRepository.save(businessCampaign);
+    }
+
+    // Send emails to participants
+    const businessName =
+      currentUser.role === Role.Business
+        ? (currentUser as Business).name
+        : (createdCampaign as Campaign).business?.name || 'Mcom Loyalty';
+
+    // Assuming we have a way to generate a deep link or URL to the campaign
+    // For now, we'll just point to a generic campaign page or the app
+    const ctaLink = `https://mcomloyalty.com/campaigns/${createdCampaign.id}`; // Replace with actual deep link logic
+
+    for (const participant of participants) {
+      if (participant.email) {
+        await this.mailService.sendWishlistCampaignEmail(
+          participant.email,
+          createdCampaign.name,
+          businessName,
+          wishlistAggregate.itemName,
+          ctaLink,
+        );
+      }
+    }
+
+    return createdCampaign;
+  }
+
   async findAll(
     currentUser: Business | Admin,
     paginationDto: PaginationDto,
@@ -117,11 +229,19 @@ export class CampaignService {
         skip,
         take: limit,
       });
+
+      const totalPages = Math.ceil(total / limit);
+      const next = page < totalPages ? Number(page) + 1 : null;
+      const previous = page > 1 ? Number(page) - 1 : null;
+
       return {
         data: data as any,
         total,
-        page,
-        limit,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        next,
+        previous,
       };
     } else {
       const [data, total] = await this.campaignRepository.findAndCount({
@@ -129,11 +249,19 @@ export class CampaignService {
         skip,
         take: limit,
       });
+
+      const totalPages = Math.ceil(total / limit);
+      const next = page < totalPages ? Number(page) + 1 : null;
+      const previous = page > 1 ? Number(page) - 1 : null;
+
       return {
         data,
         total,
-        page,
-        limit,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages,
+        next,
+        previous,
       };
     }
   }
@@ -158,11 +286,18 @@ export class CampaignService {
 
     const [data, total] = await qb.getManyAndCount();
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -181,11 +316,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data: data as any,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -202,11 +344,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -227,11 +376,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -315,18 +471,18 @@ export class CampaignService {
     Object.assign(campaign, campaignData);
 
     if (campaign instanceof BusinessCampaign) {
-       return this.businessCampaignRepository.save(campaign);
+      return this.businessCampaignRepository.save(campaign);
     } else {
-       return this.campaignRepository.save(campaign);
+      return this.campaignRepository.save(campaign);
     }
   }
 
   async remove(id: string, currentUser: Business | Admin): Promise<void> {
     const campaign = await this.findOne(id, currentUser);
     if (campaign instanceof BusinessCampaign) {
-       await this.businessCampaignRepository.remove(campaign);
+      await this.businessCampaignRepository.remove(campaign);
     } else {
-       await this.campaignRepository.remove(campaign);
+      await this.campaignRepository.remove(campaign);
     }
   }
 
@@ -368,16 +524,16 @@ export class CampaignService {
 
     // Query BusinessCampaigns for this business
     const [data, total] = await this.businessCampaignRepository.findAndCount({
-        where: {
-            business: { id: businessId },
-            start_date: LessThanOrEqual(new Date()),
-            end_date: MoreThanOrEqual(new Date()),
-            disabled: false
-        },
-        relations: ['business', 'rewards'],
-        order: { created_at: 'DESC' },
-        skip,
-        take: limit
+      where: {
+        business: { id: businessId },
+        start_date: LessThanOrEqual(new Date()),
+        end_date: MoreThanOrEqual(new Date()),
+        disabled: false
+      },
+      relations: ['business', 'rewards'],
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit
     });
 
     // We need participant count.
@@ -386,23 +542,23 @@ export class CampaignService {
 
     // Let's stick to QB for efficiency
     const qb = this.businessCampaignRepository.createQueryBuilder('bc')
-        .leftJoinAndSelect('bc.business', 'business')
-        .leftJoinAndSelect('bc.rewards', 'rewards')
-        .where('bc.business_id = :businessId', { businessId })
-        .andWhere('bc.start_date <= NOW()')
-        .andWhere('bc.end_date >= NOW()')
-        .andWhere('bc.disabled = :disabled', { disabled: false })
-        .addSelect(
-            (subQuery) =>
-              subQuery
-                .select('COUNT(DISTINCT ph.participant_id)', 'participant_count')
-                .from(PointHistory, 'ph')
-                .where('ph.business_campaign_id = bc.id'),
-            'participantCount',
-          )
-        .orderBy('bc.created_at', 'DESC')
-        .skip(skip)
-        .take(limit);
+      .leftJoinAndSelect('bc.business', 'business')
+      .leftJoinAndSelect('bc.rewards', 'rewards')
+      .where('bc.business_id = :businessId', { businessId })
+      .andWhere('bc.start_date <= NOW()')
+      .andWhere('bc.end_date >= NOW()')
+      .andWhere('bc.disabled = :disabled', { disabled: false })
+      .addSelect(
+        (subQuery) =>
+          subQuery
+            .select('COUNT(DISTINCT ph.participant_id)', 'participant_count')
+            .from(PointHistory, 'ph')
+            .where('ph.business_campaign_id = bc.id'),
+        'participantCount',
+      )
+      .orderBy('bc.created_at', 'DESC')
+      .skip(skip)
+      .take(limit);
 
     const totalCount = await qb.getCount();
     const { entities, raw } = await qb.getRawAndEntities();
@@ -415,11 +571,18 @@ export class CampaignService {
       return { ...entity, participantCount };
     });
 
+    const totalPages = Math.ceil(totalCount / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data: result as any,
       total: totalCount,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -427,9 +590,9 @@ export class CampaignService {
     currentUser: User,
     query: string,
   ): Promise<Campaign[]> {
-      // Return type says Campaign[], but we probably want BusinessCampaign[] if applicable.
-      // But we can return mix or just change return type to any[] or (Campaign|BusinessCampaign)[]
-      // For now, let's see if we can query BusinessCampaigns
+    // Return type says Campaign[], but we probably want BusinessCampaign[] if applicable.
+    // But we can return mix or just change return type to any[] or (Campaign|BusinessCampaign)[]
+    // For now, let's see if we can query BusinessCampaigns
 
     let businessId: string;
 
@@ -481,7 +644,7 @@ export class CampaignService {
     const campaign = await this.findOne(id, currentUser);
     campaign.disabled = !campaign.disabled;
     if (campaign instanceof BusinessCampaign) {
-        return this.businessCampaignRepository.save(campaign);
+      return this.businessCampaignRepository.save(campaign);
     }
     return this.campaignRepository.save(campaign);
   }
@@ -497,11 +660,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -626,11 +796,18 @@ export class CampaignService {
       take: limit,
     });
 
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
     return {
       data: data as any,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
     };
   }
 
@@ -851,8 +1028,11 @@ export class CampaignService {
     return {
       data: activities,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+      next: page < Math.ceil(total / limit) ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
     };
   }
 
@@ -900,8 +1080,11 @@ export class CampaignService {
     return {
       data: activities,
       total,
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+      next: page < Math.ceil(total / limit) ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
     };
   }
 

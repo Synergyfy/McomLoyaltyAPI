@@ -15,6 +15,7 @@ import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { BusinessCampaign } from './business-campaign.entity';
 import { CampaignType, AudienceType, RewardType } from './campaign-enums';
+import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
 
 @Entity('campaigns')
 export class Campaign extends AbstractBaseEntity {
@@ -146,4 +147,11 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   footer_text: string;
+
+  @ManyToOne(() => WishlistAggregate, { nullable: true })
+  @JoinColumn({ name: 'wishlist_aggregate_id' })
+  wishlistAggregate: WishlistAggregate;
+
+  @Column({ type: 'int', nullable: true })
+  initial_audience_size: number;
 }

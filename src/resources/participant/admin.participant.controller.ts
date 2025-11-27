@@ -13,7 +13,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 @Roles(Role.Admin)
 @Controller('admin/participants')
 export class AdminParticipantController {
-  constructor(private readonly participantService: ParticipantService) {}
+  constructor(private readonly participantService: ParticipantService) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all participants (admin only)' })

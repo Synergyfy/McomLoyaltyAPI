@@ -11,7 +11,7 @@ export class MembershipService {
     private readonly membershipRepository: Repository<Membership>,
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
-  ) {}
+  ) { }
 
   async getMyMembership(user: any) {
     return await this.membershipRepository.findOne({
@@ -22,7 +22,7 @@ export class MembershipService {
 
   async getMyPaymentHistory(user: any) {
     return await this.paymentHistoryRepository.find({
-      where: { user_id: user.id },
+      where: { user: { id: user.id } },
       relations: ['membership'],
     });
   }

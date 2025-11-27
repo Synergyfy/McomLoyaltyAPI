@@ -214,4 +214,38 @@ export class MailService {
       `,
     });
   }
+  async sendWishlistCampaignEmail(email: string, campaignName: string, businessName: string, itemName: string, ctaLink: string) {
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `Good News! A Campaign for ${itemName} is Here!`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #ea580c; margin: 0; font-size: 28px; font-weight: 700;">Wishlist Alert!</h2>
+            <p style="color: #666; margin-top: 10px; font-size: 16px;">Something you wanted is now part of a campaign</p>
+          </div>
+          
+          <div style="color: #333333; font-size: 16px; line-height: 1.6;">
+            <p>Hello,</p>
+            <p>Great news! <strong>${businessName}</strong> has launched a new campaign <strong>${campaignName}</strong> that features an item from your wishlist: <strong>${itemName}</strong>.</p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${ctaLink}" style="display: inline-block; background-color: #ea580c; color: #ffffff; font-size: 18px; font-weight: bold; padding: 16px 32px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+                View Campaign
+              </a>
+            </div>
+            
+            <p>Don't miss out on this opportunity to earn points and rewards!</p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="font-size: 14px; color: #888; text-align: center;">
+              Best regards,<br>
+              <strong>The Mcom Loyalty Team</strong>
+            </p>
+          </div>
+        </div>
+      `,
+    });
+  }
 }
