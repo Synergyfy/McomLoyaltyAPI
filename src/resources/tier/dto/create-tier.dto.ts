@@ -145,6 +145,9 @@ export class CreateTierDto {
           maxRewardsPerCampaign: 5,
           monthlyPointsAllowance: 2000,
         },
+        monthly_price: 59.99,
+        annual_price: 600.00,
+        stripe_monthly_price_id: 'price_pro_monthly',
       },
       enableProPlus: true,
       pro_plus: {
@@ -154,6 +157,9 @@ export class CreateTierDto {
           maxRewardsPerCampaign: 10,
           monthlyPointsAllowance: 5000,
         },
+        monthly_price: 99.99,
+        annual_price: 1000.00,
+        stripe_monthly_price_id: 'price_pro_plus_monthly',
       },
     },
   })

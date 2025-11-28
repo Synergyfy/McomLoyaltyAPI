@@ -11,6 +11,8 @@ The configuration controls three main areas:
 2.  **Feature Flags**: Boolean toggles for specific features (e.g., Access to CRM).
 3.  **Progress Bonuses**: Dynamic limit increases based on the business's progression level (e.g., "Active" or "Trusted" status).
 
+Additionally, tiers can now support **Pro** and **Pro Plus** variants, allowing for even more granular control within a single tier.
+
 ---
 
 ## The Configuration Object
@@ -21,6 +23,7 @@ The `configuration` JSON object must adhere to the following structure:
 {
   "quotas": {
     "maxActiveCampaigns": number,       // -1 for unlimited
+    "maxActiveRewards": number,         // -1 for unlimited
     "maxRewardsPerCampaign": number,
     "monthlyPointsAllowance": number
   },
@@ -34,6 +37,18 @@ The `configuration` JSON object must adhere to the following structure:
     // Optional: Add bonus quotas based on progression level
     "active_campaign_bonus": number,
     "trusted_campaign_bonus": number
+  },
+  "enablePro": boolean,                 // Optional: Enable Pro variant
+  "enableProPlus": boolean,             // Optional: Enable Pro Plus variant
+  "pro": {                              // Optional: Overrides for Pro variant
+    "quotas": { ... },
+    "featureFlags": { ... },
+    "progressBonuses": { ... }
+  },
+  "pro_plus": {                         // Optional: Overrides for Pro Plus variant
+    "quotas": { ... },
+    "featureFlags": { ... },
+    "progressBonuses": { ... }
   }
 }
 ```
@@ -44,6 +59,7 @@ The `configuration` JSON object must adhere to the following structure:
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `maxActiveCampaigns` | `number` | The maximum number of campaigns a business can have active simultaneously. Set to `-1` for unlimited. |
+| `maxActiveRewards` | `number` | The maximum number of active rewards a business can have. Set to `-1` for unlimited. |
 | `maxRewardsPerCampaign` | `number` | The maximum number of rewards that can be attached to a single campaign. |
 | `monthlyPointsAllowance` | `number` | The amount of system points credited to the business each month (if applicable). |
 
@@ -66,6 +82,17 @@ If `maxActiveCampaigns` is `5`, and you set `"trusted_campaign_bonus": 2`:
 *   A "Starter" business gets **5** campaigns.
 *   A "Trusted" business gets **5 + 2 = 7** campaigns.
 
+#### 4. Pro and Pro Plus Variants (Optional)
+You can define overrides for "Pro" and "Pro Plus" variants of the tier.
+*   **enablePro / enableProPlus**: Set to `true` to enable these variants.
+*   **pro / pro_plus**: A partial configuration object. Any values defined here will **override** the base configuration for users with that variant. Values not defined here will fall back to the base configuration.
+
+**Pricing for Variants**:
+You can also set specific prices for these variants within the `pro` or `pro_plus` object:
+*   `monthly_price`, `annual_price`, `quaterly_price`
+*   `stripe_monthly_price_id`, `stripe_annual_price_id`, etc.
+
+
 ---
 
 ## API Usage Examples
@@ -87,6 +114,7 @@ This tier is for entry-level businesses. They have low limits and cannot create 
   "configuration": {
     "quotas": {
       "maxActiveCampaigns": 5,
+      "maxActiveRewards": 10,
       "maxRewardsPerCampaign": 1,
       "monthlyPointsAllowance": 500
     },
@@ -103,8 +131,8 @@ This tier is for entry-level businesses. They have low limits and cannot create 
 }
 ```
 
-### 2. Creating a "Gold" Tier (Power Users)
-This tier offers high limits, full feature access, and rewards for progression.
+### 2. Creating a "Gold" Tier with Pro Options
+This tier offers high limits, but allows for "Pro" users to have even more.
 
 **Endpoint**: `POST /tiers`
 
@@ -120,6 +148,7 @@ This tier offers high limits, full feature access, and rewards for progression.
   "configuration": {
     "quotas": {
       "maxActiveCampaigns": 50,
+      "maxActiveRewards": 100,
       "maxRewardsPerCampaign": 5,
       "monthlyPointsAllowance": 5000
     },
@@ -129,10 +158,14 @@ This tier offers high limits, full feature access, and rewards for progression.
       "hasAccessToAdvancedAnalytics": true,
       "hasAccessToCRM": true
     },
-    "progressBonuses": {
-      "active_campaign_bonus": 5,
-      "trusted_campaign_bonus": 10,
-      "partner_campaign_bonus": 20
+    "enablePro": true,
+    "pro": {
+        "quotas": {
+            "maxActiveCampaigns": -1, // Unlimited for Pro
+            "monthlyPointsAllowance": 10000
+        },
+        "monthly_price": 149.99,
+        "stripe_monthly_price_id": "price_gold_pro_monthly"
     }
   }
 }
@@ -149,6 +182,7 @@ You can modify the configuration of an existing tier at any time. The changes ta
   "configuration": {
     "quotas": {
       "maxActiveCampaigns": 10,  // Increased from 5
+      "maxActiveRewards": 20,
       "maxRewardsPerCampaign": 2,
       "monthlyPointsAllowance": 1000
     },
@@ -168,12 +202,16 @@ You can modify the configuration of an existing tier at any time. The changes ta
 
 The system calculates the **Effective Limit** dynamically whenever a user attempts an action (like creating a campaign).
 
+1.  **Check Variant**: If the user has a `pro` or `pro_plus` variant, the system merges the specific variant configuration on top of the base configuration.
+2.  **Apply Bonuses**: The system adds any applicable progress bonuses to the quotas.
+
 **Formula**:
-> `Effective Limit` = `Tier Base Limit` + `Progress Level Bonus`
+> `Effective Limit` = (`Tier Base Limit` OR `Variant Limit`) + `Progress Level Bonus`
 
 **Scenario**:
-*   **Tier**: Bronze (Base Limit: 5)
-*   **User Level**: Active (Bonus: +2 defined in config)
-*   **Result**: The user can create up to **7** campaigns.
+*   **Tier**: Gold (Base Limit: 50)
+*   **Variant**: Pro (Limit Override: Unlimited/-1)
+*   **User Level**: Active (Bonus: +5)
+*   **Result**: The user has **Unlimited** campaigns.
 
-If the user tries to create an 8th campaign, the API will return a `403 Forbidden` error with a message explaining the limit.
+If the user tries to exceed their effective limit, the API will return a `403 Forbidden` error with a message explaining the limit.
