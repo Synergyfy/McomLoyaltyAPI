@@ -8,13 +8,15 @@ import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { CapabilityService, ActionType } from '../../capability/capability.service';
+import { CapabilitiesGuard } from '../../capability/guards/capabilities.guard';
+import { CheckPermission } from '../../capability/decorators/check-permission.decorator';
+import { UseGuards } from '@nestjs/common';
 
 @ApiTags('rewards')
 @Controller('rewards')
 export class RewardsController {
   constructor(
     private readonly rewardsService: RewardsService,
-    private readonly capabilityService: CapabilityService,
   ) { }
 
   // Admin endpoints
@@ -105,12 +107,13 @@ export class RewardsController {
   @Roles(Role.Business)
   @ApiBearerAuth()
   @Post('business/rewards/:rewardId')
+  @UseGuards(CapabilitiesGuard)
+  @CheckPermission(ActionType.ADD_REWARD_TO_BUSINESS)
   async addRewardToBusiness(
     @Param('rewardId') rewardId: string,
     @Body() createBusinessRewardDto: CreateBusinessRewardDto,
     @CurrentUser() user: any,
   ) {
-    await this.capabilityService.checkPermission(user.id, ActionType.ADD_REWARD_TO_BUSINESS);
     return this.rewardsService.addRewardToBusiness(rewardId, user.id, createBusinessRewardDto);
   }
 

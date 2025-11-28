@@ -486,14 +486,15 @@ export class CampaignService {
     }
   }
 
-  async findOngoingCampaigns(): Promise<Campaign[]> {
+  async findOngoingCampaigns(): Promise<BusinessCampaign[]> {
     const now = new Date();
-    return this.campaignRepository.find({
+    return this.businessCampaignRepository.find({
       where: {
         start_date: LessThanOrEqual(now),
         end_date: MoreThanOrEqual(now),
         disabled: false,
       },
+      relations: ['business'],
     });
   }
 
