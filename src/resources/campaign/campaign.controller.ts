@@ -39,342 +39,264 @@ import {
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
 import { CapabilityService, ActionType } from '../capability/capability.service';
+import { CheckPermission } from '../capability/decorators/check-permission.decorator';
+import { CapabilitiesGuard } from '../capability/guards/capabilities.guard';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
 export class CampaignController {
   constructor(
-    private readonly campaignService: CampaignService,
-    private readonly capabilityService: CapabilityService,
-  ) { }
-
-  @Post()
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({
-    summary: 'Create a new campaign',
-    description: 'Accessible by Admins and Business Owners.',
-  })
-  @ApiExtraModels(CreateCampaignDto, CreateCampaignAdminDto)
-  @ApiBody({
-    description: 'Payload for creating a new campaign',
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(CreateCampaignDto) },
-        { $ref: getSchemaPath(CreateCampaignAdminDto) },
-      ],
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'The campaign has been successfully created.',
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(Campaign) },
-        { $ref: getSchemaPath(BusinessCampaign) },
-      ],
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  async create(
-    @Body() createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
-    @CurrentUser() currentUser: Business | Admin,
+    @UseGuards(RolesGuard)
+    @Roles(Role.Admin, Role.Business)
+    @ApiOperation({
+      summary: 'Create a new campaign from a wishlist aggregate',
+      description: 'Accessible by Admins and Business Owners.',
+    })
+    @ApiBody({ type: CreateCampaignFromWishlistDto })
+    @ApiResponse({
+      status: 201,
+      description: 'The campaign has been successfully created.',
+      schema: {
+        oneOf: [
+          { $ref: getSchemaPath(Campaign) },
+          { $ref: getSchemaPath(BusinessCampaign) },
+        ],
+      },
+    })
+    @ApiResponse({ status: 401, description: 'Unauthorized.' })
+    @ApiResponse({ status: 404, description: 'Wishlist aggregate not found.' })
+    createFromWishlist(
+      @Body() createCampaignDto: CreateCampaignFromWishlistDto,
+        @CurrentUser() currentUser: Business | Admin,
   ) {
-    if ((currentUser as any).role === Role.Business) {
-      const isFromScratch = true; // Creating via this endpoint implies from scratch
-      const rewardCount = (createCampaignDto as CreateCampaignDto).business_reward_ids?.length || 0;
-      await this.capabilityService.checkPermission(currentUser.id, ActionType.CREATE_CAMPAIGN, {
-        isFromScratch,
-        rewardCount,
-      });
-    }
-    return this.campaignService.create(createCampaignDto, currentUser);
-  }
+  return this.campaignService.createFromWishlist(createCampaignDto, currentUser);
+}
 
-  @Post('from-wishlist')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({
-    summary: 'Create a new campaign from a wishlist aggregate',
-    description: 'Accessible by Admins and Business Owners.',
-  })
-  @ApiBody({ type: CreateCampaignFromWishlistDto })
-  @ApiResponse({
-    status: 201,
-    description: 'The campaign has been successfully created.',
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(Campaign) },
-        { $ref: getSchemaPath(BusinessCampaign) },
-      ],
-    },
-  })
+@Get()
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Admin, Role.Business)
+@ApiOperation({
+  summary: 'Get all campaigns for the current user',
+  description:
+    'Admins get all campaigns, Business Owners get their own campaigns.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns a paginated list of campaigns.',
+})
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+findAll(
+  @CurrentUser() currentUser: Business | Admin,
+  @Query() paginationDto: PaginationDto,
+) {
+  return this.campaignService.findAll(currentUser, paginationDto);
+}
+
+@Get('business/:businessId')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Admin)
+@ApiOperation({
+  summary: 'Get all campaigns for a specific business',
+  description: 'Accessible by Admins.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns a paginated list of campaigns for the business.',
+})
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+findAllByBusiness(
+  @Param('businessId', ParseUUIDPipe) businessId: string,
+  @Query() paginationDto: PaginationDto,
+) {
+  return this.campaignService.findAllByBusiness(businessId, paginationDto);
+}
+
+@Get('admin')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Business)
+@ApiOperation({
+  summary: 'Get all campaigns created by admins',
+  description: 'Accessible by Business Owners.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns a paginated list of admin-created campaigns.',
+})
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+findAllByAdmin(@Query() paginationDto: PaginationDto) {
+  return this.campaignService.findAllByAdmin(paginationDto);
+}
+
+@Get('admins')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Admin)
+@ApiOperation({
+  summary: 'Get all campaigns created by other admins',
+  description: 'Accessible by Admins only.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns a paginated list of admin-created campaigns.',
+})
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+findAllByOtherAdmins(
+  @CurrentUser() currentUser: Admin,
+  @Query() paginationDto: PaginationDto,
+) {
+  return this.campaignService.findAllByOtherAdmins(
+    currentUser,
+    paginationDto,
+  );
+}
+
+@Get('ongoing')
+@Public()
+@ApiOperation({ summary: 'Get all ongoing campaigns' })
+@ApiResponse({
+  status: 200,
+  description: 'Returns a list of ongoing campaigns.',
+})
+findOngoingCampaigns() {
+  return this.campaignService.findOngoingCampaigns();
+}
+
+@Get('staff/ongoing')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Staff, Role.Business)
+@ApiOperation({
+  summary: 'Get all ongoing campaigns for the staff\'s business or the business itself',
+  description: 'Accessible by Staff and Business Owners.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns a paginated list of ongoing campaigns.',
+})
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+findOngoingForStaff(
+  @CurrentUser() currentUser: User,
+  @Query() paginationDto: PaginationDto,
+) {
+  return this.campaignService.findOngoingForStaff(currentUser, paginationDto);
+}
+
+@Get('participant/search')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Staff, Role.Business)
+@ApiOperation({
+  summary: 'Search for a participant and get their campaigns for the business',
+  description:
+    'Accessible by Staff and Business. Search by email or unique code.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns a list of campaigns the participant is in.',
+  type: [Campaign],
+})
+@ApiResponse({ status: 404, description: 'Participant not found.' })
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+findParticipantCampaignsForBusiness(
+  @CurrentUser() currentUser: User,
+  @Query('query') query: string,
+) {
+  return this.campaignService.findParticipantCampaignsForBusiness(
+    currentUser,
+    query,
+  );
+}
+
+@Get('all/public')
+@Public()
+@ApiOperation({ summary: 'Get all public campaigns' })
+@ApiResponse({
+  status: 200,
+  description: 'Returns a paginated list of public campaigns.',
+})
+findAllPublic(@Query() query: any) {
+  return this.campaignService.findAllPublic(query);
+}
+
+@Get('public/business-campaign/:identifier')
+@Public()
+@ApiOperation({ summary: 'Get a public business campaign by unique code or ID' })
+@ApiExtraModels(BusinessCampaign, Campaign)
+@ApiResponse({
+  status: 200,
+  description: 'Returns the campaign details.',
+  schema: {
+    oneOf: [
+      { $ref: getSchemaPath(BusinessCampaign) },
+      { $ref: getSchemaPath(Campaign) },
+    ]
+  }
+})
+@ApiResponse({ status: 404, description: 'Campaign not found.' })
+@ApiResponse({ status: 400, description: 'Campaign has expired or is disabled.' })
+findOnePublicBusinessCampaign(@Param('identifier') identifier: string) {
+  return this.campaignService.findPublicCampaign(identifier);
+}
+
+@Get('analytics')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Business)
+@ApiOperation({
+  summary: 'Get campaign analytics for the business.',
+  description: 'Accessible by Business Owners. Can be filtered by campaign.',
+})
+@ApiResponse({
+  status: 200,
+  description: 'Returns the campaign analytics.',
+})
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+getAnalytics(
+  @CurrentUser() currentUser: User,
+  @Query() query: CampaignAnalyticsQueryDto,
+) {
+  return this.campaignService.getAnalytics(currentUser, query);
+}
+
+@Get(':id')
+@Public()
+@ApiOperation({ summary: 'Public: Get a campaign by ID' })
+@ApiResponse({ status: 200, description: 'Returns the campaign.' })
+@ApiResponse({ status: 404, description: 'Campaign not found.' })
+findOne(
+  @Param('id', ParseUUIDPipe) id: string,
+  @CurrentUser() currentUser: Business | Admin,
+) {
+  return this.campaignService.findOne(id, currentUser);
+}
+
+@Patch(':id')
+@ApiBearerAuth()
+@UseGuards(RolesGuard)
+@Roles(Role.Admin, Role.Business)
+@ApiOperation({ summary: 'Update a campaign' })
+@ApiBody({
+  description: 'Payload for updating a campaign',
+  type: UpdateCampaignDto,
+})
+@ApiResponse({
+@ApiResponse({
+  status: 200,
+  description: 'The campaign has been successfully deleted.',
+})
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Wishlist aggregate not found.' })
-  createFromWishlist(
-    @Body() createCampaignDto: CreateCampaignFromWishlistDto,
-    @CurrentUser() currentUser: Business | Admin,
-  ) {
-    return this.campaignService.createFromWishlist(createCampaignDto, currentUser);
-  }
-
-  @Get()
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({
-    summary: 'Get all campaigns for the current user',
-    description:
-      'Admins get all campaigns, Business Owners get their own campaigns.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a paginated list of campaigns.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  findAll(
-    @CurrentUser() currentUser: Business | Admin,
-    @Query() paginationDto: PaginationDto,
-  ) {
-    return this.campaignService.findAll(currentUser, paginationDto);
-  }
-
-  @Get('business/:businessId')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin)
-  @ApiOperation({
-    summary: 'Get all campaigns for a specific business',
-    description: 'Accessible by Admins.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a paginated list of campaigns for the business.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  findAllByBusiness(
-    @Param('businessId', ParseUUIDPipe) businessId: string,
-    @Query() paginationDto: PaginationDto,
-  ) {
-    return this.campaignService.findAllByBusiness(businessId, paginationDto);
-  }
-
-  @Get('admin')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Business)
-  @ApiOperation({
-    summary: 'Get all campaigns created by admins',
-    description: 'Accessible by Business Owners.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a paginated list of admin-created campaigns.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  findAllByAdmin(@Query() paginationDto: PaginationDto) {
-    return this.campaignService.findAllByAdmin(paginationDto);
-  }
-
-  @Get('admins')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin)
-  @ApiOperation({
-    summary: 'Get all campaigns created by other admins',
-    description: 'Accessible by Admins only.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a paginated list of admin-created campaigns.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  findAllByOtherAdmins(
-    @CurrentUser() currentUser: Admin,
-    @Query() paginationDto: PaginationDto,
-  ) {
-    return this.campaignService.findAllByOtherAdmins(
-      currentUser,
-      paginationDto,
-    );
-  }
-
-  @Get('ongoing')
-  @Public()
-  @ApiOperation({ summary: 'Get all ongoing campaigns' })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a list of ongoing campaigns.',
-  })
-  findOngoingCampaigns() {
-    return this.campaignService.findOngoingCampaigns();
-  }
-
-  @Get('staff/ongoing')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Staff, Role.Business)
-  @ApiOperation({
-    summary: 'Get all ongoing campaigns for the staff\'s business or the business itself',
-    description: 'Accessible by Staff and Business Owners.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a paginated list of ongoing campaigns.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  findOngoingForStaff(
-    @CurrentUser() currentUser: User,
-    @Query() paginationDto: PaginationDto,
-  ) {
-    return this.campaignService.findOngoingForStaff(currentUser, paginationDto);
-  }
-
-  @Get('participant/search')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Staff, Role.Business)
-  @ApiOperation({
-    summary: 'Search for a participant and get their campaigns for the business',
-    description:
-      'Accessible by Staff and Business. Search by email or unique code.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a list of campaigns the participant is in.',
-    type: [Campaign],
-  })
-  @ApiResponse({ status: 404, description: 'Participant not found.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  findParticipantCampaignsForBusiness(
-    @CurrentUser() currentUser: User,
-    @Query('query') query: string,
-  ) {
-    return this.campaignService.findParticipantCampaignsForBusiness(
-      currentUser,
-      query,
-    );
-  }
-
-  @Get('all/public')
-  @Public()
-  @ApiOperation({ summary: 'Get all public campaigns' })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns a paginated list of public campaigns.',
-  })
-  findAllPublic(@Query() query: any) {
-    return this.campaignService.findAllPublic(query);
-  }
-
-  @Get('public/business-campaign/:identifier')
-  @Public()
-  @ApiOperation({ summary: 'Get a public business campaign by unique code or ID' })
-  @ApiExtraModels(BusinessCampaign, Campaign)
-  @ApiResponse({
-    status: 200,
-    description: 'Returns the campaign details.',
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(BusinessCampaign) },
-        { $ref: getSchemaPath(Campaign) },
-      ]
-    }
-  })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
-  @ApiResponse({ status: 400, description: 'Campaign has expired or is disabled.' })
-  findOnePublicBusinessCampaign(@Param('identifier') identifier: string) {
-    return this.campaignService.findPublicCampaign(identifier);
-  }
-
-  @Get('analytics')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Business)
-  @ApiOperation({
-    summary: 'Get campaign analytics for the business.',
-    description: 'Accessible by Business Owners. Can be filtered by campaign.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns the campaign analytics.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  getAnalytics(
-    @CurrentUser() currentUser: User,
-    @Query() query: CampaignAnalyticsQueryDto,
-  ) {
-    return this.campaignService.getAnalytics(currentUser, query);
-  }
-
-  @Get(':id')
-  @Public()
-  @ApiOperation({ summary: 'Public: Get a campaign by ID' })
-  @ApiResponse({ status: 200, description: 'Returns the campaign.' })
-  @ApiResponse({ status: 404, description: 'Campaign not found.' })
-  findOne(
+remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() currentUser: Business | Admin,
   ) {
-    return this.campaignService.findOne(id, currentUser);
-  }
+  return this.campaignService.remove(id, currentUser);
+}
 
-  @Patch(':id')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({ summary: 'Update a campaign' })
-  @ApiBody({
-    description: 'Payload for updating a campaign',
-    type: UpdateCampaignDto,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'The campaign has been successfully updated.',
-    schema: {
-      oneOf: [
-        { $ref: getSchemaPath(Campaign) },
-        { $ref: getSchemaPath(BusinessCampaign) },
-      ],
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Campaign not found.' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateCampaignDto: UpdateCampaignDto,
-    @CurrentUser() currentUser: Business | Admin,
-  ) {
-    if ((currentUser as any).role === Role.Business && updateCampaignDto.business_reward_ids) {
-      const rewardCount = updateCampaignDto.business_reward_ids.length;
-      await this.capabilityService.checkPermission(currentUser.id, ActionType.UPDATE_CAMPAIGN, {
-        rewardCount,
-      });
-    }
-    return this.campaignService.update(id, updateCampaignDto, currentUser);
-  }
-
-  @Delete(':id')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({ summary: 'Delete a campaign' })
-  @ApiResponse({
-    status: 200,
-    description: 'The campaign has been successfully deleted.',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'Campaign not found.' })
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: Business | Admin,
-  ) {
-    return this.campaignService.remove(id, currentUser);
-  }
-
-  @Patch(':id/toggle')
+@Patch(':id/toggle')
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(Role.Admin, Role.Business)
@@ -391,10 +313,10 @@ export class CampaignController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
-  toggleCampaignStatus(
+toggleCampaignStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() currentUser: Business | Admin,
   ) {
-    return this.campaignService.toggleCampaignStatus(id, currentUser);
-  }
+  return this.campaignService.toggleCampaignStatus(id, currentUser);
+}
 }

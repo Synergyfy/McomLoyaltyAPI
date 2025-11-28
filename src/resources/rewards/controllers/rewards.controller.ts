@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Put, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateRewardDto } from '../dto/create-reward.dto';
 import { RewardsService } from '../services/rewards.service';
@@ -8,6 +8,8 @@ import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { CapabilityService, ActionType } from '../../capability/capability.service';
+import { CheckPermission } from '../../capability/decorators/check-permission.decorator';
+import { CapabilitiesGuard } from '../../capability/guards/capabilities.guard';
 
 @ApiTags('rewards')
 @Controller('rewards')
@@ -103,6 +105,8 @@ export class RewardsController {
   @ApiOperation({ summary: 'Business: Add a reward to business' })
   @ApiResponse({ status: 201, description: 'The reward has been successfully added to the business.' })
   @Roles(Role.Business)
+  @UseGuards(CapabilitiesGuard)
+  @CheckPermission(ActionType.ADD_REWARD_TO_BUSINESS)
   @ApiBearerAuth()
   @Post('business/rewards/:rewardId')
   async addRewardToBusiness(
@@ -110,7 +114,6 @@ export class RewardsController {
     @Body() createBusinessRewardDto: CreateBusinessRewardDto,
     @CurrentUser() user: any,
   ) {
-    await this.capabilityService.checkPermission(user.id, ActionType.ADD_REWARD_TO_BUSINESS);
     return this.rewardsService.addRewardToBusiness(rewardId, user.id, createBusinessRewardDto);
   }
 
