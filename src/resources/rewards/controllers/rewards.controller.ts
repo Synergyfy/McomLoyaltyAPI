@@ -5,6 +5,7 @@ import { RewardsService } from '../services/rewards.service';
 import { UpdateRewardDto } from '../dto/update-reward.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
+import { UpdateBusinessRewardDto } from '../dto/update-business-reward.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { CapabilityService, ActionType } from '../../capability/capability.service';
@@ -124,5 +125,20 @@ export class RewardsController {
   @Delete('business/rewards/:rewardId')
   async removeRewardFromBusiness(@Param('rewardId') rewardId: string, @CurrentUser() user: any) {
     return this.rewardsService.removeRewardFromBusiness(rewardId, user.id);
+  }
+
+  @ApiOperation({ summary: 'Business: Update a reward' })
+  @ApiResponse({ status: 200, description: 'The reward has been successfully updated.' })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Put('business/rewards/:id')
+  @UseGuards(CapabilitiesGuard)
+  @CheckPermission(ActionType.UPDATE_REWARD)
+  async updateBusinessReward(
+    @Param('id') id: string,
+    @Body() updateBusinessRewardDto: UpdateBusinessRewardDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.rewardsService.updateBusinessReward(user.id, id, updateBusinessRewardDto);
   }
 }

@@ -10,6 +10,7 @@ export interface TierConfig {
         canEditAdminTemplates: boolean;
         hasAccessToAdvancedAnalytics: boolean;
         hasAccessToCRM: boolean;
+        canUpdateReward: boolean;
     };
     progressBonuses?: {
         [key: string]: number; // e.g., "pro_plus_campaign_bonus": 1

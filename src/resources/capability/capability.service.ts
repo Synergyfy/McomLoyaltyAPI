@@ -14,6 +14,7 @@ export enum ActionType {
     EDIT_TEMPLATE = 'EDIT_TEMPLATE',
     UPDATE_CAMPAIGN = 'UPDATE_CAMPAIGN',
     ADD_REWARD_TO_BUSINESS = 'ADD_REWARD_TO_BUSINESS',
+    UPDATE_REWARD = 'UPDATE_REWARD',
 }
 
 @Injectable()
@@ -93,6 +94,12 @@ export class CapabilityService {
             case ActionType.EDIT_TEMPLATE:
                 if (!effectiveConfig.featureFlags.canEditAdminTemplates) {
                     throw new ForbiddenException('Your tier does not allow editing admin templates.');
+                }
+                break;
+
+            case ActionType.UPDATE_REWARD:
+                if (!effectiveConfig.featureFlags.canUpdateReward) {
+                    throw new ForbiddenException('Your tier does not allow updating rewards.');
                 }
                 break;
 
