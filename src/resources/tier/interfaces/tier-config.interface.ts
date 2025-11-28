@@ -14,4 +14,8 @@ export interface TierConfig {
     progressBonuses?: {
         [key: string]: number; // e.g., "pro_plus_campaign_bonus": 1
     };
+    enablePro?: boolean;
+    enableProPlus?: boolean;
+    pro?: Partial<TierConfig>;
+    pro_plus?: Partial<TierConfig>;
 }

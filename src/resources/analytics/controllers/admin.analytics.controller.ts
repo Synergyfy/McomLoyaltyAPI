@@ -2,9 +2,9 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 
-import { Role } from 'src/common/role.enum';
-import { Roles } from 'src/common/decorators/roles.decorator';
-import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Role } from '../../../common/role.enum';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 import {
   SystemOverviewDto,
   TopBusinessDto,
@@ -16,7 +16,7 @@ import {
 } from '../dto/growth-activity-chart.dto';
 import { AdminAnalyticsService } from '../services/admin.analytics.service';
 import { PointLogResponseDto } from '../dto/point-log.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 @ApiTags('Admin Analytics')
 @Controller('admin/analytics')
@@ -24,7 +24,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 @Roles(Role.Admin)
 @ApiBearerAuth()
 export class AdminAnalyticsController {
-  constructor(private readonly adminAnalyticsService: AdminAnalyticsService) {}
+  constructor(private readonly adminAnalyticsService: AdminAnalyticsService) { }
 
   @Get('system-overview')
   @ApiOperation({

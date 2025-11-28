@@ -137,6 +137,24 @@ export class CreateTierDto {
       progressBonuses: {
         pro_plus_campaign_bonus: 1,
       },
+      enablePro: true,
+      pro: {
+        quotas: {
+          maxActiveCampaigns: 10,
+          maxActiveRewards: 20,
+          maxRewardsPerCampaign: 5,
+          monthlyPointsAllowance: 2000,
+        },
+      },
+      enableProPlus: true,
+      pro_plus: {
+        quotas: {
+          maxActiveCampaigns: -1,
+          maxActiveRewards: -1,
+          maxRewardsPerCampaign: 10,
+          monthlyPointsAllowance: 5000,
+        },
+      },
     },
   })
   @IsOptional()
