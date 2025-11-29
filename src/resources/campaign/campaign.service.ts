@@ -3,6 +3,8 @@ import {
   NotFoundException,
   UnauthorizedException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -41,6 +43,7 @@ import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
 import { MailService } from 'src/mail/mail.service';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
 import { Tier } from '../tier/entities/tier.entity';
+import { TierProgressionService } from '../tier-progression/tier-progression.service';
 
 @Injectable()
 export class CampaignService {
@@ -68,6 +71,8 @@ export class CampaignService {
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
     private readonly mailService: MailService,
+    @Inject(forwardRef(() => TierProgressionService))
+    private readonly tierProgressionService: TierProgressionService,
   ) { }
 
   async create(
@@ -131,7 +136,13 @@ export class CampaignService {
         rewards = businessRewards.map((br) => br.reward);
       }
       businessCampaign.rewards = rewards;
-      return this.businessCampaignRepository.save(businessCampaign);
+      businessCampaign.rewards = rewards;
+      const savedCampaign = await this.businessCampaignRepository.save(businessCampaign);
+
+      // Check for promotion
+      await this.tierProgressionService.checkAndPromote(currentUser.id);
+
+      return savedCampaign;
     }
   }
 
@@ -210,6 +221,9 @@ export class CampaignService {
       }
 
       createdCampaign = await this.businessCampaignRepository.save(businessCampaign);
+
+      // Check for promotion
+      await this.tierProgressionService.checkAndPromote(currentUser.id);
     }
 
     // Send emails to participants
@@ -1059,5 +1073,15 @@ export class CampaignService {
     return await this.businessCampaignRepository.count({
       where: { business: { id: userId } },
     });
+  }
+
+  async countTotalParticipantJoins(businessId: string): Promise<number> {
+    const result = await this.businessCampaignRepository.createQueryBuilder('bc')
+      .innerJoin('bc.participantCampaignBalances', 'pcb')
+      .where('bc.business_id = :businessId', { businessId })
+      .select('COUNT(pcb.id)', 'count')
+      .getRawOne();
+
+    return parseInt(result.count, 10) || 0;
   }
 }

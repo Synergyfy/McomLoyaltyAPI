@@ -18,6 +18,7 @@ import {
 import { DataSource } from 'typeorm';
 import { MailService } from '../../../mail/mail.service';
 import { CapabilityService, ActionType } from '../../capability/capability.service';
+import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 
 @Injectable()
 export class PointEarningService {
@@ -39,6 +40,7 @@ export class PointEarningService {
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
     private readonly capabilityService: CapabilityService,
+    private readonly tierProgressionService: TierProgressionService,
   ) { }
 
   // Helper to find performer (Staff or Business)
@@ -266,7 +268,31 @@ export class PointEarningService {
     if (transactionManager) {
       return execute(transactionManager);
     } else {
-      return await this.dataSource.transaction(execute);
+      const result = await this.dataSource.transaction(execute);
+
+      // Check for promotion (fire and forget or await?)
+      // We need businessId. We can get it from performerId if type is Business, or we need to look it up.
+      // Since 'execute' already looked it up, we could have returned it.
+      // But 'execute' returns Participant.
+      // Let's just look it up again or optimize later. 
+      // Actually, findPerformer is fast.
+      try {
+        let businessId = '';
+        if (performerType === 'Business') {
+          businessId = performerId;
+        } else {
+          const staff = await this.staffRepository.findOne({ where: { id: performerId }, relations: ['business'] });
+          if (staff && staff.business) businessId = staff.business.id;
+        }
+
+        if (businessId) {
+          await this.tierProgressionService.checkAndPromote(businessId);
+        }
+      } catch (e) {
+        console.error('Error checking promotion:', e);
+      }
+
+      return result;
     }
   }
 

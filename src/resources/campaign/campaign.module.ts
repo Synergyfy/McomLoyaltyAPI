@@ -17,6 +17,7 @@ import { Tier } from '../tier/entities/tier.entity';
 import { MailModule } from 'src/mail/mail.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { forwardRef } from '@nestjs/common';
+import { TierProgressionModule } from '../tier-progression/tier-progression.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { forwardRef } from '@nestjs/common';
     ]),
     MailModule,
     forwardRef(() => CapabilityModule),
+    forwardRef(() => TierProgressionModule),
   ],
   controllers: [CampaignController, BusinessCampaignController],
   providers: [CampaignService],

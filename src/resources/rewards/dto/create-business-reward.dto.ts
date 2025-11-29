@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsString, IsDateString, IsEnum, IsBoolean } from 'class-validator';
 import { RewardStatus } from '../enums/reward-status.enum';
+import { RewardType } from '../enums/reward-type.enum';
 
 export class CreateBusinessRewardDto {
   @ApiProperty({
@@ -65,6 +66,14 @@ export class CreateBusinessRewardDto {
   @IsEnum(RewardStatus)
   @IsOptional()
   status?: RewardStatus;
+
+  @ApiProperty({
+    description: 'The type of the reward',
+    enum: RewardType,
+    example: RewardType.VOUCHER,
+  })
+  @IsEnum(RewardType)
+  reward_type: RewardType;
 
   @ApiProperty({
     description: 'Whether the reward is disabled',

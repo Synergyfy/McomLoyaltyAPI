@@ -1,4 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Business } from '../business/entities/business.entity';
 import { MembershipModule } from '../membership/membership.module';
 import { CampaignModule } from '../campaign/campaign.module';
 import { RewardsModule } from '../rewards/rewards.module';
@@ -12,10 +14,12 @@ import { TierProgressionService } from './tier-progression.service';
     imports: [
         MembershipModule,
         forwardRef(() => CampaignModule),
-        RewardsModule,
-        ParticipantCampaignBalanceModule,
+        forwardRef(() => RewardsModule),
+        forwardRef(() => ParticipantCampaignBalanceModule),
         forwardRef(() => CapabilityModule),
-        AnalyticsModule
+        forwardRef(() => CapabilityModule),
+        AnalyticsModule,
+        TypeOrmModule.forFeature([Business]),
     ],
     providers: [TierProgressionService],
     exports: [TierProgressionService],

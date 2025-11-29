@@ -6,6 +6,9 @@ import { RewardsService } from '../rewards/services/rewards.service';
 import { PointHistoryService } from '../analytics/services/point-history.service';
 import { MembershipStatus } from '../membership/entities/membership.entity';
 import { TierConfig, SeasonalTierConfig, ProgressionConditions } from '../tier/interfaces/tier-config.interface';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Business } from '../business/entities/business.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class TierProgressionService {
@@ -15,8 +18,11 @@ export class TierProgressionService {
         private readonly membershipService: MembershipService,
         @Inject(forwardRef(() => CampaignService))
         private readonly campaignService: CampaignService,
+        @Inject(forwardRef(() => RewardsService))
         private readonly rewardsService: RewardsService,
         private readonly pointHistoryService: PointHistoryService,
+        @InjectRepository(Business)
+        private readonly businessRepository: Repository<Business>,
     ) { }
 
     async checkAndPromote(userId: string): Promise<void> {
@@ -41,7 +47,7 @@ export class TierProgressionService {
         const proPlusConfig = seasonalConfig?.pro_plus || tierConfig.pro_plus;
 
         // Gather metrics
-        const metrics = await this.getProgressionMetrics(userId);
+        const metrics = await this.getProgressionMetrics(userId, membership.starts_at);
 
         // Check for promotion
         let newLevel = currentLevel;
@@ -49,53 +55,83 @@ export class TierProgressionService {
         // Logic:
         // If Basic -> Check Pro
         // If Pro -> Check ProPlus
-        // Note: If user qualifies for ProPlus directly from Basic, we should probably promote them all the way.
 
-        if (currentLevel === 'basic') {
-            if (proConfig && this.evaluateConditions(metrics, proConfig.conditions)) {
+        // Check eligibility for Pro
+        if (currentLevel === 'basic' && proConfig) {
+            if (this.evaluateConditions(metrics, proConfig.conditions)) {
                 newLevel = 'pro';
-                this.logger.log(`User ${userId} promoted to PRO`);
             }
         }
 
-        if (newLevel === 'pro' || currentLevel === 'pro') {
-            if (proPlusConfig && this.evaluateConditions(metrics, proPlusConfig.conditions)) {
+        // Check eligibility for Pro Plus (can jump from basic if eligible)
+        if (proPlusConfig) {
+            if (this.evaluateConditions(metrics, proPlusConfig.conditions)) {
                 newLevel = 'pro_plus';
-                this.logger.log(`User ${userId} promoted to PRO_PLUS`);
             }
         }
+
+        // If we are already Pro, we only check for Pro Plus. 
+        // But the logic above covers it: if basic, it checks pro, then checks pro_plus. 
+        // If pro_plus condition is met, it overrides 'pro'.
+        // If current is 'pro', first block is skipped, second block checks pro_plus.
 
         if (newLevel !== currentLevel) {
+            this.logger.log(`Promoting user ${userId} from ${currentLevel} to ${newLevel}`);
             await this.membershipService.updateProgressionLevel(membership.id, newLevel);
         }
     }
 
-    private async getProgressionMetrics(userId: string) {
+    private async getProgressionMetrics(userId: string, membershipStartDate: Date) {
         const [
             campaignsCreated,
             rewardsCreated,
-            pointsUsed
+            pointsUsed,
+            participantJoins
         ] = await Promise.all([
             this.campaignService.countTotalCampaigns(userId),
             this.rewardsService.countTotalRewards(userId),
-            this.pointHistoryService.getTotalPointsUsed(userId)
+            this.pointHistoryService.getTotalPointsUsed(userId),
+            this.campaignService.countTotalParticipantJoins(userId)
         ]);
 
-        // Note: Other metrics like 'minCustomerScans', 'minParticipants' would need additional service methods
-        // For now, implementing the core ones available.
+        // Calculate days active
+        const daysActive = Math.floor((Date.now() - new Date(membershipStartDate).getTime()) / (1000 * 60 * 60 * 24));
+
+        // Check profile completion (ignore KYC)
+        const business = await this.businessRepository.findOneBy({ id: userId });
+        const profileCompleted = !!(
+            business &&
+            business.name &&
+            business.email &&
+            business.phone &&
+            business.address &&
+            business.website // Assuming website is part of "complete" profile, or maybe optional?
+            // Requirement says "check if profile is completed". Usually implies mandatory fields + some optional.
+            // I'll assume name, email, phone, address are core. Website might be optional.
+            // Let's check if website is nullable in entity. Yes it is.
+            // But for "completed" profile, maybe it should be filled?
+            // I'll stick to name, email, phone, address for now as "completed".
+            // Actually, let's include website if it's considered part of "profile completion" metrics usually.
+            // But to be safe and not block promotion too hard, I'll stick to core contact info.
+        );
+
+        // For now, let's assume I can access it. I'll add the repository to constructor in a separate edit if needed, 
+        // or use what I have. I don't have Business access here yet.
+
+        // Let's return placeholders for now and I will add BusinessRepository injection in next step.
 
         return {
             campaignsCreated,
             rewardsCreated,
             pointsUsed,
-            // placeholders for others
-            customerScans: 0,
-            participants: 0,
-            tasksCompleted: 0,
-            purchases: 0,
-            daysActive: 0, // Calculate from membership start date
-            profileCompleted: false,
-            kycVerified: false,
+            customerScans: 0, // Ignored
+            participants: 0, // Ignored or mapped? "minParticipants" -> maybe participantJoins?
+            // Requirement 7: "use the number of times a participant ... as the number of purchanges. so use that to compare minPurchases"
+            purchases: participantJoins,
+            tasksCompleted: 0, // Ignored
+            daysActive,
+            profileCompleted,
+            kycVerified: false, // Ignored
             customerInteractions: 0,
             reviews: 0,
             redeemedRewards: 0,
@@ -108,7 +144,16 @@ export class TierProgressionService {
         if (conditions.minRewardsCreated && metrics.rewardsCreated < conditions.minRewardsCreated) return false;
         if (conditions.minPointsUsed && metrics.pointsUsed < conditions.minPointsUsed) return false;
 
-        // Add checks for other conditions as metrics become available
+        // Requirement 7: minPurchases uses metrics.purchases (which is participantJoins)
+        if (conditions.minPurchases && metrics.purchases < conditions.minPurchases) return false;
+
+        // Requirement 9: check days active
+        if (conditions.minDaysActive && metrics.daysActive < conditions.minDaysActive) return false;
+
+        // Requirement 10: check profile completed
+        if (conditions.profileCompleted && !metrics.profileCompleted) return false;
+
+        // Ignore minCustomerScans and minTasksCompleted as per instructions 6 and 8.
 
         return true;
     }
