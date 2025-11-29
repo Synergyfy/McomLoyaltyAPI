@@ -42,8 +42,15 @@ export class Membership extends AbstractBaseEntity {
 
   @Column({
     type: 'enum',
-    enum: ['standard', 'pro', 'pro_plus'],
+    enum: ['standard', 'winter', 'summer', 'autumn', 'spring'],
     default: 'standard',
   })
-  variant: 'standard' | 'pro' | 'pro_plus';
+  variant: 'standard' | 'winter' | 'summer' | 'autumn' | 'spring';
+
+  @Column({
+    type: 'enum',
+    enum: ['basic', 'pro', 'pro_plus'],
+    default: 'basic',
+  })
+  progression_level: 'basic' | 'pro' | 'pro_plus';
 }

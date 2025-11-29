@@ -1,25 +1,82 @@
-export interface TierConfig {
-    quotas: {
-        maxActiveCampaigns: number; // -1 for unlimited
-        maxActiveRewards: number; // -1 for unlimited
-        maxRewardsPerCampaign: number;
-        monthlyPointsAllowance: number;
-        maxTeamMembers: number; // -1 for unlimited
+export interface TierQuotas {
+    maxActiveCampaigns: number; // -1 for unlimited
+    maxActiveRewards: number; // -1 for unlimited
+    maxRewardsPerCampaign: number;
+    monthlyPointsAllowance: number;
+    maxTeamMembers: number; // -1 for unlimited
+}
+
+export interface TierFeatureFlags {
+    canCreateCampaignFromScratch: boolean;
+    canEditAdminTemplates: boolean;
+    hasAccessToAdvancedAnalytics: boolean;
+    hasAccessToCRM: boolean;
+    canUpdateReward: boolean;
+}
+
+export interface ProgressionConditions {
+    minCampaignsCreated?: number;
+    minRewardsCreated?: number;
+    minPointsUsed?: number;
+    minCustomerScans?: number;
+    minParticipants?: number;
+    minTasksCompleted?: number;
+    minPurchases?: number;
+    minDaysActive?: number;
+    profileCompleted?: boolean;
+    kycVerified?: boolean;
+    minCustomerInteractions?: number;
+    minReviews?: number;
+    minRedeemedRewards?: number;
+    minRevenue?: number;
+}
+
+export interface ProgressionBenefits {
+    quotas?: Partial<TierQuotas>;
+    featureFlags?: Partial<TierFeatureFlags>;
+    bonusPoints?: number;
+    unlockNextTierPreview?: {
+        percentNextTierPoints?: number;
+        additionalTeamMembers?: number;
+        analytics?: boolean;
+        segmentation?: boolean;
     };
-    featureFlags: {
-        canCreateCampaignFromScratch: boolean;
-        canEditAdminTemplates: boolean;
-        hasAccessToAdvancedAnalytics: boolean;
-        hasAccessToCRM: boolean;
-        canUpdateReward: boolean;
-    };
+}
+
+export interface ProgressionLevelConfig {
+    conditions: ProgressionConditions;
+    benefits: ProgressionBenefits;
+}
+
+export interface SeasonalTierConfig {
+    price: number;
+    stripe_price_id?: string;
+    paypal_plan_id?: string;
+    quotas?: Partial<TierQuotas>;
+    featureFlags?: Partial<TierFeatureFlags>;
     progressBonuses?: {
-        [key: string]: number; // e.g., "pro_plus_campaign_bonus": 1
+        [key: string]: number;
     };
-    enablePro?: boolean;
-    enableProPlus?: boolean;
-    pro?: Partial<TierConfig>;
-    pro_plus?: Partial<TierConfig>;
+    pro?: ProgressionLevelConfig;
+    pro_plus?: ProgressionLevelConfig;
+}
+
+export interface TierConfig {
+    quotas: TierQuotas;
+    featureFlags: TierFeatureFlags;
+    progressBonuses?: {
+        [key: string]: number; // e.g., "active_campaign_bonus": 1
+    };
+
+    // Progression Levels
+    pro?: ProgressionLevelConfig;
+    pro_plus?: ProgressionLevelConfig;
+
+    // Seasonal Variants
+    winter?: SeasonalTierConfig;
+    summer?: SeasonalTierConfig;
+    autumn?: SeasonalTierConfig;
+    spring?: SeasonalTierConfig;
 
     // Pricing overrides for variants
     monthly_price?: number;

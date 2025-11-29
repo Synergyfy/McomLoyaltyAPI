@@ -11,7 +11,7 @@ The configuration controls three main areas:
 2.  **Feature Flags**: Boolean toggles for specific features (e.g., Access to CRM).
 3.  **Progress Bonuses**: Dynamic limit increases based on the business's progression level (e.g., "Active" or "Trusted" status).
 
-Additionally, tiers can now support **Pro** and **Pro Plus** variants, allowing for even more granular control within a single tier.
+Additionally, tiers can now support **Seasonal Variants** (Winter, Summer, Autumn, Spring), allowing for specific configurations and pricing for different seasons.
 
 ---
 
@@ -40,18 +40,19 @@ The `configuration` JSON object must adhere to the following structure:
     "active_campaign_bonus": number,
     "trusted_campaign_bonus": number
   },
-  "enablePro": boolean,                 // Optional: Enable Pro variant
-  "enableProPlus": boolean,             // Optional: Enable Pro Plus variant
-  "pro": {                              // Optional: Overrides for Pro variant
-    "quotas": { ... },
-    "featureFlags": { ... },
-    "progressBonuses": { ... }
+  
+  // Seasonal Variants (Optional)
+  "winter": {
+    "price": number,
+    "stripe_price_id": string,
+    "paypal_plan_id": string,
+    "quotas": { ... },          // Optional overrides
+    "featureFlags": { ... },    // Optional overrides
+    "progressBonuses": { ... }  // Optional overrides
   },
-  "pro_plus": {                         // Optional: Overrides for Pro Plus variant
-    "quotas": { ... },
-    "featureFlags": { ... },
-    "progressBonuses": { ... }
-  }
+  "summer": { ... },
+  "autumn": { ... },
+  "spring": { ... }
 }
 ```
 
@@ -86,16 +87,14 @@ If `maxActiveCampaigns` is `5`, and you set `"trusted_campaign_bonus": 2`:
 *   A "Starter" business gets **5** campaigns.
 *   A "Trusted" business gets **5 + 2 = 7** campaigns.
 
-#### 4. Pro and Pro Plus Variants (Optional)
-You can define overrides for "Pro" and "Pro Plus" variants of the tier.
-*   **enablePro / enableProPlus**: Set to `true` to enable these variants.
-*   **pro / pro_plus**: A partial configuration object. Any values defined here will **override** the base configuration for users with that variant. Values not defined here will fall back to the base configuration.
+#### 4. Seasonal Variants (Optional)
+You can define overrides for specific seasons: **Winter**, **Summer**, **Autumn**, and **Spring**.
+Each seasonal variant object (`winter`, `summer`, etc.) can contain:
 
-**Pricing for Variants**:
-You can also set specific prices for these variants within the `pro` or `pro_plus` object:
-*   `monthly_price`, `annual_price`, `quaterly_price`
-*   `stripe_monthly_price_id`, `stripe_annual_price_id`, etc.
-
+*   **price**: The specific price for this seasonal variant.
+*   **stripe_price_id**: The Stripe Price ID for this seasonal variant.
+*   **paypal_plan_id**: The PayPal Plan ID for this seasonal variant.
+*   **quotas / featureFlags / progressBonuses**: Partial configuration objects. Any values defined here will **override** the base configuration for users with that seasonal variant.
 
 ---
 
@@ -137,8 +136,8 @@ This tier is for entry-level businesses. They have low limits and cannot create 
 }
 ```
 
-### 2. Creating a "Gold" Tier with Pro Options
-This tier offers high limits, but allows for "Pro" users to have even more.
+### 2. Creating a "Gold" Tier with Seasonal Variants
+This tier offers high limits, but allows for specific seasonal configurations (e.g., a "Winter Special" with higher allowances).
 
 **Endpoint**: `POST /tiers`
 
@@ -166,14 +165,20 @@ This tier offers high limits, but allows for "Pro" users to have even more.
       "hasAccessToCRM": true,
       "canUpdateReward": true
     },
-    "enablePro": true,
-    "pro": {
+    "winter": {
+        "price": 149.99,
+        "stripe_price_id": "price_gold_winter_special",
         "quotas": {
-            "maxActiveCampaigns": -1, // Unlimited for Pro
+            "maxActiveCampaigns": -1, // Unlimited for Winter
             "monthlyPointsAllowance": 10000
-        },
-        "monthly_price": 149.99,
-        "stripe_monthly_price_id": "price_gold_pro_monthly"
+        }
+    },
+    "summer": {
+        "price": 89.99,
+        "stripe_price_id": "price_gold_summer_sale",
+        "quotas": {
+             "maxActiveCampaigns": 60
+        }
     }
   }
 }
@@ -212,15 +217,15 @@ You can modify the configuration of an existing tier at any time. The changes ta
 
 The system calculates the **Effective Limit** dynamically whenever a user attempts an action (like creating a campaign).
 
-1.  **Check Variant**: If the user has a `pro` or `pro_plus` variant, the system merges the specific variant configuration on top of the base configuration.
+1.  **Check Variant**: If the user has a seasonal variant (e.g., `winter`), the system merges the specific seasonal configuration on top of the base configuration.
 2.  **Apply Bonuses**: The system adds any applicable progress bonuses to the quotas.
 
 **Formula**:
-> `Effective Limit` = (`Tier Base Limit` OR `Variant Limit`) + `Progress Level Bonus`
+> `Effective Limit` = (`Tier Base Limit` OR `Seasonal Variant Limit`) + `Progress Level Bonus`
 
 **Scenario**:
 *   **Tier**: Gold (Base Limit: 50)
-*   **Variant**: Pro (Limit Override: Unlimited/-1)
+*   **Variant**: Winter (Limit Override: Unlimited/-1)
 *   **User Level**: Active (Bonus: +5)
 *   **Result**: The user has **Unlimited** campaigns.
 
