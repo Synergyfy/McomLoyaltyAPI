@@ -31,7 +31,8 @@ The `configuration` JSON object must adhere to the following structure:
     "canCreateCampaignFromScratch": boolean,
     "canEditAdminTemplates": boolean,
     "hasAccessToAdvancedAnalytics": boolean,
-    "hasAccessToCRM": boolean
+    "hasAccessToCRM": boolean,
+    "canUpdateReward": boolean
   },
   "progressBonuses": {
     // Optional: Add bonus quotas based on progression level
@@ -70,6 +71,7 @@ The `configuration` JSON object must adhere to the following structure:
 | `canEditAdminTemplates` | `boolean` | If `true`, the business can modify the details of a template. If `false`, the template is read-only. |
 | `hasAccessToAdvancedAnalytics` | `boolean` | Grants access to detailed analytics dashboards. |
 | `hasAccessToCRM` | `boolean` | Grants access to Customer Relationship Management features. |
+| `canUpdateReward` | `boolean` | If `true`, the business can edit their existing rewards. |
 
 #### 3. Progress Bonuses (Optional)
 This section allows you to reward businesses for climbing the "Business Progression" ladder (Starter -> Active -> Trusted -> Partner).
@@ -122,7 +124,8 @@ This tier is for entry-level businesses. They have low limits and cannot create 
       "canCreateCampaignFromScratch": false,
       "canEditAdminTemplates": false,
       "hasAccessToAdvancedAnalytics": false,
-      "hasAccessToCRM": false
+      "hasAccessToCRM": false,
+      "canUpdateReward": false
     },
     "progressBonuses": {
       "active_campaign_bonus": 1
@@ -156,7 +159,8 @@ This tier offers high limits, but allows for "Pro" users to have even more.
       "canCreateCampaignFromScratch": true,
       "canEditAdminTemplates": true,
       "hasAccessToAdvancedAnalytics": true,
-      "hasAccessToCRM": true
+      "hasAccessToCRM": true,
+      "canUpdateReward": true
     },
     "enablePro": true,
     "pro": {
@@ -190,7 +194,8 @@ You can modify the configuration of an existing tier at any time. The changes ta
       "canCreateCampaignFromScratch": true, // Now allowed
       "canEditAdminTemplates": false,
       "hasAccessToAdvancedAnalytics": false,
-      "hasAccessToCRM": false
+      "hasAccessToCRM": false,
+      "canUpdateReward": true
     }
   }
 }

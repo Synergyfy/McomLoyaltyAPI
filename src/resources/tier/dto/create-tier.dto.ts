@@ -133,6 +133,7 @@ export class CreateTierDto {
         canEditAdminTemplates: false,
         hasAccessToAdvancedAnalytics: true,
         hasAccessToCRM: false,
+        canUpdateReward: true,
       },
       progressBonuses: {
         pro_plus_campaign_bonus: 1,
