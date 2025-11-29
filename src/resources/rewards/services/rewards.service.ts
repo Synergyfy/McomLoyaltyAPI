@@ -341,4 +341,10 @@ export class RewardsService {
     Object.assign(businessReward, updateBusinessRewardDto);
     return this.businessRewardRepository.save(businessReward);
   }
+
+  async countTotalRewards(userId: string): Promise<number> {
+    return await this.businessRewardRepository.count({
+      where: { business: { id: userId } },
+    });
+  }
 }

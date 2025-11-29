@@ -33,4 +33,12 @@ export class MembershipService {
       relations: ['membership'],
     });
   }
+
+  async updateProgressionLevel(id: string, level: 'basic' | 'pro' | 'pro_plus') {
+    await this.membershipRepository.update(id, { progression_level: level });
+  }
+
+  async remove(id: string) {
+    await this.membershipRepository.softDelete(id);
+  }
 }

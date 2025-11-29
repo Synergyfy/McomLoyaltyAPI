@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { TierService } from './tier.service';
 import { CreateTierDto } from './dto/create-tier.dto';
 import { UpdateTierDto } from './dto/update-tier.dto';
+import { UpdateTierProgressionDto } from './dto/update-tier-progression.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -66,6 +67,20 @@ export class TierController {
     @CurrentUser() admin: Admin,
   ) {
     return this.tierService.update(id, updateTierDto, admin);
+  }
+
+  @Patch(':id/progression')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Update tier progression configuration (Admin only)' })
+  @ApiResponse({ status: 200, description: 'The tier progression has been successfully updated.', type: Tier })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 404, description: 'Tier not found.' })
+  updateProgression(
+    @Param('id') id: string,
+    @Body() progressionDto: UpdateTierProgressionDto,
+    @CurrentUser() admin: Admin,
+  ) {
+    return this.tierService.updateProgression(id, progressionDto, admin);
   }
 
   @Delete(':id')
