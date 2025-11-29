@@ -8,6 +8,7 @@ import { RewardsService } from '../rewards/services/rewards.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import moment from 'moment';
 
 export enum ActionType {
@@ -20,6 +21,7 @@ export enum ActionType {
     ADD_REWARD_TO_BUSINESS = 'ADD_REWARD_TO_BUSINESS',
     UPDATE_REWARD = 'UPDATE_REWARD',
     AWARD_POINTS = 'AWARD_POINTS',
+    CREATE_STAFF = 'CREATE_STAFF',
 }
 
 @Injectable()
@@ -32,6 +34,8 @@ export class CapabilityService {
         private readonly rewardsService: RewardsService,
         @InjectRepository(PointHistory)
         private readonly pointHistoryRepository: Repository<PointHistory>,
+        @InjectRepository(Staff)
+        private readonly staffRepository: Repository<Staff>,
     ) { }
 
     async checkPermission(userId: string, action: ActionType, context?: any): Promise<void> {
@@ -112,6 +116,10 @@ export class CapabilityService {
 
             case ActionType.AWARD_POINTS:
                 await this.checkMonthlyPointsAllowance(userId, effectiveConfig, context?.points);
+                break;
+
+            case ActionType.CREATE_STAFF:
+                await this.checkTeamMemberLimit(userId, effectiveConfig);
                 break;
 
             default:
@@ -207,6 +215,21 @@ export class CapabilityService {
         if (totalAwarded + pointsToAward > allowance) {
             throw new ForbiddenException(
                 `You have reached your monthly points allowance of ${allowance}. Upgrade to award more points.`
+            );
+        }
+    }
+
+    private async checkTeamMemberLimit(businessId: string, config: TierConfig) {
+        const limit = config.quotas.maxTeamMembers;
+        if (limit === -1) return; // Unlimited
+
+        const currentCount = await this.staffRepository.count({
+            where: { business: { id: businessId } },
+        });
+
+        if (currentCount >= limit) {
+            throw new ForbiddenException(
+                `You have reached your limit of ${limit} team members. Upgrade to add more staff.`
             );
         }
     }

@@ -4,6 +4,7 @@ export interface TierConfig {
         maxActiveRewards: number; // -1 for unlimited
         maxRewardsPerCampaign: number;
         monthlyPointsAllowance: number;
+        maxTeamMembers: number; // -1 for unlimited
     };
     featureFlags: {
         canCreateCampaignFromScratch: boolean;

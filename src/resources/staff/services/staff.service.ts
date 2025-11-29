@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { Staff } from '../entities/staff.entity';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateStaffDto } from '../dto/update-staff.dto';
+import { ActionType, CapabilityService } from '../../capability/capability.service';
 import { HashService } from '../../../common/hash/hash.service';
 
 @Injectable()
@@ -13,9 +14,12 @@ export class StaffService {
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
     private readonly hashService: HashService,
-  ) {}
+    private readonly capabilityService: CapabilityService,
+  ) { }
 
   async create(createStaffDto: CreateStaffDto, businessId: string): Promise<Staff> {
+    await this.capabilityService.checkPermission(businessId, ActionType.CREATE_STAFF);
+
     const existingStaff = await this.findByEmail(createStaffDto.email);
     if (existingStaff) {
       throw new ConflictException('Email already exists');

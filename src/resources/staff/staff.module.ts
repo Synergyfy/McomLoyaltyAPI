@@ -4,11 +4,12 @@ import { Staff } from './entities/staff.entity';
 import { StaffService } from './services/staff.service';
 import { StaffController } from './controllers/staff.controller';
 import { HashModule } from '../../common/hash/hash.module';
+import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Staff]), HashModule],
+  imports: [TypeOrmModule.forFeature([Staff]), HashModule, CapabilityModule],
   providers: [StaffService],
   controllers: [StaffController],
   exports: [StaffService],
 })
-export class StaffModule {}
+export class StaffModule { }
