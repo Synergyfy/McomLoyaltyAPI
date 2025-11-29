@@ -39,4 +39,11 @@ export class Membership extends AbstractBaseEntity {
 
   @Column({ default: false })
   is_trial: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: ['standard', 'pro', 'pro_plus'],
+    default: 'standard',
+  })
+  variant: 'standard' | 'pro' | 'pro_plus';
 }

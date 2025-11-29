@@ -15,6 +15,9 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Participant } from '../participant/entities/participant.entity';
 import { Staff } from '../staff/entities/staff.entity';
+import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
+import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
+import { MailService } from 'src/mail/mail.service';
 
 describe('CampaignService', () => {
   let service: CampaignService;
@@ -118,39 +121,27 @@ describe('CampaignService', () => {
           useValue: mockBusinessRewardRepository,
         },
         {
-          provide: getRepositoryToken(BusinessCampaign),
-          useValue: {
-            create: jest.fn().mockImplementation((dto) => dto),
-            save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
-            findOne: jest.fn(),
-            findAndCount: jest.fn(),
-            createQueryBuilder: jest.fn(() => ({
-                leftJoin: jest.fn().mockReturnThis(),
-                leftJoinAndSelect: jest.fn().mockReturnThis(),
-                where: jest.fn().mockReturnThis(),
-                andWhere: jest.fn().mockReturnThis(),
-                select: jest.fn().mockReturnThis(),
-                addSelect: jest.fn().mockReturnThis(),
-                orderBy: jest.fn().mockReturnThis(),
-                skip: jest.fn().mockReturnThis(),
-                take: jest.fn().mockReturnThis(),
-                getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
-                getRawOne: jest.fn().mockResolvedValue({}),
-                getCount: jest.fn().mockResolvedValue(0),
-                getRawMany: jest.fn().mockResolvedValue([]),
-            })),
-          },
-        },
-        {
           provide: getRepositoryToken(Participant),
           useValue: mockParticipantRepository,
         },
         {
-            provide: getRepositoryToken(Staff),
-            useValue: {
-                findOne: jest.fn()
-            }
-        }
+          provide: getRepositoryToken(Staff),
+          useValue: {
+            findOne: jest.fn()
+          }
+        },
+        {
+          provide: getRepositoryToken(WishlistAggregate),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(WishlistItem),
+          useValue: { find: jest.fn() },
+        },
+        {
+          provide: MailService,
+          useValue: { sendWishlistCampaignEmail: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -257,10 +248,10 @@ describe('CampaignService', () => {
       const result = await service.create(createCampaignDto, currentUser);
 
       expect(result).toEqual(expect.objectContaining({
-          ...createCampaignDto,
-          business: expect.objectContaining({ id: 'business-id' }),
-          rewards: rewards,
-          uniqueCode: expect.any(String)
+        ...createCampaignDto,
+        business: expect.objectContaining({ id: 'business-id' }),
+        rewards: rewards,
+        uniqueCode: expect.any(String)
       }));
     });
 
@@ -483,8 +474,8 @@ describe('CampaignService', () => {
 
   describe('findOngoingCampaigns', () => {
     it('should return ongoing campaigns', async () => {
-      const campaigns = [{ id: 'campaign-1' }] as Campaign[];
-      mockCampaignRepository.find.mockResolvedValue(campaigns);
+      const campaigns = [{ id: 'campaign-1' }] as BusinessCampaign[];
+      (businessCampaignRepository.find as jest.Mock).mockResolvedValue(campaigns);
 
       const result = await service.findOngoingCampaigns();
 

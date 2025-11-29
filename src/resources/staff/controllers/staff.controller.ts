@@ -5,15 +5,20 @@ import { UpdateStaffDto } from '../dto/update-staff.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
+import { CapabilitiesGuard } from '../../capability/guards/capabilities.guard';
+import { CheckPermission } from '../../capability/decorators/check-permission.decorator';
+import { ActionType } from '../../capability/capability.service';
 
 @ApiTags('Staff Management')
 @Controller('staff')
+@UseGuards(CapabilitiesGuard)
 export class StaffController {
   constructor(
     private readonly staffService: StaffService,
-    ) {}
+  ) { }
 
   @Roles(Role.Business)
+  @CheckPermission(ActionType.CREATE_STAFF)
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new staff member (for logged-in business)' })

@@ -1,9 +1,15 @@
-import { Injectable, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, ForbiddenException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { MembershipService } from '../membership/membership.service';
 import { ProgressionService } from '../progression/progression.service';
 import { CampaignService } from '../campaign/campaign.service';
 import { TierConfig } from '../tier/interfaces/tier-config.interface';
 import { MembershipStatus } from '../membership/entities/membership.entity';
+import { RewardsService } from '../rewards/services/rewards.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Between } from 'typeorm';
+import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
+import { Staff } from '../staff/entities/staff.entity';
+import moment from 'moment';
 
 export enum ActionType {
     CREATE_CAMPAIGN = 'CREATE_CAMPAIGN',
@@ -13,87 +19,130 @@ export enum ActionType {
     EDIT_TEMPLATE = 'EDIT_TEMPLATE',
     UPDATE_CAMPAIGN = 'UPDATE_CAMPAIGN',
     ADD_REWARD_TO_BUSINESS = 'ADD_REWARD_TO_BUSINESS',
+    UPDATE_REWARD = 'UPDATE_REWARD',
+    AWARD_POINTS = 'AWARD_POINTS',
+    CREATE_STAFF = 'CREATE_STAFF',
 }
-
-import { RewardsService } from '../rewards/services/rewards.service';
 
 @Injectable()
 export class CapabilityService {
+    private readonly logger = new Logger(CapabilityService.name);
+
     constructor(
         private readonly membershipService: MembershipService,
         private readonly progressionService: ProgressionService,
         @Inject(forwardRef(() => CampaignService))
         private readonly campaignService: CampaignService,
         private readonly rewardsService: RewardsService,
+        @InjectRepository(PointHistory)
+        private readonly pointHistoryRepository: Repository<PointHistory>,
+        @InjectRepository(Staff)
+        private readonly staffRepository: Repository<Staff>,
     ) { }
 
     async checkPermission(userId: string, action: ActionType, context?: any): Promise<void> {
         // 1. Fetch User's Tier via Membership
         const membership = await this.membershipService.findOneByUserId(userId);
         if (!membership || membership.status !== MembershipStatus.ACTIVE) {
+            this.logger.warn(`User ${userId} has no active membership.`);
             throw new ForbiddenException('Active membership required.');
         }
 
         const tierConfig = membership.tier.configuration;
         if (!tierConfig) {
-            // Fallback or throw if no config exists (legacy tiers)
-            // For now, let's assume strict enforcement and throw if missing
+            this.logger.warn(`User ${userId} has no tier configuration.`);
             throw new ForbiddenException('Tier configuration missing.');
         }
 
+        // Determine effective configuration based on variant
+        let effectiveConfig = { ...tierConfig };
+        const variant = membership.variant;
+
+        if (variant === 'pro' && tierConfig.enablePro && tierConfig.pro) {
+            effectiveConfig = this.mergeConfig(effectiveConfig, tierConfig.pro);
+        } else if (variant === 'pro_plus' && tierConfig.enableProPlus && tierConfig.pro_plus) {
+            effectiveConfig = this.mergeConfig(effectiveConfig, tierConfig.pro_plus);
+        }
+
         // 2. Fetch User's Progression Level
-        // Assuming userId corresponds to businessId for progression
-        // We might need to adjust if userId is a staff member, but for now assuming business owner
         const progression = await this.progressionService.getBusinessProgression(userId);
         const currentLevelName = progression?.currentLevel?.name;
 
         // 3. Calculate Effective Limits & Check Permissions
         switch (action) {
             case ActionType.CREATE_CAMPAIGN:
-                await this.checkCampaignLimit(userId, tierConfig, currentLevelName);
-                if (!tierConfig.featureFlags.canCreateCampaignFromScratch && context?.isFromScratch) {
+                await this.checkCampaignLimit(userId, effectiveConfig, currentLevelName);
+                if (!effectiveConfig.featureFlags.canCreateCampaignFromScratch && context?.isFromScratch) {
+                    this.logger.warn(`User ${userId} tried to create campaign from scratch but is not allowed.`);
                     throw new ForbiddenException('Your tier does not allow creating campaigns from scratch.');
                 }
                 if (context?.rewardCount !== undefined) {
-                    this.checkRewardCountLimit(context.rewardCount, tierConfig);
+                    this.checkRewardCountLimit(context.rewardCount, effectiveConfig);
                 }
                 break;
 
             case ActionType.UPDATE_CAMPAIGN:
                 if (context?.rewardCount !== undefined) {
-                    this.checkRewardCountLimit(context.rewardCount, tierConfig);
+                    this.checkRewardCountLimit(context.rewardCount, effectiveConfig);
                 }
                 break;
 
             case ActionType.CREATE_REWARD:
-                await this.checkRewardLimit(context?.campaignId, tierConfig);
+                await this.checkRewardLimit(context?.campaignId, effectiveConfig);
                 break;
 
             case ActionType.ADD_REWARD_TO_BUSINESS:
-                await this.checkRewardInventoryLimit(userId, tierConfig);
+                await this.checkRewardInventoryLimit(userId, effectiveConfig);
                 break;
 
             case ActionType.ACCESS_ANALYTICS:
-                if (!tierConfig.featureFlags.hasAccessToAdvancedAnalytics) {
+                if (!effectiveConfig.featureFlags.hasAccessToAdvancedAnalytics) {
+                    this.logger.warn(`User ${userId} tried to access advanced analytics but is not allowed.`);
                     throw new ForbiddenException('Upgrade to access advanced analytics.');
                 }
                 break;
 
             case ActionType.ACCESS_CRM:
-                if (!tierConfig.featureFlags.hasAccessToCRM) {
+                if (!effectiveConfig.featureFlags.hasAccessToCRM) {
+                    this.logger.warn(`User ${userId} tried to access CRM but is not allowed.`);
                     throw new ForbiddenException('Upgrade to access CRM features.');
                 }
                 break;
 
             case ActionType.EDIT_TEMPLATE:
-                if (!tierConfig.featureFlags.canEditAdminTemplates) {
+                if (!effectiveConfig.featureFlags.canEditAdminTemplates) {
+                    this.logger.warn(`User ${userId} tried to edit admin template but is not allowed.`);
                     throw new ForbiddenException('Your tier does not allow editing admin templates.');
                 }
+                break;
+
+            case ActionType.UPDATE_REWARD:
+                if (!effectiveConfig.featureFlags.canUpdateReward) {
+                    this.logger.warn(`User ${userId} tried to update reward but is not allowed.`);
+                    throw new ForbiddenException('Your tier does not allow updating rewards.');
+                }
+                break;
+
+            case ActionType.AWARD_POINTS:
+                await this.checkMonthlyPointsAllowance(userId, effectiveConfig, context?.points);
+                break;
+
+            case ActionType.CREATE_STAFF:
+                await this.checkTeamMemberLimit(userId, effectiveConfig);
                 break;
 
             default:
                 break;
         }
+    }
+
+    private mergeConfig(base: TierConfig, override: Partial<TierConfig>): TierConfig {
+        return {
+            ...base,
+            quotas: { ...base.quotas, ...override.quotas },
+            featureFlags: { ...base.featureFlags, ...override.featureFlags },
+            progressBonuses: { ...base.progressBonuses, ...override.progressBonuses },
+        };
     }
 
     private async checkCampaignLimit(userId: string, config: TierConfig, levelName?: string) {
@@ -102,10 +151,6 @@ export class CapabilityService {
 
         let bonus = 0;
         if (levelName && config.progressBonuses) {
-            // Example: "pro_plus_campaign_bonus"
-            // We need a mapping or convention. Let's assume the key in progressBonuses matches a slugified level name + "_campaign_bonus"
-            // Or simpler: check specific keys if they exist
-            // For this implementation, let's look for keys containing the level name (case insensitive)
             const levelKey = levelName.toLowerCase().replace(/\s+/g, '_');
             const bonusKey = `${levelKey}_campaign_bonus`;
             if (config.progressBonuses[bonusKey]) {
@@ -117,6 +162,7 @@ export class CapabilityService {
         const currentUsage = await this.campaignService.countActiveCampaigns(userId);
 
         if (currentUsage >= effectiveLimit) {
+            this.logger.warn(`User ${userId} reached campaign limit: ${currentUsage}/${effectiveLimit}`);
             throw new ForbiddenException(
                 `You have reached your limit of ${effectiveLimit} active campaigns. Upgrade or level up to unlock more.`
             );
@@ -126,12 +172,9 @@ export class CapabilityService {
     private async checkRewardLimit(campaignId: string, config: TierConfig) {
         if (!campaignId) return; // Should be provided for this check
         const limit = config.quotas.maxRewardsPerCampaign;
-        // We need a method in CampaignService or RewardService to count rewards for a campaign
-        // Since we injected CampaignService, let's assume it has or we can add a method to count rewards
-        // For now, I will assume a method exists or I will add it.
-        // Let's assume campaignService.countRewards(campaignId)
         const currentUsage = await this.campaignService.countRewards(campaignId);
         if (currentUsage >= limit) {
+            this.logger.warn(`Campaign ${campaignId} reached reward limit: ${currentUsage}/${limit}`);
             throw new ForbiddenException(
                 `You have reached the limit of ${limit} rewards per campaign.`
             );
@@ -141,6 +184,7 @@ export class CapabilityService {
     private checkRewardCountLimit(count: number, config: TierConfig) {
         const limit = config.quotas.maxRewardsPerCampaign;
         if (count > limit) {
+            this.logger.warn(`Reward count ${count} exceeds limit ${limit}`);
             throw new ForbiddenException(
                 `You have reached the limit of ${limit} rewards per campaign.`
             );
@@ -153,8 +197,54 @@ export class CapabilityService {
 
         const currentUsage = await this.rewardsService.countActiveBusinessRewards(userId);
         if (currentUsage >= limit) {
+            this.logger.warn(`User ${userId} reached active reward limit: ${currentUsage}/${limit}`);
             throw new ForbiddenException(
                 `You have reached your limit of ${limit} active rewards. Upgrade or level up to unlock more.`
+            );
+        }
+    }
+
+    private async checkMonthlyPointsAllowance(userId: string, config: TierConfig, pointsToAward: number) {
+        const allowance = config.quotas.monthlyPointsAllowance;
+        if (allowance === -1) return; // Unlimited
+
+        const startOfMonth = moment().startOf('month').toDate();
+        const endOfMonth = moment().endOf('month').toDate();
+
+        const result = await this.pointHistoryRepository
+            .createQueryBuilder('ph')
+            .select('SUM(ph.points)', 'total')
+            .where('ph.business_id = :businessId', { businessId: userId }) // Assuming userId is businessId, or we need to fetch businessId from userId
+            // If userId is actually the User ID of the business owner, we might need to join with Business table or fetch Business first.
+            // However, based on how checkPermission is called, it seems userId is the key.
+            // Let's assume for now that the caller passes the correct ID that links to business_id in PointHistory.
+            // If PointHistory.business_id is a UUID of the Business entity, then userId passed here must be that UUID.
+            .andWhere('ph.type = :type', { type: PointHistoryType.EARN })
+            .andWhere('ph.created_at BETWEEN :start AND :end', { start: startOfMonth, end: endOfMonth })
+            .getRawOne();
+
+        const totalAwarded = result && result.total ? parseInt(result.total, 10) : 0;
+
+        if (totalAwarded + pointsToAward > allowance) {
+            this.logger.warn(`User ${userId} reached monthly points allowance: ${totalAwarded + pointsToAward}/${allowance}`);
+            throw new ForbiddenException(
+                `You have reached your monthly points allowance of ${allowance}. Upgrade to award more points.`
+            );
+        }
+    }
+
+    private async checkTeamMemberLimit(businessId: string, config: TierConfig) {
+        const limit = config.quotas.maxTeamMembers;
+        if (limit === -1) return; // Unlimited
+
+        const currentCount = await this.staffRepository.count({
+            where: { business: { id: businessId } },
+        });
+
+        if (currentCount >= limit) {
+            this.logger.warn(`Business ${businessId} reached team member limit: ${currentCount}/${limit}`);
+            throw new ForbiddenException(
+                `You have reached your limit of ${limit} team members. Upgrade to add more staff.`
             );
         }
     }

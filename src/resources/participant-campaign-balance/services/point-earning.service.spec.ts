@@ -10,6 +10,8 @@ import { DataSource } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { Business } from 'src/resources/business/entities/business.entity';
 import { BusinessCampaign } from 'src/resources/campaign/entities/business-campaign.entity';
+import { CapabilityService, ActionType } from '../../capability/capability.service';
+import { MailService } from '../../../mail/mail.service';
 
 describe('PointEarningService', () => {
   let service: PointEarningService;
@@ -25,6 +27,8 @@ describe('PointEarningService', () => {
   const mockBusinessCampaignRepository = { findOne: jest.fn() };
   const mockPointHistoryRepository = { create: jest.fn() };
   const mockDataSource = { transaction: jest.fn() };
+  const mockMailService = { sendPointsEarnedEmail: jest.fn(), sendBusinessActivityEmail: jest.fn() };
+  const mockCapabilityService = { checkPermission: jest.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -38,6 +42,8 @@ describe('PointEarningService', () => {
         { provide: getRepositoryToken(BusinessCampaign), useValue: mockBusinessCampaignRepository },
         { provide: getRepositoryToken(PointHistory), useValue: mockPointHistoryRepository },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: MailService, useValue: mockMailService },
+        { provide: CapabilityService, useValue: mockCapabilityService },
       ],
     }).compile();
 
@@ -82,9 +88,30 @@ describe('PointEarningService', () => {
       });
       mockPointHistoryRepository.create.mockReturnValue({});
 
+
+
       await service.awardPoints('staff-id', 'Staff', 'participant-id', 'campaign-id', 50);
 
+      expect(mockCapabilityService.checkPermission).toHaveBeenCalledWith('business-id', ActionType.AWARD_POINTS, { points: 50 });
       expect(mockManager.save).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException if monthly points allowance is exceeded', async () => {
+      mockStaffRepository.findOne.mockResolvedValue(staff);
+      mockCapabilityService.checkPermission.mockRejectedValue(new Error('ForbiddenException')); // Mocking the exception
+
+      const mockManager = {
+        findOne: jest.fn().mockImplementation((entity) => {
+          if (entity === Participant) return participant;
+          if (entity === BusinessCampaign) return { ...businessCampaign, total_points_earned: 0 };
+          return null;
+        }),
+      };
+      mockDataSource.transaction.mockImplementation(async (callback) => callback(mockManager));
+
+      await expect(
+        service.awardPoints('staff-id', 'Staff', 'participant-id', 'campaign-id', 50),
+      ).rejects.toThrow();
     });
 
     it('should throw BadRequestException if regular points threshold is reached', async () => {

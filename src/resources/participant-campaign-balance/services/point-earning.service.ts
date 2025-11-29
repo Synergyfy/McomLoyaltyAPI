@@ -17,6 +17,7 @@ import {
 } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
 import { MailService } from '../../../mail/mail.service';
+import { CapabilityService, ActionType } from '../../capability/capability.service';
 
 @Injectable()
 export class PointEarningService {
@@ -37,7 +38,8 @@ export class PointEarningService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
-  ) {}
+    private readonly capabilityService: CapabilityService,
+  ) { }
 
   // Helper to find performer (Staff or Business)
   private async findPerformer(id: string, type: 'Staff' | 'Business') {
@@ -95,9 +97,13 @@ export class PointEarningService {
 
       // Check if business matches
       if (businessCampaign && businessCampaign.business.id !== business.id) {
-         throw new BadRequestException('This campaign does not belong to the performing business');
+        throw new BadRequestException('This campaign does not belong to the performing business');
       }
-       // If it's a regular Campaign (admin template), business might not be directly linked or null, but typically we award on claimed ones (BC)
+
+      // Check Monthly Points Allowance
+      await this.capabilityService.checkPermission(business.id, ActionType.AWARD_POINTS, { points });
+
+      // If it's a regular Campaign (admin template), business might not be directly linked or null, but typically we award on claimed ones (BC)
 
       if (
         (activeCampaign.reward_type === 'matching' ||
@@ -116,7 +122,7 @@ export class PointEarningService {
         if (
           activeCampaign.regular_points_threshold !== null &&
           activeCampaign.total_points_earned + points >
-            activeCampaign.regular_points_threshold
+          activeCampaign.regular_points_threshold
         ) {
           throw new BadRequestException(
             'Campaign regular points threshold reached.',
@@ -125,7 +131,7 @@ export class PointEarningService {
 
         const whereCondition: any = { participant: { id: participantId } };
         if (businessCampaign) {
-            whereCondition.businessCampaign = { id: campaignId };
+          whereCondition.businessCampaign = { id: campaignId };
         }
 
         let participantCampaignBalance = await manager.findOne(
@@ -142,21 +148,21 @@ export class PointEarningService {
               campaign_balance: 0,
             });
 
-           if (businessCampaign) {
-               participantCampaignBalance.businessCampaign = businessCampaign;
-               if (businessCampaign.campaign) {
-                    participantCampaignBalance.campaign = businessCampaign.campaign;
-               }
-           }
+          if (businessCampaign) {
+            participantCampaignBalance.businessCampaign = businessCampaign;
+            if (businessCampaign.campaign) {
+              participantCampaignBalance.campaign = businessCampaign.campaign;
+            }
+          }
         }
         participantCampaignBalance.campaign_balance += points;
         participant.global_total_points += points;
         activeCampaign.total_points_earned += points;
-        
+
         // Update business totals
         if (businessCampaign.business) {
-            businessCampaign.business.total_points_earned += points;
-            await manager.save(businessCampaign.business);
+          businessCampaign.business.total_points_earned += points;
+          await manager.save(businessCampaign.business);
         }
 
         await manager.save(participantCampaignBalance);
@@ -171,17 +177,17 @@ export class PointEarningService {
         });
 
         if (businessCampaign) {
-            regularPointHistory.businessCampaign = businessCampaign;
-            if (businessCampaign.campaign) {
-                 regularPointHistory.campaign = businessCampaign.campaign;
-            }
+          regularPointHistory.businessCampaign = businessCampaign;
+          if (businessCampaign.campaign) {
+            regularPointHistory.campaign = businessCampaign.campaign;
+          }
         }
 
         await manager.save(regularPointHistory);
 
         // Send email notifications
         const businessOwner = businessCampaign.business;
-        
+
         // To Participant
         try {
           await this.mailService.sendPointsEarnedEmail(
@@ -220,7 +226,7 @@ export class PointEarningService {
         if (
           activeCampaign.matching_points_threshold !== null &&
           activeCampaign.total_matching_points_earned + points >
-            activeCampaign.matching_points_threshold
+          activeCampaign.matching_points_threshold
         ) {
           throw new BadRequestException(
             'Campaign matching points threshold reached.',
@@ -240,10 +246,10 @@ export class PointEarningService {
         });
 
         if (businessCampaign) {
-            matchingPointHistory.businessCampaign = businessCampaign;
-            if (businessCampaign.campaign) {
-                 matchingPointHistory.campaign = businessCampaign.campaign;
-            }
+          matchingPointHistory.businessCampaign = businessCampaign;
+          if (businessCampaign.campaign) {
+            matchingPointHistory.campaign = businessCampaign.campaign;
+          }
         }
 
         await manager.save(matchingPointHistory);
@@ -251,7 +257,7 @@ export class PointEarningService {
 
       await manager.save(participant);
       if (businessCampaign) {
-          await manager.save(BusinessCampaign, businessCampaign);
+        await manager.save(BusinessCampaign, businessCampaign);
       }
 
       return participant;

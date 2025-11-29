@@ -13,7 +13,7 @@ export class StaffService {
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
     private readonly hashService: HashService,
-  ) {}
+  ) { }
 
   async create(createStaffDto: CreateStaffDto, businessId: string): Promise<Staff> {
     const existingStaff = await this.findByEmail(createStaffDto.email);

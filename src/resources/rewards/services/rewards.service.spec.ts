@@ -33,6 +33,7 @@ describe('RewardsService', () => {
 
   const mockBusinessRewardRepository = {
     findOne: jest.fn(),
+    save: jest.fn(),
   };
 
   const mockBusinessRepository = {};
@@ -135,10 +136,39 @@ describe('RewardsService', () => {
     });
 
     it('should throw NotFoundException if tier not found', async () => {
-        mockTierRepository.findBy.mockResolvedValue([]);
-        const dto = { ...createRewardDto, tier_ids: ['t1'] };
+      mockTierRepository.findBy.mockResolvedValue([]);
+      const dto = { ...createRewardDto, tier_ids: ['t1'] };
 
-        await expect(service.createReward(dto)).rejects.toThrow(NotFoundException);
+      await expect(service.createReward(dto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateBusinessReward', () => {
+    const updateDto = { quantity: 50 };
+    const businessId = 'b1';
+    const rewardId = 'r1';
+    const businessReward = { id: rewardId, business: { id: businessId }, quantity: 100 } as BusinessReward;
+
+    it('should update a business reward successfully', async () => {
+      mockBusinessRewardRepository.findOne.mockResolvedValue(businessReward);
+      mockBusinessRewardRepository.save.mockResolvedValue({ ...businessReward, ...updateDto });
+
+      const result = await service.updateBusinessReward(businessId, rewardId, updateDto);
+
+      expect(mockBusinessRewardRepository.findOne).toHaveBeenCalledWith({
+        where: { id: rewardId, business: { id: businessId } },
       });
+      expect(mockBusinessRewardRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+        ...businessReward,
+        ...updateDto,
+      }));
+      expect(result).toEqual(expect.objectContaining(updateDto));
+    });
+
+    it('should throw NotFoundException if reward not found', async () => {
+      mockBusinessRewardRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateBusinessReward(businessId, rewardId, updateDto)).rejects.toThrow(NotFoundException);
+    });
   });
 });

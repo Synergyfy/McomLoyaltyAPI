@@ -16,6 +16,7 @@ import { ParticipantCampaignBalance } from '../../participant-campaign-balance/e
 import { BusinessCampaign } from './business-campaign.entity';
 import { CampaignType, AudienceType, RewardType } from './campaign-enums';
 import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
+import { Tier } from '../../tier/entities/tier.entity';
 
 @Entity('campaigns')
 export class Campaign extends AbstractBaseEntity {
@@ -154,4 +155,8 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ type: 'int', nullable: true })
   initial_audience_size: number;
+
+  @ManyToOne(() => Tier, { nullable: true })
+  @JoinColumn({ name: 'target_tier_id' })
+  targetTier: Tier;
 }

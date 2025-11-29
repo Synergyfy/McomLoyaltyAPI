@@ -18,4 +18,12 @@ export class CreateCampaignAdminDto extends BaseCampaignDto {
   @IsArray()
   @IsUUID('all', { each: true })
   reward_ids: string[];
+
+  @ApiProperty({
+    description: 'The ID of the target tier for this campaign.',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  target_tier_id?: string;
 }

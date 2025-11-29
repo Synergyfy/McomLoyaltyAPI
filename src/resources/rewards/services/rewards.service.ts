@@ -10,6 +10,7 @@ import { Reward } from '../entities/reward.entity';
 import { CreateRewardDto } from '../dto/create-reward.dto';
 import { BusinessReward } from '../entities/business-reward.entity';
 import { CreateBusinessRewardDto } from '../dto/create-business-reward.dto';
+import { UpdateBusinessRewardDto } from '../dto/update-business-reward.dto';
 import { UpdateRewardDto } from '../dto/update-reward.dto';
 import { Business } from '../../business/entities/business.entity';
 import { RewardStatus } from '../enums/reward-status.enum';
@@ -319,5 +320,25 @@ export class RewardsService {
         disabled: false,
       },
     });
+  }
+
+  async updateBusinessReward(
+    businessId: string,
+    rewardId: string,
+    updateBusinessRewardDto: UpdateBusinessRewardDto,
+  ): Promise<BusinessReward> {
+    const businessReward = await this.businessRewardRepository.findOne({
+      where: {
+        id: rewardId,
+        business: { id: businessId },
+      },
+    });
+
+    if (!businessReward) {
+      throw new NotFoundException('Reward not found or does not belong to this business');
+    }
+
+    Object.assign(businessReward, updateBusinessRewardDto);
+    return this.businessRewardRepository.save(businessReward);
   }
 }

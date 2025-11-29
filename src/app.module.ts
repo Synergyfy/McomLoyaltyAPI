@@ -37,6 +37,7 @@ import { ProgressionModule } from './resources/progression/progression.module';
 import { PartnerModule } from './resources/partner/partner.module';
 import { WishlistModule } from './resources/wishlist/wishlist.module';
 import { CapabilityModule } from './resources/capability/capability.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -76,6 +77,12 @@ import { CapabilityModule } from './resources/capability/capability.module';
     PartnerModule,
     WishlistModule,
     CapabilityModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
   ],
   controllers: [AppController],
   providers: [
@@ -91,6 +98,10 @@ import { CapabilityModule } from './resources/capability/capability.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

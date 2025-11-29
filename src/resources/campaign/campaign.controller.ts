@@ -39,18 +39,19 @@ import {
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
 import { CapabilityService, ActionType } from '../capability/capability.service';
+import { CapabilitiesGuard } from '../capability/guards/capabilities.guard';
+import { CheckPermission } from '../capability/decorators/check-permission.decorator';
 
 @ApiTags('Campaigns')
 @Controller('campaigns')
 export class CampaignController {
   constructor(
     private readonly campaignService: CampaignService,
-    private readonly capabilityService: CapabilityService,
   ) { }
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, CapabilitiesGuard)
   @Roles(Role.Admin, Role.Business)
   @ApiOperation({
     summary: 'Create a new campaign',
@@ -77,24 +78,17 @@ export class CampaignController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @CheckPermission(ActionType.CREATE_CAMPAIGN, { isFromScratch: true })
   async create(
     @Body() createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
     @CurrentUser() currentUser: Business | Admin,
   ) {
-    if ((currentUser as any).role === Role.Business) {
-      const isFromScratch = true; // Creating via this endpoint implies from scratch
-      const rewardCount = (createCampaignDto as CreateCampaignDto).business_reward_ids?.length || 0;
-      await this.capabilityService.checkPermission(currentUser.id, ActionType.CREATE_CAMPAIGN, {
-        isFromScratch,
-        rewardCount,
-      });
-    }
     return this.campaignService.create(createCampaignDto, currentUser);
   }
 
   @Post('from-wishlist')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, CapabilitiesGuard)
   @Roles(Role.Admin, Role.Business)
   @ApiOperation({
     summary: 'Create a new campaign from a wishlist aggregate',
@@ -113,6 +107,7 @@ export class CampaignController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Wishlist aggregate not found.' })
+  @CheckPermission(ActionType.CREATE_CAMPAIGN, { isFromScratch: false })
   createFromWishlist(
     @Body() createCampaignDto: CreateCampaignFromWishlistDto,
     @CurrentUser() currentUser: Business | Admin,
@@ -259,7 +254,7 @@ export class CampaignController {
   }
 
   @Get('all/public')
-  @Public()
+  // @Public()
   @ApiOperation({ summary: 'Get all public campaigns' })
   @ApiResponse({
     status: 200,
@@ -323,7 +318,7 @@ export class CampaignController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesGuard, CapabilitiesGuard)
   @Roles(Role.Admin, Role.Business)
   @ApiOperation({ summary: 'Update a campaign' })
   @ApiBody({
@@ -342,17 +337,12 @@ export class CampaignController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Campaign not found.' })
+  @CheckPermission(ActionType.UPDATE_CAMPAIGN)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCampaignDto: UpdateCampaignDto,
     @CurrentUser() currentUser: Business | Admin,
   ) {
-    if ((currentUser as any).role === Role.Business && updateCampaignDto.business_reward_ids) {
-      const rewardCount = updateCampaignDto.business_reward_ids.length;
-      await this.capabilityService.checkPermission(currentUser.id, ActionType.UPDATE_CAMPAIGN, {
-        rewardCount,
-      });
-    }
     return this.campaignService.update(id, updateCampaignDto, currentUser);
   }
 
