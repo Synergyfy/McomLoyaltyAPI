@@ -13,6 +13,7 @@ import { BusinessReward } from '../rewards/entities/business-reward.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
 import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
+import { Tier } from '../tier/entities/tier.entity';
 import { MailModule } from 'src/mail/mail.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { forwardRef } from '@nestjs/common';
@@ -29,7 +30,9 @@ import { forwardRef } from '@nestjs/common';
       BusinessReward,
       Staff,
       WishlistAggregate,
+      WishlistAggregate,
       WishlistItem,
+      Tier,
     ]),
     MailModule,
     forwardRef(() => CapabilityModule),

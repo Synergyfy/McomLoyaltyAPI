@@ -40,6 +40,7 @@ import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entit
 import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
 import { MailService } from 'src/mail/mail.service';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
+import { Tier } from '../tier/entities/tier.entity';
 
 @Injectable()
 export class CampaignService {
@@ -64,6 +65,8 @@ export class CampaignService {
     private readonly wishlistAggregateRepository: Repository<WishlistAggregate>,
     @InjectRepository(WishlistItem)
     private readonly wishlistItemRepository: Repository<WishlistItem>,
+    @InjectRepository(Tier)
+    private readonly tierRepository: Repository<Tier>,
     private readonly mailService: MailService,
   ) { }
 
@@ -76,7 +79,7 @@ export class CampaignService {
 
     if (currentUser.role === Role.Admin) {
       const campaign = this.campaignRepository.create(campaignData);
-      const { business_id, reward_ids } =
+      const { business_id, reward_ids, target_tier_id } =
         createCampaignDto as CreateCampaignAdminDto;
       if (business_id) {
         const business = await this.businessRepository.findOneBy({
@@ -93,6 +96,25 @@ export class CampaignService {
           id: In(reward_ids),
         });
       }
+
+      if (target_tier_id) {
+        const tier = await this.tierRepository.findOneBy({ id: target_tier_id });
+        if (!tier) {
+          throw new NotFoundException('Target tier not found');
+        }
+
+        const maxRewards = tier.configuration?.quotas?.maxRewardsPerCampaign;
+        // If maxRewards is -1, it's unlimited. If it's defined and not -1, check limit.
+        if (maxRewards !== undefined && maxRewards !== -1) {
+          if (rewards.length > maxRewards) {
+            throw new BadRequestException(
+              `Target tier '${tier.name}' allows a maximum of ${maxRewards} rewards per campaign. You selected ${rewards.length}.`,
+            );
+          }
+        }
+        campaign.targetTier = tier;
+      }
+
       campaign.rewards = rewards;
       return this.campaignRepository.save(campaign);
     } else {
