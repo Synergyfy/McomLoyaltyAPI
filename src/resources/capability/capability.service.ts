@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, ForbiddenException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { MembershipService } from '../membership/membership.service';
 import { ProgressionService } from '../progression/progression.service';
 import { CampaignService } from '../campaign/campaign.service';
@@ -26,6 +26,8 @@ export enum ActionType {
 
 @Injectable()
 export class CapabilityService {
+    private readonly logger = new Logger(CapabilityService.name);
+
     constructor(
         private readonly membershipService: MembershipService,
         private readonly progressionService: ProgressionService,
@@ -42,11 +44,13 @@ export class CapabilityService {
         // 1. Fetch User's Tier via Membership
         const membership = await this.membershipService.findOneByUserId(userId);
         if (!membership || membership.status !== MembershipStatus.ACTIVE) {
+            this.logger.warn(`User ${userId} has no active membership.`);
             throw new ForbiddenException('Active membership required.');
         }
 
         const tierConfig = membership.tier.configuration;
         if (!tierConfig) {
+            this.logger.warn(`User ${userId} has no tier configuration.`);
             throw new ForbiddenException('Tier configuration missing.');
         }
 
@@ -69,6 +73,7 @@ export class CapabilityService {
             case ActionType.CREATE_CAMPAIGN:
                 await this.checkCampaignLimit(userId, effectiveConfig, currentLevelName);
                 if (!effectiveConfig.featureFlags.canCreateCampaignFromScratch && context?.isFromScratch) {
+                    this.logger.warn(`User ${userId} tried to create campaign from scratch but is not allowed.`);
                     throw new ForbiddenException('Your tier does not allow creating campaigns from scratch.');
                 }
                 if (context?.rewardCount !== undefined) {
@@ -92,24 +97,28 @@ export class CapabilityService {
 
             case ActionType.ACCESS_ANALYTICS:
                 if (!effectiveConfig.featureFlags.hasAccessToAdvancedAnalytics) {
+                    this.logger.warn(`User ${userId} tried to access advanced analytics but is not allowed.`);
                     throw new ForbiddenException('Upgrade to access advanced analytics.');
                 }
                 break;
 
             case ActionType.ACCESS_CRM:
                 if (!effectiveConfig.featureFlags.hasAccessToCRM) {
+                    this.logger.warn(`User ${userId} tried to access CRM but is not allowed.`);
                     throw new ForbiddenException('Upgrade to access CRM features.');
                 }
                 break;
 
             case ActionType.EDIT_TEMPLATE:
                 if (!effectiveConfig.featureFlags.canEditAdminTemplates) {
+                    this.logger.warn(`User ${userId} tried to edit admin template but is not allowed.`);
                     throw new ForbiddenException('Your tier does not allow editing admin templates.');
                 }
                 break;
 
             case ActionType.UPDATE_REWARD:
                 if (!effectiveConfig.featureFlags.canUpdateReward) {
+                    this.logger.warn(`User ${userId} tried to update reward but is not allowed.`);
                     throw new ForbiddenException('Your tier does not allow updating rewards.');
                 }
                 break;
@@ -153,6 +162,7 @@ export class CapabilityService {
         const currentUsage = await this.campaignService.countActiveCampaigns(userId);
 
         if (currentUsage >= effectiveLimit) {
+            this.logger.warn(`User ${userId} reached campaign limit: ${currentUsage}/${effectiveLimit}`);
             throw new ForbiddenException(
                 `You have reached your limit of ${effectiveLimit} active campaigns. Upgrade or level up to unlock more.`
             );
@@ -164,6 +174,7 @@ export class CapabilityService {
         const limit = config.quotas.maxRewardsPerCampaign;
         const currentUsage = await this.campaignService.countRewards(campaignId);
         if (currentUsage >= limit) {
+            this.logger.warn(`Campaign ${campaignId} reached reward limit: ${currentUsage}/${limit}`);
             throw new ForbiddenException(
                 `You have reached the limit of ${limit} rewards per campaign.`
             );
@@ -173,6 +184,7 @@ export class CapabilityService {
     private checkRewardCountLimit(count: number, config: TierConfig) {
         const limit = config.quotas.maxRewardsPerCampaign;
         if (count > limit) {
+            this.logger.warn(`Reward count ${count} exceeds limit ${limit}`);
             throw new ForbiddenException(
                 `You have reached the limit of ${limit} rewards per campaign.`
             );
@@ -185,6 +197,7 @@ export class CapabilityService {
 
         const currentUsage = await this.rewardsService.countActiveBusinessRewards(userId);
         if (currentUsage >= limit) {
+            this.logger.warn(`User ${userId} reached active reward limit: ${currentUsage}/${limit}`);
             throw new ForbiddenException(
                 `You have reached your limit of ${limit} active rewards. Upgrade or level up to unlock more.`
             );
@@ -213,6 +226,7 @@ export class CapabilityService {
         const totalAwarded = result && result.total ? parseInt(result.total, 10) : 0;
 
         if (totalAwarded + pointsToAward > allowance) {
+            this.logger.warn(`User ${userId} reached monthly points allowance: ${totalAwarded + pointsToAward}/${allowance}`);
             throw new ForbiddenException(
                 `You have reached your monthly points allowance of ${allowance}. Upgrade to award more points.`
             );
@@ -228,6 +242,7 @@ export class CapabilityService {
         });
 
         if (currentCount >= limit) {
+            this.logger.warn(`Business ${businessId} reached team member limit: ${currentCount}/${limit}`);
             throw new ForbiddenException(
                 `You have reached your limit of ${limit} team members. Upgrade to add more staff.`
             );

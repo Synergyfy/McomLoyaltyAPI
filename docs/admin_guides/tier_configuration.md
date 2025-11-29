@@ -25,7 +25,8 @@ The `configuration` JSON object must adhere to the following structure:
     "maxActiveCampaigns": number,       // -1 for unlimited
     "maxActiveRewards": number,         // -1 for unlimited
     "maxRewardsPerCampaign": number,
-    "monthlyPointsAllowance": number
+    "monthlyPointsAllowance": number,
+    "maxTeamMembers": number            // -1 for unlimited
   },
   "featureFlags": {
     "canCreateCampaignFromScratch": boolean,
@@ -63,6 +64,7 @@ The `configuration` JSON object must adhere to the following structure:
 | `maxActiveRewards` | `number` | The maximum number of active rewards a business can have. Set to `-1` for unlimited. |
 | `maxRewardsPerCampaign` | `number` | The maximum number of rewards that can be attached to a single campaign. |
 | `monthlyPointsAllowance` | `number` | The amount of system points credited to the business each month (if applicable). |
+| `maxTeamMembers` | `number` | The maximum number of team members (staff) a business can have. Set to `-1` for unlimited. |
 
 #### 2. Feature Flags
 | Field | Type | Description |
@@ -118,7 +120,8 @@ This tier is for entry-level businesses. They have low limits and cannot create 
       "maxActiveCampaigns": 5,
       "maxActiveRewards": 10,
       "maxRewardsPerCampaign": 1,
-      "monthlyPointsAllowance": 500
+      "monthlyPointsAllowance": 500,
+      "maxTeamMembers": 1
     },
     "featureFlags": {
       "canCreateCampaignFromScratch": false,
@@ -153,7 +156,8 @@ This tier offers high limits, but allows for "Pro" users to have even more.
       "maxActiveCampaigns": 50,
       "maxActiveRewards": 100,
       "maxRewardsPerCampaign": 5,
-      "monthlyPointsAllowance": 5000
+      "monthlyPointsAllowance": 5000,
+      "maxTeamMembers": 5
     },
     "featureFlags": {
       "canCreateCampaignFromScratch": true,
@@ -188,7 +192,8 @@ You can modify the configuration of an existing tier at any time. The changes ta
       "maxActiveCampaigns": 10,  // Increased from 5
       "maxActiveRewards": 20,
       "maxRewardsPerCampaign": 2,
-      "monthlyPointsAllowance": 1000
+      "monthlyPointsAllowance": 1000,
+      "maxTeamMembers": 3
     },
     "featureFlags": {
       "canCreateCampaignFromScratch": true, // Now allowed
