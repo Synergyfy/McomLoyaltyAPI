@@ -15,6 +15,7 @@ import { Business } from '../business/entities/business.entity';
 import { TransactionCodeService } from './services/transaction-code.service';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 import { MailModule } from '../../mail/mail.module';
+import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MailModule } from '../../mail/mail.module';
       Business,
     ]),
     MailModule,
+    CapabilityModule,
   ],
   providers: [
     RedemptionService,
@@ -39,4 +41,4 @@ import { MailModule } from '../../mail/mail.module';
   ],
   controllers: [ParticipantCampaignBalanceController],
 })
-export class ParticipantCampaignBalanceModule {}
+export class ParticipantCampaignBalanceModule { }

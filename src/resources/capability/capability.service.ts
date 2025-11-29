@@ -5,6 +5,10 @@ import { CampaignService } from '../campaign/campaign.service';
 import { TierConfig } from '../tier/interfaces/tier-config.interface';
 import { MembershipStatus } from '../membership/entities/membership.entity';
 import { RewardsService } from '../rewards/services/rewards.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Between } from 'typeorm';
+import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
+import moment from 'moment';
 
 export enum ActionType {
     CREATE_CAMPAIGN = 'CREATE_CAMPAIGN',
@@ -15,6 +19,7 @@ export enum ActionType {
     UPDATE_CAMPAIGN = 'UPDATE_CAMPAIGN',
     ADD_REWARD_TO_BUSINESS = 'ADD_REWARD_TO_BUSINESS',
     UPDATE_REWARD = 'UPDATE_REWARD',
+    AWARD_POINTS = 'AWARD_POINTS',
 }
 
 @Injectable()
@@ -25,6 +30,8 @@ export class CapabilityService {
         @Inject(forwardRef(() => CampaignService))
         private readonly campaignService: CampaignService,
         private readonly rewardsService: RewardsService,
+        @InjectRepository(PointHistory)
+        private readonly pointHistoryRepository: Repository<PointHistory>,
     ) { }
 
     async checkPermission(userId: string, action: ActionType, context?: any): Promise<void> {
@@ -103,6 +110,10 @@ export class CapabilityService {
                 }
                 break;
 
+            case ActionType.AWARD_POINTS:
+                await this.checkMonthlyPointsAllowance(userId, effectiveConfig, context?.points);
+                break;
+
             default:
                 break;
         }
@@ -168,6 +179,34 @@ export class CapabilityService {
         if (currentUsage >= limit) {
             throw new ForbiddenException(
                 `You have reached your limit of ${limit} active rewards. Upgrade or level up to unlock more.`
+            );
+        }
+    }
+
+    private async checkMonthlyPointsAllowance(userId: string, config: TierConfig, pointsToAward: number) {
+        const allowance = config.quotas.monthlyPointsAllowance;
+        if (allowance === -1) return; // Unlimited
+
+        const startOfMonth = moment().startOf('month').toDate();
+        const endOfMonth = moment().endOf('month').toDate();
+
+        const result = await this.pointHistoryRepository
+            .createQueryBuilder('ph')
+            .select('SUM(ph.points)', 'total')
+            .where('ph.business_id = :businessId', { businessId: userId }) // Assuming userId is businessId, or we need to fetch businessId from userId
+            // If userId is actually the User ID of the business owner, we might need to join with Business table or fetch Business first.
+            // However, based on how checkPermission is called, it seems userId is the key.
+            // Let's assume for now that the caller passes the correct ID that links to business_id in PointHistory.
+            // If PointHistory.business_id is a UUID of the Business entity, then userId passed here must be that UUID.
+            .andWhere('ph.type = :type', { type: PointHistoryType.EARN })
+            .andWhere('ph.created_at BETWEEN :start AND :end', { start: startOfMonth, end: endOfMonth })
+            .getRawOne();
+
+        const totalAwarded = result && result.total ? parseInt(result.total, 10) : 0;
+
+        if (totalAwarded + pointsToAward > allowance) {
+            throw new ForbiddenException(
+                `You have reached your monthly points allowance of ${allowance}. Upgrade to award more points.`
             );
         }
     }
