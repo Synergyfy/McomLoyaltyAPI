@@ -4,10 +4,12 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { BusinessService } from '../services/business.service';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PageDto } from '../../../common/dto/page.dto';
 import { Business } from '../entities/business.entity';
 import { StaffService } from '../../staff/services/staff.service';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
 import { UpdateStaffDto } from '../../staff/dto/update-staff.dto';
+import { AdminService } from '../../admin/services/admin.service';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -17,6 +19,7 @@ export class AdminBusinessController {
     constructor(
         private readonly businessService: BusinessService,
         private readonly staffService: StaffService,
+        private readonly adminService: AdminService,
     ) { }
 
     @Get()
@@ -24,10 +27,10 @@ export class AdminBusinessController {
     @ApiResponse({
         status: 200,
         description: 'A paginated list of all businesses.',
-        type: [Business],
+        type: PageDto,
     })
     async findAll(@Query() paginationDto: PaginationDto) {
-        return this.businessService.findAll(paginationDto.page, paginationDto.limit);
+        return this.adminService.getBusinesses(paginationDto.page, paginationDto.limit);
     }
 
     @Get(':id')
@@ -39,7 +42,7 @@ export class AdminBusinessController {
     })
     @ApiResponse({ status: 404, description: 'Business not found.' })
     async findOne(@Param('id') id: string) {
-        return this.businessService.findById(id, ['rewards', 'campaigns']);
+        return this.adminService.getBusiness(id);
     }
 
     @Get(':id/staffs')
@@ -47,7 +50,7 @@ export class AdminBusinessController {
     @ApiResponse({
         status: 200,
         description: 'A paginated list of all staff for a business.',
-        type: [Business],
+        type: PageDto,
     })
     async findStaff(
         @Param('id') id: string,
@@ -69,7 +72,7 @@ export class AdminBusinessController {
     @ApiResponse({ status: 200, description: 'The business has been successfully disabled.' })
     @ApiResponse({ status: 404, description: 'Business not found.' })
     async disable(@Param('id') id: string) {
-        return this.businessService.update(id, { isDisabled: true });
+        return this.adminService.disableBusiness(id);
     }
 
     @Get(':id/participants')
@@ -77,7 +80,7 @@ export class AdminBusinessController {
     @ApiResponse({
         status: 200,
         description: 'A paginated list of all participants for a business.',
-        type: [Business],
+        type: PageDto,
     })
     async findAllParticipants(
         @Param('id') id: string,
@@ -95,7 +98,7 @@ export class AdminBusinessController {
     })
     @ApiResponse({ status: 404, description: 'Business not found.' })
     async update(@Param('id') id: string, @Body() updateBusinessDto: UpdateBusinessDto) {
-        return this.businessService.update(id, updateBusinessDto);
+        return this.adminService.updateBusiness(id, updateBusinessDto);
     }
 
     @Patch('staffs/:id')
@@ -107,6 +110,6 @@ export class AdminBusinessController {
     })
     @ApiResponse({ status: 404, description: 'Staff member not found.' })
     async updateStaff(@Param('id') id: string, @Body() updateStaffDto: UpdateStaffDto) {
-        return this.staffService.update(id, updateStaffDto);
+        return this.adminService.updateStaff(id, updateStaffDto);
     }
 }

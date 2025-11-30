@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
+import { Business } from '../../business/entities/business.entity';
 import { BusinessService } from '../../business/services/business.service';
 import { StaffService } from '../../staff/services/staff.service';
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
@@ -19,6 +20,7 @@ import { UpdateBusinessDto } from '../../business/dto/update-business.dto';
 import { UpdateStaffDto } from '../../staff/dto/update-staff.dto';
 import { UpdateCampaignDto } from '../../campaign/dto/update-campaign.dto';
 import { Role } from '../../../common/role.enum';
+import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 
 @Injectable()
 export class AdminService {
@@ -59,7 +61,7 @@ export class AdminService {
     return this.adminRepository.findOne({ where: { email } });
   }
 
-  async getBusinesses(page: number, limit: number) {
+  async getBusinesses(page: number, limit: number): Promise<PaginationResult<Business>> {
     const result = await this.businessService.findAll(page, limit);
 
     const enrichedBusinesses = await Promise.all(
@@ -109,6 +111,16 @@ export class AdminService {
         }
 
         business.remainingPointBalance = remainingPointBalance;
+
+        if (business.sector) {
+          (business as any).sector = business.sector.name;
+        }
+
+        if (membership && membership.tier) {
+          (business as any).tier = membership.tier.name;
+        } else {
+          (business as any).tier = null;
+        }
 
         return business;
       }),

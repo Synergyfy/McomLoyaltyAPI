@@ -184,6 +184,7 @@ export class BusinessService {
             order: { created_at: 'DESC' },
             skip: (page - 1) * limit,
             take: limit,
+            relations: ['sector', 'category', 'subCategory'],
         });
 
         const totalPages = Math.ceil(total / limit);
@@ -214,7 +215,7 @@ export class BusinessService {
         businessId: string,
         page: number,
         limit: number,
-    ): Promise<{ data: any[]; total: number }> {
+    ): Promise<PaginationResult<any>> {
         const business = await this.businessRepository.findOne({
             where: { id: businessId },
             relations: ['campaigns', 'campaigns.participants'],
@@ -226,11 +227,21 @@ export class BusinessService {
 
         const allParticipants = business.campaigns.flatMap((campaign) => campaign.participants);
         const uniqueParticipants = [...new Map(allParticipants.map((item) => [item['id'], item])).values()];
+        const total = uniqueParticipants.length;
+        const totalPages = Math.ceil(total / limit);
+        const next = page < totalPages ? Number(page) + 1 : null;
+        const previous = page > 1 ? Number(page) - 1 : null;
+
         const paginatedParticipants = uniqueParticipants.slice((page - 1) * limit, page * limit);
 
         return {
             data: paginatedParticipants,
-            total: uniqueParticipants.length,
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages,
+            next,
+            previous,
         };
     }
 

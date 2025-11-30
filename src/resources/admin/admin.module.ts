@@ -13,6 +13,7 @@ import { Membership } from '../membership/entities/membership.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { CampaignModule } from '../campaign/campaign.module';
 import { ParticipantModule } from '../participant/participant.module';
+import { AdminBusinessController } from '../business/controllers/admin.business.controller';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { ParticipantModule } from '../participant/participant.module';
     ParticipantModule,
   ],
   providers: [AdminService, MatchingPointsService],
-  controllers: [AdminController],
+  controllers: [AdminController, AdminBusinessController],
   exports: [AdminService],
 })
 export class AdminModule { }
