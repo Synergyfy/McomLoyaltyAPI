@@ -10,6 +10,8 @@ import { MatchingPointsService } from '../participant-campaign-balance/services/
 import { Participant } from '../participant/entities/participant.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { Campaign } from '../campaign/entities/campaign.entity';
+import { CampaignModule } from '../campaign/campaign.module';
+import { ParticipantModule } from '../participant/participant.module';
 
 @Module({
   imports: [
@@ -17,9 +19,11 @@ import { Campaign } from '../campaign/entities/campaign.entity';
     BusinessModule,
     StaffModule,
     HashModule,
+    CampaignModule,
+    ParticipantModule,
   ],
   providers: [AdminService, MatchingPointsService],
   controllers: [AdminController],
   exports: [AdminService],
 })
-export class AdminModule {}
+export class AdminModule { }
