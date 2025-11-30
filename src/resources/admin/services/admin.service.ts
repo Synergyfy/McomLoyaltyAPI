@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
 import { BusinessService } from '../../business/services/business.service';
 import { StaffService } from '../../staff/services/staff.service';
+import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
+import { Membership } from '../../membership/entities/membership.entity';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { HashService } from '../../../common/hash/hash.service';
 import { Campaign } from 'src/resources/campaign/entities/campaign.entity';
@@ -30,6 +32,10 @@ export class AdminService {
     private readonly campaignService: CampaignService,
     private readonly participantService: ParticipantService,
     private readonly hashService: HashService,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
   ) { }
 
   async create(createAdminDto: CreateAdminDto): Promise<Admin> {
@@ -54,7 +60,64 @@ export class AdminService {
   }
 
   async getBusinesses(page: number, limit: number) {
-    return this.businessService.findAll(page, limit);
+    const result = await this.businessService.findAll(page, limit);
+
+    const enrichedBusinesses = await Promise.all(
+      result.data.map(async (business) => {
+        // 1. Get Latest Membership (Tier)
+        const membership = await this.membershipRepository.findOne({
+          where: { business: { id: business.id } },
+          order: { created_at: 'DESC' },
+          relations: ['tier'],
+        });
+
+        // Attach membership to business for response (if needed by frontend, though not strictly on entity)
+        // Since we removed 'tier' from Business entity, we can't assign it there.
+        // We can assign the membership to the memberships array if we want to return it.
+        if (membership) {
+          business.memberships = [membership];
+        }
+
+        // 2. Calculate Remaining Point Balance
+        let remainingPointBalance = 0;
+        const tierConfig = membership?.tier?.configuration;
+
+        if (tierConfig) {
+          const monthlyPointsAllowance = tierConfig.quotas.monthlyPointsAllowance;
+
+          if (monthlyPointsAllowance === -1) {
+            remainingPointBalance = -1; // Unlimited
+          } else {
+            // Calculate points used this month
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const pointsUsed = await this.pointHistoryRepository
+              .createQueryBuilder('pointHistory')
+              .where('pointHistory.business_id = :businessId', { businessId: business.id })
+              .andWhere('pointHistory.created_at >= :startOfMonth', { startOfMonth })
+              .andWhere('pointHistory.type IN (:...types)', { types: ['EARN', 'MATCHING'] })
+              .select('SUM(pointHistory.points)', 'total')
+              .getRawOne();
+
+            const totalPointsUsed = pointsUsed && pointsUsed.total ? Number(pointsUsed.total) : 0;
+            remainingPointBalance = Math.max(0, monthlyPointsAllowance - totalPointsUsed);
+          }
+        } else {
+          remainingPointBalance = 0;
+        }
+
+        business.remainingPointBalance = remainingPointBalance;
+
+        return business;
+      }),
+    );
+
+    return {
+      ...result,
+      data: enrichedBusinesses,
+    };
   }
 
   async getStaffs(businessId: string, page: number, limit: number) {

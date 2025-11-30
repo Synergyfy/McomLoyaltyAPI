@@ -64,7 +64,7 @@ export class AuthService {
       response.user.isOnboarded = !!business.sector;
 
       const membership = await this.membershipRepository.findOne({
-        where: { user_id: user.id, status: MembershipStatus.ACTIVE },
+        where: { business: { id: user.id }, status: MembershipStatus.ACTIVE },
       });
       response.user.subscription = {
         isActive: !!membership,

@@ -89,7 +89,7 @@ export class TierService {
         const count = await this.membershipRepository.count({
           where: {
             tier: { id: tier.id },
-            user_type: Role.Business,
+            // user_type removed from Membership entity
           },
         });
         return {

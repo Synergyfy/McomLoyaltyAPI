@@ -17,6 +17,7 @@ import { BusinessCampaign } from '../campaign/entities/business-campaign.entity'
 import { MailModule } from '../../mail/mail.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { TierProgressionModule } from '../tier-progression/tier-progression.module';
+import { MembershipModule } from '../membership/membership.module';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import { TierProgressionModule } from '../tier-progression/tier-progression.modu
         MailModule,
         forwardRef(() => CapabilityModule),
         forwardRef(() => TierProgressionModule),
+        MembershipModule,
     ],
     providers: [
         RedemptionService,

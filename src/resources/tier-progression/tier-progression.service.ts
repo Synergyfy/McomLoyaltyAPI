@@ -26,7 +26,7 @@ export class TierProgressionService {
     ) { }
 
     async checkAndPromote(userId: string): Promise<void> {
-        const membership = await this.membershipService.findOneByUserId(userId);
+        const membership = await this.membershipService.findOneByBusinessId(userId);
         if (!membership || membership.status !== MembershipStatus.ACTIVE) {
             return;
         }

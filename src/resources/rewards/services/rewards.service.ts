@@ -183,7 +183,7 @@ export class RewardsService {
 
     if (reward.audience === RewardAudience.SPECIFIC_TIERS) {
       const membership = await this.membershipRepository.findOne({
-        where: { user_id: businessId, user_type: 'business' },
+        where: { business: { id: businessId } },
       });
       if (!membership || !membership.tier) {
         throw new ForbiddenException('Business does not have a tier');

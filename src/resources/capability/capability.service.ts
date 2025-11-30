@@ -42,7 +42,7 @@ export class CapabilityService {
 
     async checkPermission(userId: string, action: ActionType, context?: any): Promise<void> {
         // 1. Fetch User's Tier via Membership
-        const membership = await this.membershipService.findOneByUserId(userId);
+        const membership = await this.membershipService.findOneByBusinessId(userId);
         if (!membership || membership.status !== MembershipStatus.ACTIVE) {
             this.logger.warn(`User ${userId} has no active membership.`);
             throw new ForbiddenException('Active membership required.');
