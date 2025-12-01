@@ -2,17 +2,17 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateSystemSettingDto {
-    @ApiProperty()
+    @ApiProperty({ description: 'The unique key for the setting', example: 'POINT_PRICE_GBP' })
     @IsString()
     @IsNotEmpty()
     key: string;
 
-    @ApiProperty()
+    @ApiProperty({ description: 'The value of the setting', example: '0.10' })
     @IsString()
     @IsNotEmpty()
     value: string;
 
-    @ApiProperty({ required: false })
+    @ApiProperty({ description: 'Optional description of what this setting controls', example: 'Price per point in GBP', required: false })
     @IsString()
     @IsOptional()
     description?: string;
