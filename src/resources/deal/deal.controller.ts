@@ -1,11 +1,10 @@
-
 import { Controller, Post, Body, UseGuards, Get, Query, Param, Patch, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { DealService } from './deal.service';
 import { CreateDealDto } from './dto/create-deal.dto';
 import { UpdateDealDto } from './dto/update-deal.dto';
 import { UpdateDealStatusDto } from './dto/update-deal-status.dto';
 import { DeactivateDealDto } from './dto/deactivate-deal.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
 import { AuthGuard } from '@nestjs/passport';
@@ -13,6 +12,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../common/interfaces/user.interface';
 import { FilterDealDto } from './dto/filter-deal.dto';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Deals')
 @ApiBearerAuth()
@@ -96,5 +96,30 @@ export class DealController {
   @ApiResponse({ status: 404, description: 'Deal not found.' })
   deactivate(@Param('id', ParseUUIDPipe) id: string, @Body() deactivateDealDto: DeactivateDealDto, @CurrentUser() user: User) {
     return this.dealService.deactivate(id, deactivateDealDto.isActive, user);
+  }
+
+  @Post(':id/link-campaign')
+  @Roles(Role.Business, Role.Admin)
+  @ApiOperation({ summary: 'Link a deal to a campaign' })
+  @ApiBody({ schema: { type: 'object', properties: { campaignId: { type: 'string' }, type: { type: 'string', enum: ['business', 'standard'] } } } })
+  async linkToCampaign(@Param('id') id: string, @Body() body: { campaignId: string, type: 'business' | 'standard' }, @CurrentUser() user: User) {
+    return this.dealService.linkToCampaign(id, body.campaignId, body.type, user);
+  }
+
+  @Public()
+  @Get('public/all')
+  @ApiOperation({ summary: 'Get all public deals' })
+  @ApiResponse({ status: 200, description: 'Return a paginated list of public deals.' })
+  findAllPublic(@Query() filterDealDto: FilterDealDto) {
+    return this.dealService.findAllPublic(filterDealDto);
+  }
+
+  @Public()
+  @Get('public/:id')
+  @ApiOperation({ summary: 'Get a public deal by ID' })
+  @ApiResponse({ status: 200, description: 'Return the deal.' })
+  @ApiResponse({ status: 404, description: 'Deal not found.' })
+  findOnePublic(@Param('id', ParseUUIDPipe) id: string) {
+    return this.dealService.findOnePublic(id);
   }
 }

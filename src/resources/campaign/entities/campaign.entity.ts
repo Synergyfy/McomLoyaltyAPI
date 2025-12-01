@@ -17,6 +17,7 @@ import { BusinessCampaign } from './business-campaign.entity';
 import { CampaignType, AudienceType, RewardType } from './campaign-enums';
 import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
 import { Tier } from '../../tier/entities/tier.entity';
+import { Deal } from '../../deal/entities/deal.entity';
 
 @Entity('campaigns')
 export class Campaign extends AbstractBaseEntity {
@@ -59,6 +60,10 @@ export class Campaign extends AbstractBaseEntity {
   @ManyToMany(() => Reward)
   @JoinTable()
   rewards: Reward[];
+
+  @ManyToMany(() => Deal, (deal) => deal.campaigns)
+  @JoinTable()
+  deals: Deal[];
 
   @ManyToOne(() => Business, { nullable: true })
   @JoinColumn({ name: 'business_id' })

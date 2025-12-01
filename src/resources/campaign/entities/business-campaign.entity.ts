@@ -11,6 +11,7 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Campaign } from './campaign.entity';
 import { Reward } from '../../rewards/entities/reward.entity';
+import { Deal } from '../../deal/entities/deal.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
@@ -135,6 +136,10 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @ManyToMany(() => Reward)
   @JoinTable()
   rewards: Reward[];
+
+  @ManyToMany(() => Deal, (deal) => deal.businessCampaigns)
+  @JoinTable()
+  deals: Deal[];
 
   @ManyToMany(() => Participant, (participant) => participant.businessCampaigns)
   participants: Participant[];
