@@ -17,7 +17,7 @@ export class DealService {
     @InjectRepository(Deal)
     private readonly dealRepository: Repository<Deal>,
     private readonly categoryService: CategoryService,
-  ) {}
+  ) { }
 
   async create(createDealDto: CreateDealDto, user: User) {
     const { categoryId, ...rest } = createDealDto;
@@ -32,6 +32,7 @@ export class DealService {
       category,
       business: user.role === Role.Business ? { id: user.id } : null,
       status: user.role === Role.Admin ? DealStatus.APPROVED : DealStatus.PENDING,
+      isApproved: user.role === Role.Admin,
     });
 
     return this.dealRepository.save(deal);
@@ -69,8 +70,57 @@ export class DealService {
     };
   }
 
+  async findAllAdmin(filterDealDto: FilterDealDto) {
+    const { limit, page, search, status, categoryId } = filterDealDto;
+    const query = this.dealRepository.createQueryBuilder('deal');
+
+    query.leftJoinAndSelect('deal.business', 'business');
+    query.leftJoinAndSelect('business.sector', 'sector');
+    query.leftJoinAndSelect('deal.category', 'category');
+
+    if (status) {
+      query.andWhere('deal.status = :status', { status });
+    }
+
+    if (categoryId) {
+      query.andWhere('deal.categoryId = :categoryId', { categoryId });
+    }
+
+    if (search) {
+      query.andWhere('(deal.title ILIKE :search OR deal.description ILIKE :search)', { search: `%${search}%` });
+    }
+
+    query.orderBy('deal.created_at', 'DESC');
+
+    const offset = (page - 1) * limit;
+    query.skip(offset).take(limit);
+
+    const [deals, total] = await query.getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrevious = page > 1;
+
+    return {
+      data: deals,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNext,
+        hasPrevious,
+        next: hasNext ? page + 1 : null,
+        previous: hasPrevious ? page - 1 : null,
+      }
+    };
+  }
+
   async findOne(id: string, user: User) {
     const query = this.dealRepository.createQueryBuilder('deal');
+    query.leftJoinAndSelect('deal.business', 'business');
+    query.leftJoinAndSelect('business.sector', 'sector');
+    query.leftJoinAndSelect('deal.category', 'category');
     query.where('deal.id = :id', { id });
 
     if (user.role === Role.Business) {
@@ -113,6 +163,7 @@ export class DealService {
       throw new NotFoundException(`Deal with ID ${id} not found`);
     }
     deal.status = status;
+    deal.isApproved = status === DealStatus.APPROVED;
     return this.dealRepository.save(deal);
   }
 

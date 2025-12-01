@@ -36,6 +36,9 @@ export class Deal extends AbstractBaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  isApproved: boolean;
+
   @Index()
   @ManyToOne(() => Category, (category) => category.deals, { onDelete: 'CASCADE' })
   category: Category;

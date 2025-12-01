@@ -18,7 +18,7 @@ import { FilterDealDto } from './dto/filter-deal.dto';
 @ApiBearerAuth()
 @Controller('deals')
 export class DealController {
-  constructor(private readonly dealService: DealService) {}
+  constructor(private readonly dealService: DealService) { }
 
   @Post()
   @Roles(Role.Admin, Role.Business)
@@ -28,6 +28,15 @@ export class DealController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   create(@Body() createDealDto: CreateDealDto, @CurrentUser() user: User) {
     return this.dealService.create(createDealDto, user);
+  }
+
+  @Get('admin/all')
+  @Roles(Role.Admin)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOperation({ summary: 'Get all deals (Admin)' })
+  @ApiResponse({ status: 200, description: 'Return a paginated list of deals with details.' })
+  findAllAdmin(@Query() filterDealDto: FilterDealDto) {
+    return this.dealService.findAllAdmin(filterDealDto);
   }
 
   @Get()
