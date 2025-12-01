@@ -13,6 +13,7 @@ export enum PointHistoryType {
   EARN = 'EARN',
   REDEEM = 'REDEEM',
   MATCHING = 'MATCHING',
+  PURCHASED_EXTRA = 'PURCHASED_EXTRA',
 }
 
 @Entity('point_histories')
@@ -23,7 +24,7 @@ export class PointHistory extends AbstractBaseEntity {
   @Column()
   points: number;
 
-  @ManyToOne(() => Participant, (participant) => participant.pointHistories)
+  @ManyToOne(() => Participant, (participant) => participant.pointHistories, { nullable: true })
   @JoinColumn({ name: 'participant_id' })
   participant: Participant;
 

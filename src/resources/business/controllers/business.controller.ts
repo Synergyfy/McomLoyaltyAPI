@@ -100,4 +100,13 @@ export class BusinessController {
   async getTotalSubscriptionPointBalance(@Request() req) {
     return this.businessService.getTotalSubscriptionPointBalance(req.user.id);
   }
+
+  @Roles(Role.Business)
+  @Post('points/buy')
+  @ApiOperation({ summary: 'Buy extra points' })
+  @ApiResponse({ status: 200, description: 'Points purchased successfully.' })
+  @ApiBody({ schema: { type: 'object', properties: { points: { type: 'number' }, paymentMethod: { type: 'string' } } } })
+  async buyExtraPoints(@Request() req, @Body() body: { points: number, paymentMethod: string }) {
+    return this.businessService.buyExtraPoints(req.user.id, body.points, body.paymentMethod);
+  }
 }

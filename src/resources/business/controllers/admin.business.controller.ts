@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param, Delete, Patch, Body } from '@nestjs/common';
+import { Controller, Get, Query, Param, Delete, Patch, Body, Post } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
@@ -124,5 +124,12 @@ export class AdminBusinessController {
     @ApiResponse({ status: 200, description: 'Return total subscription point balance.' })
     async getTotalSubscriptionPointBalance(@Param('id') id: string) {
         return this.businessService.getTotalSubscriptionPointBalance(id);
+    }
+
+    @Post(':id/points/reset')
+    @ApiOperation({ summary: 'Reset monthly extra points for a business (admin only)' })
+    @ApiResponse({ status: 200, description: 'Points reset successfully.' })
+    async resetMonthlyPoints(@Param('id') id: string) {
+        return this.businessService.resetMonthlyPoints(id);
     }
 }

@@ -14,6 +14,7 @@ import { SubcategoryService } from '../../subcategory/subcategory.service';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 import { PaymentHistoryService } from '../../payment-history/payment-history.service';
 import { PointHistory, PointHistoryType } from '../../participant-campaign-balance/entities/point-history.entity';
+import { SystemSettingService } from '../../system-setting/services/system-setting.service';
 
 @Injectable()
 export class BusinessService {
@@ -29,6 +30,7 @@ export class BusinessService {
         private readonly paymentHistoryService: PaymentHistoryService,
         @InjectRepository(PointHistory)
         private readonly pointHistoryRepository: Repository<PointHistory>,
+        private readonly systemSettingService: SystemSettingService,
     ) { }
 
     private async generateAffiliateCode(): Promise<string> {
@@ -289,14 +291,17 @@ export class BusinessService {
     }
 
     async getMonthlyPointBalance(businessId: string) {
+        const business = await this.findById(businessId);
         const payments = await this.paymentHistoryService.findByBusiness(businessId);
         const latestPayment = payments[0];
 
         if (!latestPayment || !latestPayment.membership) {
             return {
-                allowance: 0,
+                monthlyLimit: 0,
                 used: 0,
-                balance: 0
+                remaining: 0,
+                extraPoints: 0,
+                maxBuyable: 0,
             };
         }
 
@@ -315,11 +320,17 @@ export class BusinessService {
         });
 
         const used = usedPoints || 0;
+        const extraPoints = business.extraPoints || 0;
+
+        // Max buyable is strictly limited by the monthly allowance minus what has been used.
+        const maxBuyable = Math.max(0, monthlyAllowance - used);
 
         return {
-            allowance: monthlyAllowance,
+            monthlyLimit: monthlyAllowance,
             used: used,
-            balance: monthlyAllowance - used,
+            remaining: (monthlyAllowance + extraPoints) - used,
+            extraPoints: extraPoints,
+            maxBuyable: maxBuyable,
         };
     }
 
@@ -362,5 +373,54 @@ export class BusinessService {
             totalUsed,
             balance: totalAllowance - totalUsed,
         };
+    }
+
+    async buyExtraPoints(businessId: string, points: number, paymentMethod: string) {
+        const status = await this.getMonthlyPointBalance(businessId);
+
+        if (points <= 0) {
+            throw new BadRequestException('Points must be greater than 0');
+        }
+
+        if (points > status.maxBuyable) {
+            throw new BadRequestException(`You cannot exceed your monthly limit. Max you can buy is ${status.maxBuyable}.`);
+        }
+
+        // Get Cost Per Point from System Settings
+        const costPerPointSetting = await this.systemSettingService.get('POINT_PRICE_GBP');
+
+        if (!costPerPointSetting || parseFloat(costPerPointSetting) <= 0) {
+            throw new BadRequestException('Top-ups are currently disabled. Please contact support.');
+        }
+
+        const costPerPoint = parseFloat(costPerPointSetting);
+        const totalCost = points * costPerPoint;
+
+        // Credit Extra Points
+        await this.businessRepository.increment({ id: businessId }, 'extraPoints', points);
+
+        // Add Point History
+        const pointHistory = this.pointHistoryRepository.create({
+            business: { id: businessId },
+            type: PointHistoryType.PURCHASED_EXTRA,
+            points: points,
+            description: `Purchased ${points} extra points`,
+        });
+        await this.pointHistoryRepository.save(pointHistory);
+
+        // TODO: Generate Invoice / Admin Notification
+        console.log(`Business ${businessId} purchased ${points} points for £${totalCost}`);
+
+        return {
+            success: true,
+            pointsPurchased: points,
+            cost: totalCost,
+            newBalance: await this.getMonthlyPointBalance(businessId)
+        };
+    }
+
+    async resetMonthlyPoints(businessId: string) {
+        await this.businessRepository.update(businessId, { extraPoints: 0 });
+        return { success: true, message: 'Monthly points reset successfully' };
     }
 }

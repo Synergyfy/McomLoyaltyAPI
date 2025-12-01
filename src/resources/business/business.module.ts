@@ -10,6 +10,7 @@ import { SubcategoryModule } from '../subcategory/subcategory.module';
 import { ReferralModule } from '../referral/referral.module';
 import { StaffModule } from '../staff/staff.module';
 import { PaymentHistoryModule } from '../payment-history/payment-history.module';
+import { SystemSettingModule } from '../system-setting/system-setting.module';
 import { BusinessService } from './services/business.service';
 import { BusinessController } from './controllers/business.controller';
 import { AffiliateController } from './controllers/affiliate.controller';
@@ -24,6 +25,7 @@ import { AffiliateController } from './controllers/affiliate.controller';
     ReferralModule,
     StaffModule,
     PaymentHistoryModule,
+    SystemSettingModule,
   ],
   providers: [BusinessService],
   controllers: [BusinessController, AffiliateController],
