@@ -38,6 +38,7 @@ import { PartnerModule } from './resources/partner/partner.module';
 import { WishlistModule } from './resources/wishlist/wishlist.module';
 import { CapabilityModule } from './resources/capability/capability.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { SystemSettingModule } from './resources/system-setting/system-setting.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
     PartnerModule,
     WishlistModule,
     CapabilityModule,
+    SystemSettingModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

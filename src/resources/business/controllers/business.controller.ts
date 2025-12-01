@@ -8,6 +8,7 @@ import { Public } from '../../../common/decorators/public.decorator';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { BuyPointsDto } from '../dto/buy-points.dto';
 
 @ApiTags('Business Lifecycle')
 @Controller('business')
@@ -99,5 +100,14 @@ export class BusinessController {
   @ApiResponse({ status: 200, description: 'Return total subscription point balance.' })
   async getTotalSubscriptionPointBalance(@Request() req) {
     return this.businessService.getTotalSubscriptionPointBalance(req.user.id);
+  }
+
+  @Roles(Role.Business)
+  @Post('points/buy')
+  @ApiOperation({ summary: 'Buy extra points' })
+  @ApiResponse({ status: 200, description: 'Points purchased successfully.' })
+  @ApiBody({ type: BuyPointsDto })
+  async buyExtraPoints(@Request() req, @Body(new ValidationPipe()) buyPointsDto: BuyPointsDto) {
+    return this.businessService.buyExtraPoints(req.user.id, buyPointsDto.points, buyPointsDto.paymentMethod);
   }
 }

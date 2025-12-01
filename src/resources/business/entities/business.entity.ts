@@ -121,4 +121,8 @@ export class Business extends AbstractBaseEntity {
 
   @ApiProperty({ description: 'The remaining monthly point balance of the business (virtual property)', required: false })
   remainingPointBalance?: number;
+
+  @ApiProperty({ description: 'Extra points purchased by the business', default: 0 })
+  @Column({ type: 'int', default: 0 })
+  extraPoints: number;
 }

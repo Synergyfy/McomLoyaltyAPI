@@ -126,8 +126,11 @@ export class PointEarningService {
 
           const pointsUsed = pointsUsedResult && pointsUsedResult.total ? Number(pointsUsedResult.total) : 0;
 
-          if (pointsUsed + points > monthlyAllowance) {
-            throw new BadRequestException(`Monthly point allowance exceeded. You have ${Math.max(0, monthlyAllowance - pointsUsed)} points remaining this month.`);
+          const extraPoints = business.extraPoints || 0;
+          const totalLimit = monthlyAllowance + extraPoints;
+
+          if (pointsUsed + points > totalLimit) {
+            throw new BadRequestException(`Monthly point allowance exceeded. You have ${Math.max(0, totalLimit - pointsUsed)} points remaining this month.`);
           }
         }
       }

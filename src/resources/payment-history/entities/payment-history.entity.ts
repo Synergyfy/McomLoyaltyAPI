@@ -14,6 +14,11 @@ export enum PaymentStatus {
   PENDING = 'pending',
 }
 
+export enum PurchaseType {
+  MEMBERSHIP = 'membership',
+  EXTRA_POINTS = 'extra_points',
+}
+
 @Entity()
 export class PaymentHistory extends AbstractBaseEntity {
   // TODO: change user_id to user
@@ -24,7 +29,7 @@ export class PaymentHistory extends AbstractBaseEntity {
   @Column()
   user_type: string;
 
-  @ManyToOne(() => Membership, { eager: true })
+  @ManyToOne(() => Membership, { eager: true, nullable: true })
   membership: Membership;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
@@ -38,4 +43,10 @@ export class PaymentHistory extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: PaymentStatus })
   status: PaymentStatus;
+
+  @Column({ type: 'enum', enum: PurchaseType, default: PurchaseType.MEMBERSHIP })
+  purchaseType: PurchaseType;
+
+  @Column({ type: 'int', nullable: true })
+  pointsPurchased: number;
 }
