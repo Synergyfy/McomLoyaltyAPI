@@ -112,4 +112,17 @@ export class AdminBusinessController {
     async updateStaff(@Param('id') id: string, @Body() updateStaffDto: UpdateStaffDto) {
         return this.adminService.updateStaff(id, updateStaffDto);
     }
+    @Get(':id/points/balance/monthly')
+    @ApiOperation({ summary: 'Get monthly point balance for a business (admin only)' })
+    @ApiResponse({ status: 200, description: 'Return monthly point balance.' })
+    async getMonthlyPointBalance(@Param('id') id: string) {
+        return this.businessService.getMonthlyPointBalance(id);
+    }
+
+    @Get(':id/points/balance/total')
+    @ApiOperation({ summary: 'Get total subscription point balance for a business (admin only)' })
+    @ApiResponse({ status: 200, description: 'Return total subscription point balance.' })
+    async getTotalSubscriptionPointBalance(@Param('id') id: string) {
+        return this.businessService.getTotalSubscriptionPointBalance(id);
+    }
 }

@@ -85,4 +85,19 @@ export class BusinessController {
   async deleteProfile(@Request() req) {
     return this.businessService.delete(req.user.id);
   }
+  @Roles(Role.Business)
+  @Get('points/balance/monthly')
+  @ApiOperation({ summary: 'Get monthly point balance' })
+  @ApiResponse({ status: 200, description: 'Return monthly point balance.' })
+  async getMonthlyPointBalance(@Request() req) {
+    return this.businessService.getMonthlyPointBalance(req.user.id);
+  }
+
+  @Roles(Role.Business)
+  @Get('points/balance/total')
+  @ApiOperation({ summary: 'Get total subscription point balance' })
+  @ApiResponse({ status: 200, description: 'Return total subscription point balance.' })
+  async getTotalSubscriptionPointBalance(@Request() req) {
+    return this.businessService.getTotalSubscriptionPointBalance(req.user.id);
+  }
 }

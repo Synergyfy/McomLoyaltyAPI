@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual } from 'typeorm';
 import { nanoid } from 'nanoid';
 import { Business } from '../entities/business.entity';
 import { Referral, ReferralStatus } from '../../referral/entities/referral.entity';
@@ -13,6 +13,7 @@ import { CategoryService } from '../../category/category.service';
 import { SubcategoryService } from '../../subcategory/subcategory.service';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 import { PaymentHistoryService } from '../../payment-history/payment-history.service';
+import { PointHistory, PointHistoryType } from '../../participant-campaign-balance/entities/point-history.entity';
 
 @Injectable()
 export class BusinessService {
@@ -26,6 +27,8 @@ export class BusinessService {
         private readonly categoryService: CategoryService,
         private readonly subcategoryService: SubcategoryService,
         private readonly paymentHistoryService: PaymentHistoryService,
+        @InjectRepository(PointHistory)
+        private readonly pointHistoryRepository: Repository<PointHistory>,
     ) { }
 
     private async generateAffiliateCode(): Promise<string> {
@@ -283,5 +286,81 @@ export class BusinessService {
 
     async getBillingHistory(id: string) {
         return this.paymentHistoryService.findByBusiness(id);
+    }
+
+    async getMonthlyPointBalance(businessId: string) {
+        const payments = await this.paymentHistoryService.findByBusiness(businessId);
+        const latestPayment = payments[0];
+
+        if (!latestPayment || !latestPayment.membership) {
+            return {
+                allowance: 0,
+                used: 0,
+                balance: 0
+            };
+        }
+
+        const membership = latestPayment.membership;
+        const tierConfig = membership.tier.configuration;
+        const monthlyAllowance = tierConfig?.quotas?.monthlyPointsAllowance || 0;
+
+        // Calculate start of current month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const usedPoints = await this.pointHistoryRepository.sum('points', {
+            business: { id: businessId },
+            type: PointHistoryType.EARN,
+            created_at: MoreThanOrEqual(startOfMonth),
+        });
+
+        const used = usedPoints || 0;
+
+        return {
+            allowance: monthlyAllowance,
+            used: used,
+            balance: monthlyAllowance - used,
+        };
+    }
+
+    async getTotalSubscriptionPointBalance(businessId: string) {
+        const payments = await this.paymentHistoryService.findByBusiness(businessId);
+        const latestPayment = payments[0];
+
+        if (!latestPayment || !latestPayment.membership) {
+            return {
+                totalAllowance: 0,
+                totalUsed: 0,
+                balance: 0
+            };
+        }
+
+        const membership = latestPayment.membership;
+        const tierConfig = membership.tier.configuration;
+        const monthlyAllowance = tierConfig?.quotas?.monthlyPointsAllowance || 0;
+
+        const startDate = new Date(membership.starts_at);
+        const endDate = new Date(membership.expires_at);
+
+        let durationMonths = 1;
+        if (membership.plan_type === 'annual') durationMonths = 12;
+        else if (membership.plan_type === 'quarterly') durationMonths = 3;
+        else durationMonths = 1; // monthly
+
+        const totalAllowance = monthlyAllowance * durationMonths;
+
+        const usedPoints = await this.pointHistoryRepository.sum('points', {
+            business: { id: businessId },
+            type: PointHistoryType.EARN,
+            created_at: Between(startDate, endDate),
+        });
+
+        const totalUsed = usedPoints || 0;
+
+        return {
+            totalAllowance,
+            totalUsed,
+            balance: totalAllowance - totalUsed,
+        };
     }
 }
