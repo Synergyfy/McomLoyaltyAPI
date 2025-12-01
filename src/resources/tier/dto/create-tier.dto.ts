@@ -127,6 +127,7 @@ export class CreateTierDto {
         maxActiveRewards: 10,
         maxRewardsPerCampaign: 3,
         monthlyPointsAllowance: 1000,
+        maxTeamMembers: 2,
       },
       featureFlags: {
         canCreateCampaignFromScratch: true,
@@ -136,31 +137,66 @@ export class CreateTierDto {
         canUpdateReward: true,
       },
       progressBonuses: {
-        pro_plus_campaign_bonus: 1,
+        active_campaign_bonus: 1,
       },
-      enablePro: true,
       pro: {
+        conditions: {
+          minCampaignsCreated: 2,
+          minPointsUsed: 500
+        },
+        benefits: {
+          quotas: {
+            maxActiveCampaigns: 6,
+            maxRewardsPerCampaign: 4
+          },
+          featureFlags: {
+            canEditAdminTemplates: true
+          },
+          bonusPoints: 500
+        }
+      },
+      pro_plus: {
+        conditions: {
+          minCampaignsCreated: 4,
+          minCustomerInteractions: 80
+        },
+        benefits: {
+          quotas: {
+            maxActiveCampaigns: 8,
+            maxRewardsPerCampaign: 6
+          },
+          featureFlags: {
+            canCreateCampaignFromScratch: true
+          },
+          unlockNextTierPreview: {
+            percentNextTierPoints: 10,
+            additionalTeamMembers: 1
+          }
+        }
+      },
+      winter: {
         quotas: {
           maxActiveCampaigns: 10,
           maxActiveRewards: 20,
           maxRewardsPerCampaign: 5,
           monthlyPointsAllowance: 2000,
         },
-        monthly_price: 59.99,
-        annual_price: 600.00,
-        stripe_monthly_price_id: 'price_pro_monthly',
+        price: 59.99,
+        stripe_price_id: 'price_winter',
+        pro: {
+          conditions: { minCampaignsCreated: 3 },
+          benefits: { quotas: { maxActiveCampaigns: 12 } }
+        }
       },
-      enableProPlus: true,
-      pro_plus: {
+      summer: {
         quotas: {
           maxActiveCampaigns: -1,
           maxActiveRewards: -1,
           maxRewardsPerCampaign: 10,
           monthlyPointsAllowance: 5000,
         },
-        monthly_price: 99.99,
-        annual_price: 1000.00,
-        stripe_monthly_price_id: 'price_pro_plus_monthly',
+        price: 99.99,
+        stripe_price_id: 'price_summer',
       },
     },
   })

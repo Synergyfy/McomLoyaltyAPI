@@ -10,6 +10,7 @@ import { Sector } from '../sector/entities/sector.entity';
 import { Tier } from '../tier/entities/tier.entity';
 import { CapabilityModule } from '../capability/capability.module';
 import { forwardRef } from '@nestjs/common';
+import { TierProgressionModule } from '../tier-progression/tier-progression.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { forwardRef } from '@nestjs/common';
       Tier,
     ]),
     forwardRef(() => CapabilityModule),
+    forwardRef(() => TierProgressionModule),
   ],
   controllers: [RewardsController],
   providers: [RewardsService],

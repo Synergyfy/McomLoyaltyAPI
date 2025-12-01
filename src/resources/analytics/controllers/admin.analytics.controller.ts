@@ -16,6 +16,7 @@ import {
 } from '../dto/growth-activity-chart.dto';
 import { AdminAnalyticsService } from '../services/admin.analytics.service';
 import { PointLogResponseDto } from '../dto/point-log.dto';
+import { PointLogFilterDto } from '../dto/point-log-filter.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 @ApiTags('Admin Analytics')
@@ -148,7 +149,7 @@ export class AdminAnalyticsController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized. JWT token is missing or invalid.' })
   @ApiResponse({ status: 403, description: 'Forbidden. User does not have the required Admin role.' })
-  getPointLogs(@Query() paginationDto: PaginationDto): Promise<PointLogResponseDto> {
-    return this.adminAnalyticsService.getPointLogs(paginationDto);
+  getPointLogs(@Query() filterDto: PointLogFilterDto): Promise<PointLogResponseDto> {
+    return this.adminAnalyticsService.getPointLogs(filterDto);
   }
 }

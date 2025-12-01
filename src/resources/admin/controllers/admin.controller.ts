@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   ValidationPipe,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -29,6 +30,10 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { PageDto } from '../../../common/dto/page.dto';
 import { Business } from '../../business/entities/business.entity';
+import { UpdateBusinessDto } from '../../business/dto/update-business.dto';
+import { Staff } from '../../staff/entities/staff.entity';
+import { UpdateStaffDto } from '../../staff/dto/update-staff.dto';
+import { UpdateCampaignDto } from '../../campaign/dto/update-campaign.dto';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -39,7 +44,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly matchingPointsService: MatchingPointsService,
-  ) {}
+  ) { }
 
   @Public()
   @Post('signup')
@@ -53,33 +58,9 @@ export class AdminController {
     return this.adminService.create(createAdminDto);
   }
 
-  @Roles(Role.Admin)
-  @ApiOperation({ summary: 'Admin: Get all businesses' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return all businesses with pagination.',
-  })
-  @Get('businesses')
-  async getBusinesses(
-    @Query() paginationDto: PaginationDto,
-  ): Promise<PageDto<Business>> {
-    return this.adminService.getBusinesses(
-      paginationDto.page,
-      paginationDto.limit,
-    );
-  }
 
-  @Roles(Role.Admin)
-  @ApiOperation({ summary: 'Admin: Get all staffs by business ID' })
-  @ApiResponse({ status: 200, description: 'Return all staffs for a business.' })
-  @Get('staffs/:businessId')
-  async getStaffs(
-    @Param('businessId') businessId: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return this.adminService.getStaffs(businessId, page, limit);
-  }
+
+
 
   @Roles(Role.Admin)
   @Post('award-matching-points')
@@ -116,4 +97,25 @@ export class AdminController {
       toggleMatchingPointsDto.campaignId,
     );
   }
+
+
+
+
+
+
+
+
+
+  @Roles(Role.Admin)
+  @Patch('campaigns/:id')
+  @ApiOperation({ summary: 'Admin: Update or disable campaign' })
+  @ApiResponse({ status: 200, description: 'Campaign updated.' })
+  async updateCampaign(
+    @Param('id') id: string,
+    @Body() updateCampaignDto: UpdateCampaignDto,
+  ) {
+    return this.adminService.updateCampaign(id, updateCampaignDto);
+  }
+
+
 }

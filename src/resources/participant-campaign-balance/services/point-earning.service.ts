@@ -18,6 +18,8 @@ import {
 import { DataSource } from 'typeorm';
 import { MailService } from '../../../mail/mail.service';
 import { CapabilityService, ActionType } from '../../capability/capability.service';
+import { TierProgressionService } from '../../tier-progression/tier-progression.service';
+import { MembershipService } from '../../membership/membership.service';
 
 @Injectable()
 export class PointEarningService {
@@ -39,6 +41,8 @@ export class PointEarningService {
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
     private readonly capabilityService: CapabilityService,
+    private readonly tierProgressionService: TierProgressionService,
+    private readonly membershipService: MembershipService,
   ) { }
 
   // Helper to find performer (Staff or Business)
@@ -102,6 +106,31 @@ export class PointEarningService {
 
       // Check Monthly Points Allowance
       await this.capabilityService.checkPermission(business.id, ActionType.AWARD_POINTS, { points });
+
+      // Enforce Monthly Point Limit
+      const membership = await this.membershipService.findOneByBusinessId(business.id);
+      if (membership && membership.tier && membership.tier.configuration) {
+        const monthlyAllowance = membership.tier.configuration.quotas.monthlyPointsAllowance;
+        if (monthlyAllowance !== -1) {
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+
+          const pointsUsedResult = await this.pointHistoryRepository
+            .createQueryBuilder('pointHistory')
+            .where('pointHistory.business_id = :businessId', { businessId: business.id })
+            .andWhere('pointHistory.created_at >= :startOfMonth', { startOfMonth })
+            .andWhere('pointHistory.type IN (:...types)', { types: ['EARN', 'MATCHING'] })
+            .select('SUM(pointHistory.points)', 'total')
+            .getRawOne();
+
+          const pointsUsed = pointsUsedResult && pointsUsedResult.total ? Number(pointsUsedResult.total) : 0;
+
+          if (pointsUsed + points > monthlyAllowance) {
+            throw new BadRequestException(`Monthly point allowance exceeded. You have ${Math.max(0, monthlyAllowance - pointsUsed)} points remaining this month.`);
+          }
+        }
+      }
 
       // If it's a regular Campaign (admin template), business might not be directly linked or null, but typically we award on claimed ones (BC)
 
@@ -266,7 +295,31 @@ export class PointEarningService {
     if (transactionManager) {
       return execute(transactionManager);
     } else {
-      return await this.dataSource.transaction(execute);
+      const result = await this.dataSource.transaction(execute);
+
+      // Check for promotion (fire and forget or await?)
+      // We need businessId. We can get it from performerId if type is Business, or we need to look it up.
+      // Since 'execute' already looked it up, we could have returned it.
+      // But 'execute' returns Participant.
+      // Let's just look it up again or optimize later. 
+      // Actually, findPerformer is fast.
+      try {
+        let businessId = '';
+        if (performerType === 'Business') {
+          businessId = performerId;
+        } else {
+          const staff = await this.staffRepository.findOne({ where: { id: performerId }, relations: ['business'] });
+          if (staff && staff.business) businessId = staff.business.id;
+        }
+
+        if (businessId) {
+          await this.tierProgressionService.checkAndPromote(businessId);
+        }
+      } catch (e) {
+        console.error('Error checking promotion:', e);
+      }
+
+      return result;
     }
   }
 

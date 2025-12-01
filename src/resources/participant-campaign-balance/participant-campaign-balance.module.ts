@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ParticipantCampaignBalance } from './entities/participant-campaign-balance.entity';
 import { PointHistory } from './entities/point-history.entity';
@@ -16,29 +16,33 @@ import { TransactionCodeService } from './services/transaction-code.service';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 import { MailModule } from '../../mail/mail.module';
 import { CapabilityModule } from '../capability/capability.module';
+import { TierProgressionModule } from '../tier-progression/tier-progression.module';
+import { MembershipModule } from '../membership/membership.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      ParticipantCampaignBalance,
-      PointHistory,
-      Staff,
-      Participant,
-      BusinessReward,
-      Campaign,
-      BusinessCampaign,
-      TransactionCode,
-      Business,
-    ]),
-    MailModule,
-    CapabilityModule,
-  ],
-  providers: [
-    RedemptionService,
-    PointEarningService,
-    ParticipantCampaignBalanceService,
-    TransactionCodeService,
-  ],
-  controllers: [ParticipantCampaignBalanceController],
+    imports: [
+        TypeOrmModule.forFeature([
+            ParticipantCampaignBalance,
+            PointHistory,
+            Staff,
+            Participant,
+            BusinessReward,
+            Campaign,
+            BusinessCampaign,
+            TransactionCode,
+            Business,
+        ]),
+        MailModule,
+        forwardRef(() => CapabilityModule),
+        forwardRef(() => TierProgressionModule),
+        MembershipModule,
+    ],
+    providers: [
+        RedemptionService,
+        PointEarningService,
+        ParticipantCampaignBalanceService,
+        TransactionCodeService,
+    ],
+    controllers: [ParticipantCampaignBalanceController],
 })
 export class ParticipantCampaignBalanceModule { }

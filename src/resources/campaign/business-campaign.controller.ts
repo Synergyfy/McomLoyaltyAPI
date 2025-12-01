@@ -83,7 +83,7 @@ export class BusinessCampaignController {
     @CurrentUser() business: Business,
     @Query() paginationDto: PaginationDto,
   ) {
-    return this.campaignService.findClaimedCampaigns(
+    return this.campaignService.findAllByBusiness(
       business.id,
       paginationDto,
     );
@@ -95,9 +95,10 @@ export class BusinessCampaignController {
     @CurrentUser() business: Business,
     @Query() paginationDto: PaginationDto,
   ) {
-    return this.campaignService.getCampaignAnalytics(
-      business.id,
-      paginationDto,
+    // Mapping to getAnalytics which expects CampaignAnalyticsQueryDto
+    return this.campaignService.getAnalytics(
+      business,
+      { ...paginationDto } as any,
     );
   }
 
@@ -107,9 +108,9 @@ export class BusinessCampaignController {
     @CurrentUser() business: Business,
     @Param('campaignId', ParseUUIDPipe) campaignId: string,
   ) {
-    return this.campaignService.getDetailedCampaignAnalytics(
-      business.id,
+    return this.campaignService.getCampaignAnalytics(
       campaignId,
+      business.id,
     );
   }
 

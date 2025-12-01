@@ -26,6 +26,7 @@ import {
   PointLogResponseDto,
   PointLogItemDto,
 } from '../dto/point-log.dto';
+import { PointLogFilterDto } from '../dto/point-log-filter.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
@@ -45,7 +46,7 @@ export class AdminAnalyticsService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(ParticipantCampaignBalance)
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
-  ) {}
+  ) { }
 
   /**
    * Retrieves a high-level overview of the entire system.
@@ -285,8 +286,17 @@ export class AdminAnalyticsService {
    * @param paginationDto The pagination options.
    * @returns A promise that resolves to a paginated list of point logs.
    */
-  async getPointLogs(paginationDto: PaginationDto): Promise<PointLogResponseDto> {
-    const { page, limit } = paginationDto;
+  async getPointLogs(filterDto: PointLogFilterDto): Promise<PointLogResponseDto> {
+    const {
+      page,
+      limit,
+      businessId,
+      campaignId,
+      participantId,
+      transactionType,
+      startDate,
+      endDate,
+    } = filterDto;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.pointHistoryRepository
@@ -303,6 +313,36 @@ export class AdminAnalyticsService {
       .orderBy('ph.created_at', 'DESC')
       .skip(skip)
       .take(limit);
+
+    if (businessId) {
+      queryBuilder.andWhere('ph.business_id = :businessId', { businessId });
+    }
+
+    if (campaignId) {
+      queryBuilder.andWhere('ph.campaign_id = :campaignId', { campaignId });
+    }
+
+    if (participantId) {
+      queryBuilder.andWhere('ph.participant_id = :participantId', {
+        participantId,
+      });
+    }
+
+    if (transactionType) {
+      queryBuilder.andWhere('ph.type = :transactionType', { transactionType });
+    }
+
+    if (startDate) {
+      queryBuilder.andWhere('ph.created_at >= :startDate', {
+        startDate: moment(startDate).startOf('day').toDate(),
+      });
+    }
+
+    if (endDate) {
+      queryBuilder.andWhere('ph.created_at <= :endDate', {
+        endDate: moment(endDate).endOf('day').toDate(),
+      });
+    }
 
     const [results, total] = await queryBuilder.getManyAndCount();
 

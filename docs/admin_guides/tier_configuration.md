@@ -6,12 +6,13 @@ This document explains how to create and configure **Subscription Tiers** using 
 
 Each `SubscriptionTier` now includes a `configuration` field. This field is a JSON object that strictly defines what a business on this tier can and cannot do.
 
-The configuration controls three main areas:
+The configuration controls four main areas:
 1.  **Quotas**: Numeric limits (e.g., Max active campaigns).
 2.  **Feature Flags**: Boolean toggles for specific features (e.g., Access to CRM).
 3.  **Progress Bonuses**: Dynamic limit increases based on the business's progression level (e.g., "Active" or "Trusted" status).
+4.  **Progression Levels (Pro/ProPlus)**: Non-paid upgrades unlocked by meeting specific conditions.
 
-Additionally, tiers can now support **Pro** and **Pro Plus** variants, allowing for even more granular control within a single tier.
+Additionally, tiers can support **Seasonal Variants** (Winter, Summer, Autumn, Spring), allowing for specific configurations and pricing for different seasons.
 
 ---
 
@@ -40,18 +41,31 @@ The `configuration` JSON object must adhere to the following structure:
     "active_campaign_bonus": number,
     "trusted_campaign_bonus": number
   },
-  "enablePro": boolean,                 // Optional: Enable Pro variant
-  "enableProPlus": boolean,             // Optional: Enable Pro Plus variant
-  "pro": {                              // Optional: Overrides for Pro variant
-    "quotas": { ... },
-    "featureFlags": { ... },
-    "progressBonuses": { ... }
+  
+  // Progression Levels (Optional)
+  "pro": {
+      "conditions": { ... }, // Triggers to unlock Pro
+      "benefits": { ... }    // Benefits unlocked at Pro
   },
-  "pro_plus": {                         // Optional: Overrides for Pro Plus variant
-    "quotas": { ... },
-    "featureFlags": { ... },
-    "progressBonuses": { ... }
-  }
+  "pro_plus": {
+      "conditions": { ... }, // Triggers to unlock ProPlus
+      "benefits": { ... }    // Benefits unlocked at ProPlus
+  },
+
+  // Seasonal Variants (Optional)
+  "winter": {
+    "price": number,
+    "stripe_price_id": string,
+    "paypal_plan_id": string,
+    "quotas": { ... },          // Optional overrides
+    "featureFlags": { ... },    // Optional overrides
+    "progressBonuses": { ... }, // Optional overrides
+    "pro": { ... },             // Optional overrides for Pro in Winter
+    "pro_plus": { ... }         // Optional overrides for ProPlus in Winter
+  },
+  "summer": { ... },
+  "autumn": { ... },
+  "spring": { ... }
 }
 ```
 
@@ -75,34 +89,51 @@ The `configuration` JSON object must adhere to the following structure:
 | `hasAccessToCRM` | `boolean` | Grants access to Customer Relationship Management features. |
 | `canUpdateReward` | `boolean` | If `true`, the business can edit their existing rewards. |
 
-#### 3. Progress Bonuses (Optional)
-This section allows you to reward businesses for climbing the "Business Progression" ladder (Starter -> Active -> Trusted -> Partner).
+#### 3. Progression Levels (Pro & ProPlus)
+This system allows businesses to unlock better features **without paying extra**, simply by being active and meeting conditions.
 
-*   **Key Format**: `[level_name]_campaign_bonus` (lowercase, spaces replaced by underscores).
-*   **Value**: The *additional* number of campaigns allowed on top of the base quota.
+**Structure**:
+Each level (`pro` and `pro_plus`) has two parts:
+1.  **Conditions**: What the business must achieve to unlock this level.
+2.  **Benefits**: What the business gets when they unlock this level.
 
-**Example**:
-If `maxActiveCampaigns` is `5`, and you set `"trusted_campaign_bonus": 2`:
-*   A "Starter" business gets **5** campaigns.
-*   A "Trusted" business gets **5 + 2 = 7** campaigns.
+**Conditions Object**:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `minCampaignsCreated` | `number` | Minimum total campaigns created. |
+| `minRewardsCreated` | `number` | Minimum total rewards created. |
+| `minPointsUsed` | `number` | Minimum total points distributed/redeemed. |
+| `minCustomerScans` | `number` | Minimum number of QR/NFC scans received. |
+| `minParticipants` | `number` | Minimum number of unique participants engaged. |
+| `minCustomerInteractions` | `number` | Total interactions (scans + redemptions). |
+| `minDaysActive` | `number` | Days since registration. |
+| `profileCompleted` | `boolean` | Whether the business profile is fully filled. |
+| `kycVerified` | `boolean` | Whether KYC documents are verified. |
 
-#### 4. Pro and Pro Plus Variants (Optional)
-You can define overrides for "Pro" and "Pro Plus" variants of the tier.
-*   **enablePro / enableProPlus**: Set to `true` to enable these variants.
-*   **pro / pro_plus**: A partial configuration object. Any values defined here will **override** the base configuration for users with that variant. Values not defined here will fall back to the base configuration.
+**Benefits Object**:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `quotas` | `Partial<TierQuotas>` | Overrides for base quotas (e.g., higher campaign limit). |
+| `featureFlags` | `Partial<TierFeatureFlags>` | Overrides for feature flags (e.g., unlock CRM). |
+| `bonusPoints` | `number` | One-time or monthly bonus points added to allowance. |
+| `unlockNextTierPreview` | `object` | Special preview features of the *next* paid tier (e.g., `percentNextTierPoints`, `additionalTeamMembers`). |
 
-**Pricing for Variants**:
-You can also set specific prices for these variants within the `pro` or `pro_plus` object:
-*   `monthly_price`, `annual_price`, `quaterly_price`
-*   `stripe_monthly_price_id`, `stripe_annual_price_id`, etc.
+#### 4. Seasonal Variants (Optional)
+You can define overrides for specific seasons: **Winter**, **Summer**, **Autumn**, and **Spring**.
+Each seasonal variant object (`winter`, `summer`, etc.) can contain:
 
+*   **price**: The specific price for this seasonal variant.
+*   **stripe_price_id**: The Stripe Price ID for this seasonal variant.
+*   **paypal_plan_id**: The PayPal Plan ID for this seasonal variant.
+*   **quotas / featureFlags / progressBonuses**: Partial configuration objects. Any values defined here will **override** the base configuration for users with that seasonal variant.
+*   **pro / pro_plus**: Specific progression rules for this season.
 
 ---
 
 ## API Usage Examples
 
-### 1. Creating a "Bronze" Tier (Restricted)
-This tier is for entry-level businesses. They have low limits and cannot create custom campaigns.
+### 1. Creating a "Bronze" Tier with Progression
+This tier starts restricted but unlocks features as the business grows.
 
 **Endpoint**: `POST /tiers`
 
@@ -130,15 +161,46 @@ This tier is for entry-level businesses. They have low limits and cannot create 
       "hasAccessToCRM": false,
       "canUpdateReward": false
     },
-    "progressBonuses": {
-      "active_campaign_bonus": 1
+    "pro": {
+        "conditions": {
+            "minCampaignsCreated": 2,
+            "minPointsUsed": 500
+        },
+        "benefits": {
+            "quotas": {
+                "maxActiveCampaigns": 7,
+                "maxRewardsPerCampaign": 2
+            },
+            "featureFlags": {
+                "canEditAdminTemplates": true
+            },
+            "bonusPoints": 200
+        }
+    },
+    "pro_plus": {
+        "conditions": {
+            "minCampaignsCreated": 5,
+            "minCustomerInteractions": 100
+        },
+        "benefits": {
+            "quotas": {
+                "maxActiveCampaigns": 10,
+                "maxTeamMembers": 2
+            },
+            "featureFlags": {
+                "canCreateCampaignFromScratch": true
+            },
+            "unlockNextTierPreview": {
+                "percentNextTierPoints": 10
+            }
+        }
     }
   }
 }
 ```
 
-### 2. Creating a "Gold" Tier with Pro Options
-This tier offers high limits, but allows for "Pro" users to have even more.
+### 2. Creating a "Gold" Tier with Seasonal Variants & Progression
+This tier offers high limits, seasonal pricing, and progression rewards.
 
 **Endpoint**: `POST /tiers`
 
@@ -166,41 +228,17 @@ This tier offers high limits, but allows for "Pro" users to have even more.
       "hasAccessToCRM": true,
       "canUpdateReward": true
     },
-    "enablePro": true,
-    "pro": {
+    "winter": {
+        "price": 149.99,
+        "stripe_price_id": "price_gold_winter_special",
         "quotas": {
-            "maxActiveCampaigns": -1, // Unlimited for Pro
+            "maxActiveCampaigns": -1, // Unlimited for Winter
             "monthlyPointsAllowance": 10000
         },
-        "monthly_price": 149.99,
-        "stripe_monthly_price_id": "price_gold_pro_monthly"
-    }
-  }
-}
-```
-
-### 3. Updating a Tier Configuration
-You can modify the configuration of an existing tier at any time. The changes take effect immediately for all users on that tier.
-
-**Endpoint**: `PATCH /tiers/:id`
-
-**Payload**:
-```json
-{
-  "configuration": {
-    "quotas": {
-      "maxActiveCampaigns": 10,  // Increased from 5
-      "maxActiveRewards": 20,
-      "maxRewardsPerCampaign": 2,
-      "monthlyPointsAllowance": 1000,
-      "maxTeamMembers": 3
-    },
-    "featureFlags": {
-      "canCreateCampaignFromScratch": true, // Now allowed
-      "canEditAdminTemplates": false,
-      "hasAccessToAdvancedAnalytics": false,
-      "hasAccessToCRM": false,
-      "canUpdateReward": true
+        "pro": {
+            "conditions": { "minCampaignsCreated": 10 },
+            "benefits": { "quotas": { "maxTeamMembers": 10 } }
+        }
     }
   }
 }
@@ -212,16 +250,19 @@ You can modify the configuration of an existing tier at any time. The changes ta
 
 The system calculates the **Effective Limit** dynamically whenever a user attempts an action (like creating a campaign).
 
-1.  **Check Variant**: If the user has a `pro` or `pro_plus` variant, the system merges the specific variant configuration on top of the base configuration.
-2.  **Apply Bonuses**: The system adds any applicable progress bonuses to the quotas.
+1.  **Base Config**: Start with the Tier's base configuration.
+2.  **Seasonal Override**: If the user has a seasonal variant (e.g., `winter`), merge the specific seasonal configuration.
+3.  **Progression Override**: If the user has reached `pro` or `pro_plus` level, merge the corresponding `benefits` configuration.
+    *   *Note*: Seasonal progression rules take precedence over base progression rules if defined.
+4.  **Progress Bonuses**: Add any applicable "Business Progression" bonuses (e.g., "Active" status bonus).
 
 **Formula**:
-> `Effective Limit` = (`Tier Base Limit` OR `Variant Limit`) + `Progress Level Bonus`
+> `Effective Limit` = (`Base` + `Seasonal Override` + `Progression Benefits`) + `Progress Level Bonus`
 
 **Scenario**:
-*   **Tier**: Gold (Base Limit: 50)
-*   **Variant**: Pro (Limit Override: Unlimited/-1)
-*   **User Level**: Active (Bonus: +5)
-*   **Result**: The user has **Unlimited** campaigns.
+*   **Tier**: Bronze (Base Limit: 5)
+*   **Progression**: Pro (Benefit: +2 Campaigns -> Limit: 7)
+*   **User Level**: Active (Bonus: +1)
+*   **Result**: The user has **8** campaigns allowed.
 
 If the user tries to exceed their effective limit, the API will return a `403 Forbidden` error with a message explaining the limit.

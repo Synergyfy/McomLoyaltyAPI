@@ -1,9 +1,10 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tier } from './entities/tier.entity';
 import { CreateTierDto } from './dto/create-tier.dto';
 import { UpdateTierDto } from './dto/update-tier.dto';
+import { UpdateTierProgressionDto } from './dto/update-tier-progression.dto';
 import { TierHistory } from './entities/tier-history.entity';
 import { Admin } from '../admin/entities/admin.entity';
 import { Membership } from '../membership/entities/membership.entity';
@@ -58,6 +59,23 @@ export class TierService {
     return updatedTier;
   }
 
+  async updateProgression(id: string, progressionDto: UpdateTierProgressionDto, admin: Admin) {
+    const tier = await this.findOne(id);
+    if (!tier) {
+      throw new NotFoundException('Tier not found');
+    }
+
+    // Merge progression config into existing configuration
+    tier.configuration = {
+      ...tier.configuration,
+      ...progressionDto
+    };
+
+    await this.tierRepository.save(tier);
+    await this.createHistory(tier, admin);
+    return tier;
+  }
+
   async remove(id: string, admin: Admin) {
     const tier = await this.findOne(id);
     await this.tierRepository.softDelete(id);
@@ -71,7 +89,7 @@ export class TierService {
         const count = await this.membershipRepository.count({
           where: {
             tier: { id: tier.id },
-            user_type: Role.Business,
+            // user_type removed from Membership entity
           },
         });
         return {

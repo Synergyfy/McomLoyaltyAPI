@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,6 +22,8 @@ import { Sector } from '../../sector/entities/sector.entity';
 import { Tier } from '../../tier/entities/tier.entity';
 import { In, Brackets } from 'typeorm';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
+import { TierProgressionService } from '../../tier-progression/tier-progression.service';
+import { RewardSource } from '../enums/reward-source.enum';
 
 @Injectable()
 export class RewardsService {
@@ -36,6 +40,8 @@ export class RewardsService {
     private readonly sectorRepository: Repository<Sector>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    @Inject(forwardRef(() => TierProgressionService))
+    private readonly tierProgressionService: TierProgressionService,
   ) { }
 
   // Admin methods
@@ -177,7 +183,7 @@ export class RewardsService {
 
     if (reward.audience === RewardAudience.SPECIFIC_TIERS) {
       const membership = await this.membershipRepository.findOne({
-        where: { user_id: businessId, user_type: 'business' },
+        where: { business: { id: businessId } },
       });
       if (!membership || !membership.tier) {
         throw new ForbiddenException('Business does not have a tier');
@@ -217,6 +223,25 @@ export class RewardsService {
     });
 
     return this.businessRewardRepository.save(businessReward);
+  }
+
+  async createBusinessReward(
+    businessId: string,
+    createBusinessRewardDto: CreateBusinessRewardDto,
+  ): Promise<BusinessReward> {
+    const businessReward = this.businessRewardRepository.create({
+      ...createBusinessRewardDto,
+      business: { id: businessId },
+      reward_source: RewardSource.BUSINESS,
+      audience: RewardAudience.ALL_BUSINESS,
+    });
+
+    const savedReward = await this.businessRewardRepository.save(businessReward);
+
+    // Check for promotion
+    await this.tierProgressionService.checkAndPromote(businessId);
+
+    return savedReward;
   }
 
   async getBusinessRewards(
@@ -340,5 +365,11 @@ export class RewardsService {
 
     Object.assign(businessReward, updateBusinessRewardDto);
     return this.businessRewardRepository.save(businessReward);
+  }
+
+  async countTotalRewards(userId: string): Promise<number> {
+    return await this.businessRewardRepository.count({
+      where: { business: { id: userId } },
+    });
   }
 }

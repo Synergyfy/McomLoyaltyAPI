@@ -8,6 +8,7 @@ import { PointEarningService } from './point-earning.service';
 import { RedemptionService } from './redemption.service';
 import { PointHistory } from '../entities/point-history.entity';
 import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 
 @Injectable()
 export class ParticipantCampaignBalanceService {
@@ -25,6 +26,7 @@ export class ParticipantCampaignBalanceService {
     private readonly pointEarningService: PointEarningService,
     private readonly redemptionService: RedemptionService,
     private readonly dataSource: DataSource,
+    private readonly tierProgressionService: TierProgressionService,
   ) { }
 
   async getParticipantBalance(participantId: string) {
@@ -59,11 +61,11 @@ export class ParticipantCampaignBalanceService {
     // Note: Typically campaignId passed here corresponds to the one the user is viewing.
 
     const campaignBalance = await this.participantCampaignBalanceRepository.findOne({
-        where: [
-            { participant: { id: participantId }, campaign: { id: campaignId } },
-            { participant: { id: participantId }, businessCampaign: { id: campaignId } }
-        ],
-        relations: ['campaign', 'businessCampaign'],
+      where: [
+        { participant: { id: participantId }, campaign: { id: campaignId } },
+        { participant: { id: participantId }, businessCampaign: { id: campaignId } }
+      ],
+      relations: ['campaign', 'businessCampaign'],
     });
 
     if (!campaignBalance) {
@@ -90,8 +92,8 @@ export class ParticipantCampaignBalanceService {
           campaign: { id: campaignId },
         },
         {
-           participant: { id: participantId },
-           businessCampaign: { id: campaignId }
+          participant: { id: participantId },
+          businessCampaign: { id: campaignId }
         }
       ]
     });
@@ -113,14 +115,14 @@ export class ParticipantCampaignBalanceService {
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({
       where: [
-          {
-            participant: { id: participantId },
-            campaign: { id: campaignId },
-          },
-          {
-            participant: { id: participantId },
-            businessCampaign: { id: campaignId }
-          }
+        {
+          participant: { id: participantId },
+          campaign: { id: campaignId },
+        },
+        {
+          participant: { id: participantId },
+          businessCampaign: { id: campaignId }
+        }
       ],
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
@@ -160,7 +162,7 @@ export class ParticipantCampaignBalanceService {
   }
 
   async claimCode(participantId: string, code: string, campaignId: string) {
-    return await this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       // 1. Lock and fetch the transaction code first
       const rawCode = await manager.createQueryBuilder(TransactionCode, 'tc')
         .where('tc.code = :code', { code })
@@ -181,19 +183,19 @@ export class ParticipantCampaignBalanceService {
       // Check validation against businessCampaign or campaign
       if (transactionCode.businessCampaign) {
         if (transactionCode.businessCampaign.id !== campaignId) {
-             throw new BadRequestException('Code is not valid for this campaign');
+          throw new BadRequestException('Code is not valid for this campaign');
         }
       } else if (transactionCode.campaign) {
-         if (transactionCode.campaign.id !== campaignId) {
-             // Fallback: check if the campaignId matches a BusinessCampaign linked to the Campaign
-             const bc = await manager.findOne(BusinessCampaign, { where: { id: campaignId }, relations: ['campaign'] });
-             if (!bc || !bc.campaign || bc.campaign.id !== transactionCode.campaign.id) {
-                 throw new BadRequestException('Code is not valid for this campaign');
-             }
-         }
+        if (transactionCode.campaign.id !== campaignId) {
+          // Fallback: check if the campaignId matches a BusinessCampaign linked to the Campaign
+          const bc = await manager.findOne(BusinessCampaign, { where: { id: campaignId }, relations: ['campaign'] });
+          if (!bc || !bc.campaign || bc.campaign.id !== transactionCode.campaign.id) {
+            throw new BadRequestException('Code is not valid for this campaign');
+          }
+        }
       } else {
-           // Should not happen if data integrity is maintained, but handles case where neither is linked
-           throw new BadRequestException('Transaction code is not linked to any campaign');
+        // Should not happen if data integrity is maintained, but handles case where neither is linked
+        throw new BadRequestException('Transaction code is not linked to any campaign');
       }
 
       if (transactionCode.status !== TransactionCodeStatus.ACTIVE) {
@@ -238,5 +240,31 @@ export class ParticipantCampaignBalanceService {
         );
       }
     });
+
+    // Check for promotion after transaction
+    // We need businessId.
+    // We can fetch the transaction code again or just use the one we had?
+    // But we are outside transaction now.
+    // We can fetch it or just use the logic:
+    // We need to know who created the code.
+    // Let's fetch the code briefly or use a variable from inside transaction?
+    // We can't easily pass variables out of transaction callback unless we return them.
+    // But 'claimCode' returns the result of awardPoints or redeemReward.
+
+    // Let's just re-fetch the code to be safe and simple, or better:
+    // We know the code string.
+    const tc = await this.transactionCodeRepository.findOne({
+      where: { code },
+      relations: ['creator_business', 'creator_staff', 'creator_staff.business']
+    });
+
+    if (tc) {
+      const businessId = tc.creator_business?.id || tc.creator_staff?.business?.id;
+      if (businessId) {
+        await this.tierProgressionService.checkAndPromote(businessId);
+      }
+    }
+
+    return result;
   }
 }

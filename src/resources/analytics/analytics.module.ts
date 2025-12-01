@@ -31,5 +31,6 @@ import { PointHistoryService } from './services/point-history.service';
   ],
   controllers: [AnalyticsController, AdminAnalyticsController],
   providers: [AnalyticsService, AdminAnalyticsService, PointHistoryService],
+  exports: [PointHistoryService],
 })
-export class AnalyticsModule {}
+export class AnalyticsModule { }

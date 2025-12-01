@@ -2,7 +2,7 @@ import { Injectable, ForbiddenException, Inject, forwardRef, Logger } from '@nes
 import { MembershipService } from '../membership/membership.service';
 import { ProgressionService } from '../progression/progression.service';
 import { CampaignService } from '../campaign/campaign.service';
-import { TierConfig } from '../tier/interfaces/tier-config.interface';
+import { TierConfig, SeasonalTierConfig, ProgressionBenefits } from '../tier/interfaces/tier-config.interface';
 import { MembershipStatus } from '../membership/entities/membership.entity';
 import { RewardsService } from '../rewards/services/rewards.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -42,7 +42,7 @@ export class CapabilityService {
 
     async checkPermission(userId: string, action: ActionType, context?: any): Promise<void> {
         // 1. Fetch User's Tier via Membership
-        const membership = await this.membershipService.findOneByUserId(userId);
+        const membership = await this.membershipService.findOneByBusinessId(userId);
         if (!membership || membership.status !== MembershipStatus.ACTIVE) {
             this.logger.warn(`User ${userId} has no active membership.`);
             throw new ForbiddenException('Active membership required.');
@@ -54,14 +54,36 @@ export class CapabilityService {
             throw new ForbiddenException('Tier configuration missing.');
         }
 
-        // Determine effective configuration based on variant
+        // Determine effective configuration based on variant and progression level
         let effectiveConfig = { ...tierConfig };
         const variant = membership.variant;
+        const progressionLevel = membership.progression_level;
 
-        if (variant === 'pro' && tierConfig.enablePro && tierConfig.pro) {
-            effectiveConfig = this.mergeConfig(effectiveConfig, tierConfig.pro);
-        } else if (variant === 'pro_plus' && tierConfig.enableProPlus && tierConfig.pro_plus) {
-            effectiveConfig = this.mergeConfig(effectiveConfig, tierConfig.pro_plus);
+        // 1. Apply Seasonal Variant Overrides
+        let seasonalConfig: SeasonalTierConfig | undefined;
+        if (variant === 'winter' && tierConfig.winter) {
+            seasonalConfig = tierConfig.winter;
+        } else if (variant === 'summer' && tierConfig.summer) {
+            seasonalConfig = tierConfig.summer;
+        } else if (variant === 'autumn' && tierConfig.autumn) {
+            seasonalConfig = tierConfig.autumn;
+        } else if (variant === 'spring' && tierConfig.spring) {
+            seasonalConfig = tierConfig.spring;
+        }
+
+        if (seasonalConfig) {
+            effectiveConfig = this.mergeSeasonalConfig(effectiveConfig, seasonalConfig);
+        }
+
+        // 2. Apply Progression Level Overrides (Pro / ProPlus)
+        // Check if seasonal config has specific progression rules, otherwise use base tier rules
+        const proConfig = seasonalConfig?.pro || tierConfig.pro;
+        const proPlusConfig = seasonalConfig?.pro_plus || tierConfig.pro_plus;
+
+        if (progressionLevel === 'pro' && proConfig) {
+            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proConfig.benefits);
+        } else if (progressionLevel === 'pro_plus' && proPlusConfig) {
+            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
         }
 
         // 2. Fetch User's Progression Level
@@ -136,13 +158,28 @@ export class CapabilityService {
         }
     }
 
-    private mergeConfig(base: TierConfig, override: Partial<TierConfig>): TierConfig {
+    private mergeSeasonalConfig(base: TierConfig, override: SeasonalTierConfig): TierConfig {
         return {
             ...base,
             quotas: { ...base.quotas, ...override.quotas },
             featureFlags: { ...base.featureFlags, ...override.featureFlags },
             progressBonuses: { ...base.progressBonuses, ...override.progressBonuses },
         };
+    }
+
+    private mergeProgressionBenefits(base: TierConfig, benefits: ProgressionBenefits): TierConfig {
+        const merged = {
+            ...base,
+            quotas: { ...base.quotas, ...benefits.quotas },
+            featureFlags: { ...base.featureFlags, ...benefits.featureFlags },
+        };
+
+        // Handle bonus points if needed (e.g. add to monthly allowance or just store it)
+        if (benefits.bonusPoints) {
+            merged.quotas.monthlyPointsAllowance += benefits.bonusPoints;
+        }
+
+        return merged;
     }
 
     private async checkCampaignLimit(userId: string, config: TierConfig, levelName?: string) {

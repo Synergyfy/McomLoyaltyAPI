@@ -25,5 +25,6 @@ import { MailModule } from '../../mail/mail.module';
   ],
   controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],
+  exports: [ParticipantService],
 })
 export class ParticipantModule { }

@@ -10,6 +10,7 @@ import { Reward } from '../../rewards/entities/reward.entity';
 import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PointLogFilterDto } from '../dto/point-log-filter.dto';
 
 describe('AdminAnalyticsService', () => {
   let service: AdminAnalyticsService;
@@ -42,8 +43,8 @@ describe('AdminAnalyticsService', () => {
         {
           provide: getRepositoryToken(Business),
           useValue: {
-             count: jest.fn(),
-             createQueryBuilder: jest.fn(),
+            count: jest.fn(),
+            createQueryBuilder: jest.fn(),
           },
         },
         {
@@ -85,10 +86,10 @@ describe('AdminAnalyticsService', () => {
           participant: { name: 'John Doe', email: 'john@example.com' },
         },
         {
-            type: PointHistoryType.MATCHING,
-            points: 50,
-            created_at: new Date(),
-            participant: { name: 'Jane Doe', email: 'jane@example.com' },
+          type: PointHistoryType.MATCHING,
+          points: 50,
+          created_at: new Date(),
+          participant: { name: 'Jane Doe', email: 'jane@example.com' },
         }
       ];
       const mockTotal = 2;
@@ -123,22 +124,22 @@ describe('AdminAnalyticsService', () => {
 
       expect(result).toEqual({
         data: [
-            {
-                name: 'John Doe',
-                email: 'john@example.com',
-                points: 100,
-                description: PointHistoryType.EARN,
-                type: 'Regular',
-                date: mockPointHistory[0].created_at,
-            },
-            {
-                name: 'Jane Doe',
-                email: 'jane@example.com',
-                points: 50,
-                description: PointHistoryType.EARN, // Matching mapped to EARN
-                type: 'Matching',
-                date: mockPointHistory[1].created_at,
-            }
+          {
+            name: 'John Doe',
+            email: 'john@example.com',
+            points: 100,
+            description: PointHistoryType.EARN,
+            type: 'Regular',
+            date: mockPointHistory[0].created_at,
+          },
+          {
+            name: 'Jane Doe',
+            email: 'jane@example.com',
+            points: 50,
+            description: PointHistoryType.EARN, // Matching mapped to EARN
+            type: 'Matching',
+            date: mockPointHistory[1].created_at,
+          }
         ],
         total: mockTotal,
         page: 1,
@@ -146,7 +147,7 @@ describe('AdminAnalyticsService', () => {
       });
     });
 
-     it('should handle missing participant', async () => {
+    it('should handle missing participant', async () => {
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
       const mockPointHistory = [
         {
@@ -158,7 +159,7 @@ describe('AdminAnalyticsService', () => {
       ];
       const mockTotal = 1;
 
-       const mockQueryBuilder = {
+      const mockQueryBuilder = {
         leftJoin: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -175,6 +176,39 @@ describe('AdminAnalyticsService', () => {
       expect(result.data[0].email).toBe('Unknown');
       expect(result.data[0].type).toBe('Regular');
       expect(result.data[0].description).toBe(PointHistoryType.REDEEM);
+    });
+
+    it('should apply filters', async () => {
+      const filterDto: PointLogFilterDto = {
+        page: 1,
+        limit: 10,
+        businessId: 'some-business-id',
+      };
+      const mockPointHistory = [];
+      const mockTotal = 0;
+
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getManyAndCount: jest
+          .fn()
+          .mockResolvedValue([mockPointHistory, mockTotal]),
+      };
+
+      (
+        pointHistoryRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(mockQueryBuilder);
+
+      await service.getPointLogs(filterDto);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'ph.business_id = :businessId',
+        { businessId: 'some-business-id' },
+      );
     });
   });
 });

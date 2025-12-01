@@ -6,12 +6,15 @@ import { Staff } from '../entities/staff.entity';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateStaffDto } from '../dto/update-staff.dto';
 import { HashService } from '../../../common/hash/hash.service';
+import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 
 @Injectable()
 export class StaffService {
   constructor(
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly hashService: HashService,
   ) { }
 
@@ -68,5 +71,20 @@ export class StaffService {
 
   async findByEmail(email: string): Promise<Staff | undefined> {
     return this.staffRepository.findOne({ where: { email } });
+  }
+
+  async getActivities(
+    staffId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ data: PointHistory[]; total: number }> {
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: { initiated_by_staff: { id: staffId } },
+      relations: ['participant', 'campaign', 'businessCampaign', 'reward', 'businessReward'],
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total };
   }
 }

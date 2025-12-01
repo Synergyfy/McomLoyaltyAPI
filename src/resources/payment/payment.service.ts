@@ -352,7 +352,7 @@ export class PaymentService {
     isTrial: boolean = false,
     expiresAt: Date,
   ) {
-    let membership = await this.membershipRepository.findOne({ where: { user_id: user.id } });
+    let membership = await this.membershipRepository.findOne({ where: { business: { id: user.id } } });
     const startsAt = new Date();
 
     if (membership) {
@@ -365,8 +365,7 @@ export class PaymentService {
       await this.membershipRepository.save(membership);
     } else {
       membership = this.membershipRepository.create({
-        user_id: user.id,
-        user_type: user.role,
+        business: { id: user.id } as Business,
         tier,
         plan_type: planType,
         starts_at: startsAt,
@@ -429,7 +428,7 @@ export class PaymentService {
             expiresAt,
           );
         } else if (event.type === 'invoice.payment_failed') {
-          const membership = await this.membershipRepository.findOne({ where: { user_id: business.id } });
+          const membership = await this.membershipRepository.findOne({ where: { business: { id: business.id } } });
           if (membership) {
             membership.status = MembershipStatus.EXPIRED;
             await this.membershipRepository.save(membership);

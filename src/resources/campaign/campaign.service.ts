@@ -3,6 +3,8 @@ import {
   NotFoundException,
   UnauthorizedException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -41,6 +43,7 @@ import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
 import { MailService } from 'src/mail/mail.service';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
 import { Tier } from '../tier/entities/tier.entity';
+import { TierProgressionService } from '../tier-progression/tier-progression.service';
 
 @Injectable()
 export class CampaignService {
@@ -68,6 +71,8 @@ export class CampaignService {
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
     private readonly mailService: MailService,
+    @Inject(forwardRef(() => TierProgressionService))
+    private readonly tierProgressionService: TierProgressionService,
   ) { }
 
   async create(
@@ -131,7 +136,13 @@ export class CampaignService {
         rewards = businessRewards.map((br) => br.reward);
       }
       businessCampaign.rewards = rewards;
-      return this.businessCampaignRepository.save(businessCampaign);
+      businessCampaign.rewards = rewards;
+      const savedCampaign = await this.businessCampaignRepository.save(businessCampaign);
+
+      // Check for promotion
+      await this.tierProgressionService.checkAndPromote(currentUser.id);
+
+      return savedCampaign;
     }
   }
 
@@ -210,6 +221,9 @@ export class CampaignService {
       }
 
       createdCampaign = await this.businessCampaignRepository.save(businessCampaign);
+
+      // Check for promotion
+      await this.tierProgressionService.checkAndPromote(currentUser.id);
     }
 
     // Send emails to participants
@@ -798,166 +812,43 @@ export class CampaignService {
       contact_email: campaign.contact_email,
       contact_phone_number: campaign.contact_phone_number,
       footer_text: campaign.footer_text,
-      rewards: campaign.rewards,
     });
 
     return this.businessCampaignRepository.save(businessCampaign);
   }
 
-  async findClaimedCampaigns(
-    businessId: string,
-    paginationDto: PaginationDto,
-  ): Promise<PaginatedCampaignResponseDto> {
-    const { page, limit } = paginationDto;
-    const skip = (page - 1) * limit;
-
-    const [data, total] = await this.businessCampaignRepository.findAndCount({
-      where: { business: { id: businessId }, campaign: Not(IsNull()) }, // Filter only claimed ones (linked to campaign) if needed
-      relations: ['campaign', 'rewards'], // rewards are on BusinessCampaign now
-      order: { created_at: 'DESC' },
-      skip,
-      take: limit,
-    });
-
-    const totalPages = Math.ceil(total / limit);
-    const next = page < totalPages ? Number(page) + 1 : null;
-    const previous = page > 1 ? Number(page) - 1 : null;
-
-    return {
-      data: data as any,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages,
-      next,
-      previous,
-    };
-  }
-
-  async getCampaignAnalytics(
-    businessId: string,
-    paginationDto: PaginationDto,
-  ): Promise<any> {
-    const { page, limit } = paginationDto;
-    const skip = (page - 1) * limit;
-
-    // Query BusinessCampaigns instead of Campaigns
-    const qb = this.businessCampaignRepository
-      .createQueryBuilder('bc')
-      .leftJoin('bc.business', 'business')
-      .leftJoin('business.sector', 'sector')
-      .where('bc.business_id = :businessId', { businessId });
-
-    const total = await qb.getCount();
-
-    qb.select('bc.id', 'id')
-      .addSelect('bc.name', 'name')
-      .addSelect('bc.start_date', 'start_date')
-      .addSelect('bc.end_date', 'end_date')
-      .addSelect('bc.disabled', 'disabled')
-      .addSelect('sector.name', 'sector')
-      .addSelect(
-        (subQuery) =>
-          subQuery
-            .select('COUNT(DISTINCT ph.participant_id)')
-            .from(PointHistory, 'ph')
-            .where('ph.business_campaign_id = bc.id'),
-        'total_participants',
-      )
-      .addSelect(
-        (subQuery) =>
-          subQuery
-            .select('COALESCE(SUM(ph.points), 0)')
-            .from(PointHistory, 'ph')
-            .where('ph.business_campaign_id = bc.id')
-            .andWhere("ph.type = 'EARN'"),
-        'total_points_awarded',
-      )
-      .addSelect(
-        (subQuery) =>
-          subQuery
-            .select('COUNT(ph.id)')
-            .from(PointHistory, 'ph')
-            .where('ph.business_campaign_id = bc.id')
-            .andWhere("ph.type = 'REDEEM'"),
-        'total_rewards_redeemed',
-      )
-      .orderBy('bc.created_at', 'DESC')
-      .skip(skip)
-      .take(limit);
-
-    const data = await qb.getRawMany();
-
-    const result = data.map((row) => {
-      const totalParticipants = parseInt(row.total_participants, 10) || 0;
-      const totalRewardsRedeemed =
-        parseInt(row.total_rewards_redeemed, 10) || 0;
-
-      return {
-        id: row.id,
-        name: row.name,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        disabled: row.disabled,
-        sector: row.sector,
-        status: row.disabled ? 'inactive' : 'active',
-        total_participants: row.total_participants,
-        total_points_awarded: row.total_points_awarded,
-        total_rewards_redeemed: row.total_rewards_redeemed,
-        redemption_rate:
-          totalParticipants > 0
-            ? (totalRewardsRedeemed / totalParticipants) * 100
-            : 0,
-      };
-    });
-
-    return {
-      data: result,
-      total,
-      page,
-      limit,
-    };
-  }
-
-  async getDetailedCampaignAnalytics(
-    businessId: string,
-    campaignId: string,
-  ): Promise<any> {
+  async getCampaignAnalytics(campaignId: string, businessId: string) {
     const analyticsQuery = this.pointHistoryRepository
       .createQueryBuilder('ph')
       .where('ph.business_campaign_id = :campaignId', { campaignId })
       .andWhere('ph.business_id = :businessId', { businessId })
       .select([
+        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS total_points_earned",
+        "SUM(CASE WHEN ph.type = 'REDEEM' THEN ph.points ELSE 0 END) AS total_points_redeemed",
+        "COUNT(CASE WHEN ph.type = 'EARN' THEN 1 END) AS total_earns",
+        "COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS total_redemptions",
+        "COUNT(CASE WHEN ph.type = 'REDEEM' AND ph.reward_id IS NOT NULL THEN 1 END) AS total_rewards_redeemed",
         'COUNT(DISTINCT ph.participant_id) AS total_participants',
-        "COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS total_rewards_redeemed",
-        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS total_points_awarded",
       ])
       .getRawOne();
 
-    const weeklyChartDataQuery = this.pointHistoryRepository.query(
-      `
-      SELECT
-        date_trunc('day', ph.created_at) AS date,
-        SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS points_awarded,
-        COUNT(CASE WHEN ph.type = 'REDEEM' THEN 1 END) AS rewards_redeemed,
-        COUNT(DISTINCT CASE WHEN ph.created_at >= NOW() - INTERVAL '7 days' THEN ph.participant_id END) AS new_participants
-      FROM
-        point_histories ph
-      WHERE
-        ph.business_campaign_id = $1
-        AND ph.business_id = $2
-        AND ph.created_at >= NOW() - INTERVAL '7 days'
-      GROUP BY
-        date
-      ORDER BY
-        date;
-    `,
-      [campaignId, businessId],
-    );
+    const weeklyChartDataQuery = this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .where('ph.business_campaign_id = :campaignId', { campaignId })
+      .andWhere('ph.business_id = :businessId', { businessId })
+      .andWhere("ph.created_at >= NOW() - INTERVAL '7 days'")
+      .select([
+        "TO_CHAR(ph.created_at, 'YYYY-MM-DD') AS date",
+        "SUM(CASE WHEN ph.type = 'EARN' THEN ph.points ELSE 0 END) AS points_earned",
+        "SUM(CASE WHEN ph.type = 'REDEEM' THEN ph.points ELSE 0 END) AS points_redeemed",
+      ])
+      .groupBy('date')
+      .orderBy('date', 'ASC')
+      .getRawMany();
 
-    const rankedParticipantsQuery = this.participantRepository
-      .createQueryBuilder('p')
-      .leftJoin('p.pointHistories', 'ph')
+    const rankedParticipantsQuery = this.pointHistoryRepository
+      .createQueryBuilder('ph')
+      .leftJoin('ph.participant', 'p')
       .where('ph.business_campaign_id = :campaignId', { campaignId })
       .andWhere('ph.business_id = :businessId', { businessId })
       .select([
@@ -1176,5 +1067,21 @@ export class CampaignService {
   async countRewards(campaignId: string): Promise<number> {
     const campaign = await this.findOne(campaignId);
     return campaign.rewards ? campaign.rewards.length : 0;
+  }
+
+  async countTotalCampaigns(userId: string): Promise<number> {
+    return await this.businessCampaignRepository.count({
+      where: { business: { id: userId } },
+    });
+  }
+
+  async countTotalParticipantJoins(businessId: string): Promise<number> {
+    const result = await this.businessCampaignRepository.createQueryBuilder('bc')
+      .innerJoin('bc.participantCampaignBalances', 'pcb')
+      .where('bc.business_id = :businessId', { businessId })
+      .select('COUNT(pcb.id)', 'count')
+      .getRawOne();
+
+    return parseInt(result.count, 10) || 0;
   }
 }

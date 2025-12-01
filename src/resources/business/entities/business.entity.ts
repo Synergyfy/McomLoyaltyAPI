@@ -11,6 +11,7 @@ import { Referral } from '../../referral/entities/referral.entity';
 import { Deal } from '../../deal/entities/deal.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
 import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { Membership } from '../../membership/entities/membership.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -114,4 +115,10 @@ export class Business extends AbstractBaseEntity {
   @ApiProperty({ description: 'Total points redeemed by participants in campaigns owned by this business', default: 0 })
   @Column({ default: 0 })
   total_points_redeemed: number;
+
+  @OneToMany(() => Membership, (membership) => membership.business)
+  memberships: Membership[];
+
+  @ApiProperty({ description: 'The remaining monthly point balance of the business (virtual property)', required: false })
+  remainingPointBalance?: number;
 }

@@ -5,47 +5,55 @@ import { BusinessCampaign } from '../../campaign/entities/business-campaign.enti
 import { Role } from '../../../common/role.enum';
 import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
+import { DealRedemption } from '../../deal/entities/deal-redemption.entity';
+import { DealReview } from '../../deal/entities/deal-review.entity';
 
 @Entity('participants')
 export class Participant extends AbstractBaseEntity {
-  @Column()
-  name: string;
+    @Column()
+    name: string;
 
-  @Column({ unique: true })
-  email: string;
+    @Column({ unique: true })
+    email: string;
 
-  @Column()
-  password?: string;
+    @Column()
+    password?: string;
 
-  @Column({ type: 'enum', enum: Role, default: Role.Participant })
-  role: Role;
+    @Column({ type: 'enum', enum: Role, default: Role.Participant })
+    role: Role;
 
-  @Column({ unique: true })
-  uniqueCode: string;
+    @Column({ unique: true })
+    uniqueCode: string;
 
-  @ManyToMany(() => Campaign, (campaign) => campaign.participants)
-  @JoinTable()
-  campaigns: Campaign[];
+    @ManyToMany(() => Campaign, (campaign) => campaign.participants)
+    @JoinTable()
+    campaigns: Campaign[];
 
-  @ManyToMany(() => BusinessCampaign, (businessCampaign) => businessCampaign.participants)
-  @JoinTable()
-  businessCampaigns: BusinessCampaign[];
+    @ManyToMany(() => BusinessCampaign, (businessCampaign) => businessCampaign.participants)
+    @JoinTable()
+    businessCampaigns: BusinessCampaign[];
 
-  @OneToMany(
-    () => ParticipantCampaignBalance,
-    (participantCampaignBalance) => participantCampaignBalance.participant,
-  )
-  participantCampaignBalances: ParticipantCampaignBalance[];
+    @OneToMany(
+        () => ParticipantCampaignBalance,
+        (participantCampaignBalance) => participantCampaignBalance.participant,
+    )
+    participantCampaignBalances: ParticipantCampaignBalance[];
 
-  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.participant)
-  pointHistories: PointHistory[];
+    @OneToMany(() => PointHistory, (pointHistory) => pointHistory.participant)
+    pointHistories: PointHistory[];
 
-  @Column({ default: 0 })
-  global_total_points: number;
+    @OneToMany(() => DealRedemption, (redemption) => redemption.user)
+    dealRedemptions: DealRedemption[];
 
-  @Column({ default: 0 })
-  matching_points: number;
+    @OneToMany(() => DealReview, (review) => review.user)
+    dealReviews: DealReview[];
 
-  @Column({ default: false })
-  isDisabled: boolean;
+    @Column({ default: 0 })
+    global_total_points: number;
+
+    @Column({ default: 0 })
+    matching_points: number;
+
+    @Column({ default: false })
+    isDisabled: boolean;
 }

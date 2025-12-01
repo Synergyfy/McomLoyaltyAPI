@@ -87,7 +87,9 @@ export class AdminParticipantController {
   async getHistory(
     @Param('id') id: string,
     @Query() paginationDto: PaginationDto,
+    @Query('campaignId') campaignId?: string,
+    @Query('businessId') businessId?: string,
   ) {
-    return this.participantService.getHistory(id, paginationDto.page, paginationDto.limit);
+    return this.participantService.getHistory(id, paginationDto.page, paginationDto.limit, campaignId, businessId);
   }
 }

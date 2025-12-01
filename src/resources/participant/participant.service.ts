@@ -331,12 +331,19 @@ export class ParticipantService {
     participantId: string,
     page: number,
     limit: number,
+    campaignId?: string,
+    businessId?: string,
   ): Promise<{ data: PointHistory[]; total: number }> {
+    const where: any = { participant: { id: participantId } };
+    if (campaignId) where.campaign = { id: campaignId };
+    if (businessId) where.business = { id: businessId };
+
     const [data, total] = await this.pointHistoryRepository.findAndCount({
-      where: { participant: { id: participantId } },
+      where,
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
+      relations: ['campaign', 'business', 'businessCampaign', 'reward', 'businessReward'],
     });
     return { data, total };
   }

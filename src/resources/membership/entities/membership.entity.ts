@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Tier } from '../../tier/entities/tier.entity';
 
@@ -14,13 +14,13 @@ export enum PlanType {
   QUARTERLY = 'quarterly',
 }
 
+import { Business } from '../../business/entities/business.entity';
+
 @Entity()
 export class Membership extends AbstractBaseEntity {
-  @Column()
-  user_id: string;
-
-  @Column()
-  user_type: string;
+  @ManyToOne(() => Business)
+  @JoinColumn({ name: 'business_id' })
+  business: Business;
 
   @ManyToOne(() => Tier, { eager: true })
   tier: Tier;
@@ -42,8 +42,15 @@ export class Membership extends AbstractBaseEntity {
 
   @Column({
     type: 'enum',
-    enum: ['standard', 'pro', 'pro_plus'],
+    enum: ['standard', 'winter', 'summer', 'autumn', 'spring'],
     default: 'standard',
   })
-  variant: 'standard' | 'pro' | 'pro_plus';
+  variant: 'standard' | 'winter' | 'summer' | 'autumn' | 'spring';
+
+  @Column({
+    type: 'enum',
+    enum: ['basic', 'pro', 'pro_plus'],
+    default: 'basic',
+  })
+  progression_level: 'basic' | 'pro' | 'pro_plus';
 }
