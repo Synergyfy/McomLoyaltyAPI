@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Business } from './entities/business.entity';
 import { Referral } from '../referral/entities/referral.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
 import { HashModule } from '../../common/hash/hash.module';
 import { SectorModule } from '../sector/sector.module';
 import { CategoryModule } from '../category/category.module';
@@ -15,7 +16,7 @@ import { AffiliateController } from './controllers/affiliate.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business, Referral]),
+    TypeOrmModule.forFeature([Business, Referral, PointHistory]),
     HashModule,
     SectorModule,
     CategoryModule,
