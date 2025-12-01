@@ -9,6 +9,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { BuyPointsDto } from '../dto/buy-points.dto';
+import { PointPurchaseConfigDto } from '../dto/point-purchase-config.dto';
 
 @ApiTags('Business Lifecycle')
 @Controller('business')
@@ -109,5 +110,13 @@ export class BusinessController {
   @ApiBody({ type: BuyPointsDto })
   async buyExtraPoints(@Request() req, @Body(new ValidationPipe()) buyPointsDto: BuyPointsDto) {
     return this.businessService.buyExtraPoints(req.user.id, buyPointsDto.points, buyPointsDto.paymentMethod);
+  }
+
+  @Roles(Role.Business)
+  @Get('points/purchase-config')
+  @ApiOperation({ summary: 'Get point purchase configuration' })
+  @ApiResponse({ status: 200, description: 'Return point purchase configuration.', type: PointPurchaseConfigDto })
+  async getPointPurchaseConfig(@Request() req) {
+    return this.businessService.getPointPurchaseConfig(req.user.id);
   }
 }

@@ -423,4 +423,16 @@ export class BusinessService {
         await this.businessRepository.update(businessId, { extraPoints: 0 });
         return { success: true, message: 'Monthly points reset successfully' };
     }
+
+    async getPointPurchaseConfig(businessId: string) {
+        const status = await this.getMonthlyPointBalance(businessId);
+        const costPerPointSetting = await this.systemSettingService.get('POINT_PRICE_GBP');
+        const costPerPoint = costPerPointSetting ? parseFloat(costPerPointSetting) : 0;
+
+        return {
+            maxBuyablePoints: status.maxBuyable,
+            costPerPoint: costPerPoint,
+            currency: 'GBP'
+        };
+    }
 }
