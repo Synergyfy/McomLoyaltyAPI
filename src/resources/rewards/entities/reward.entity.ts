@@ -35,11 +35,31 @@ export class Reward extends AbstractBaseEntity {
   status: RewardStatus;
 
   @ManyToMany(() => Sector)
-  @JoinTable()
+  @JoinTable({
+    name: 'reward_sectors_sector',
+    joinColumn: {
+      name: 'rewardId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'sectorId',
+      referencedColumnName: 'id',
+    },
+  })
   sectors: Sector[];
 
   @ManyToMany(() => Tier)
-  @JoinTable()
+  @JoinTable({
+    name: 'reward_tiers_tier',
+    joinColumn: {
+      name: 'rewardId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'tierId',
+      referencedColumnName: 'id',
+    },
+  })
   tiers: Tier[];
 
   @Column()
