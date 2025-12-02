@@ -1,0 +1,123 @@
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Patch,
+    Param,
+    Delete,
+    Query,
+    UseGuards,
+    Req,
+} from '@nestjs/common';
+import { PointPackageService } from './point-package.service';
+import { CreatePointPackageDto } from './dto/create-point-package.dto';
+import { UpdatePointPackageDto } from './dto/update-point-package.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/role.enum';
+
+import { MembershipService } from '../membership/membership.service';
+
+@ApiTags('Point Packages')
+@Controller('point-packages')
+export class PointPackageController {
+    constructor(
+        private readonly pointPackageService: PointPackageService,
+        private readonly membershipService: MembershipService,
+    ) { }
+
+    @Post('admin')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Create a new point package (Admin)' })
+    create(@Body() createPointPackageDto: CreatePointPackageDto) {
+        return this.pointPackageService.create(createPointPackageDto);
+    }
+
+    @Get('admin')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get all point packages (Admin)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
+        return this.pointPackageService.findAll(page, limit);
+    }
+
+    @Get('admin/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get a point package by ID (Admin)' })
+    findOne(@Param('id') id: string) {
+        return this.pointPackageService.findOne(id);
+    }
+
+    @Patch('admin/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Update a point package (Admin)' })
+    update(@Param('id') id: string, @Body() updatePointPackageDto: UpdatePointPackageDto) {
+        return this.pointPackageService.update(id, updatePointPackageDto);
+    }
+
+    @Delete('admin/:id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Delete a point package (Admin)' })
+    remove(@Param('id') id: string) {
+        return this.pointPackageService.remove(id);
+    }
+
+    // Business Endpoints
+
+    @Get('business/available')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Business)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get available point packages for current business tier' })
+    async getAvailablePackages(@Req() req) {
+        const businessId = req.user.id;
+        const membership = await this.membershipService.findOneByBusinessId(businessId);
+
+        if (!membership || !membership.tier) {
+            return [];
+        }
+
+        return this.pointPackageService.getAvailablePackages(membership.tier.id);
+    }
+
+    @Post('business/buy')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Business)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Buy a point package' })
+    async buyPackage(@Req() req, @Body() body: { packageId: string; provider: string }) {
+        return this.pointPackageService.buyPackage(req.user.id, body.packageId, body.provider);
+    }
+
+    @Post('business/confirm-purchase')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Business)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Confirm a point package purchase' })
+    async confirmPurchase(@Req() req, @Body() body: { transactionId: string; provider: string }) {
+        return this.pointPackageService.confirmPurchase(req.user.id, body.transactionId, body.provider);
+    }
+
+    @Get('business/my-packages')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Business)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get my purchased point packages' })
+    async getMyPackages(@Req() req) {
+        return this.pointPackageService.getMyPackages(req.user.id);
+    }
+}

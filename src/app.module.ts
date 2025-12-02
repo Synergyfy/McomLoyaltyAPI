@@ -39,6 +39,7 @@ import { WishlistModule } from './resources/wishlist/wishlist.module';
 import { CapabilityModule } from './resources/capability/capability.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SystemSettingModule } from './resources/system-setting/system-setting.module';
+import { PointPackageModule } from './resources/point-package/point-package.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { SystemSettingModule } from './resources/system-setting/system-setting.m
     WishlistModule,
     CapabilityModule,
     SystemSettingModule,
+    PointPackageModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
