@@ -15,6 +15,7 @@ import { PaginationResult } from '../../../common/interfaces/pagination-result.i
 import { PaymentHistoryService } from '../../payment-history/payment-history.service';
 import { PointHistory, PointHistoryType } from '../../participant-campaign-balance/entities/point-history.entity';
 import { SystemSettingService } from '../../system-setting/services/system-setting.service';
+import { PaymentService } from '../../payment/payment.service';
 
 @Injectable()
 export class BusinessService {
@@ -31,6 +32,7 @@ export class BusinessService {
         @InjectRepository(PointHistory)
         private readonly pointHistoryRepository: Repository<PointHistory>,
         private readonly systemSettingService: SystemSettingService,
+        private readonly paymentService: PaymentService,
     ) { }
 
     private async generateAffiliateCode(): Promise<string> {
@@ -375,7 +377,7 @@ export class BusinessService {
         };
     }
 
-    async buyExtraPoints(businessId: string, points: number, paymentMethod: string) {
+    async buyExtraPoints(businessId: string, points: number, provider: string) {
         const status = await this.getMonthlyPointBalance(businessId);
 
         if (points <= 0) {
@@ -396,27 +398,43 @@ export class BusinessService {
         const costPerPoint = parseFloat(costPerPointSetting);
         const totalCost = points * costPerPoint;
 
-        // Credit Extra Points
-        await this.businessRepository.increment({ id: businessId }, 'extraPoints', points);
-
-        // Add Point History
-        const pointHistory = this.pointHistoryRepository.create({
-            business: { id: businessId },
-            type: PointHistoryType.PURCHASED_EXTRA,
-            points: points,
-            description: `Purchased ${points} extra points`,
-        });
-        await this.pointHistoryRepository.save(pointHistory);
-
-        // TODO: Generate Invoice / Admin Notification
-        console.log(`Business ${businessId} purchased ${points} points for £${totalCost}`);
+        const paymentResult = await this.paymentService.initiatePointPurchase({ id: businessId }, points, totalCost, provider);
 
         return {
             success: true,
-            pointsPurchased: points,
+            ...paymentResult,
             cost: totalCost,
-            newBalance: await this.getMonthlyPointBalance(businessId)
+            currency: 'GBP'
         };
+    }
+
+    async confirmPointPurchase(businessId: string, transactionId: string, provider: string) {
+        const verification = await this.paymentService.verifyPointPurchase({ id: businessId }, transactionId, provider);
+
+        if (verification.status === 'succeeded') {
+            // Credit Extra Points
+            await this.businessRepository.increment({ id: businessId }, 'extraPoints', verification.points);
+
+            // Add Point History
+            const pointHistory = this.pointHistoryRepository.create({
+                business: { id: businessId },
+                type: PointHistoryType.PURCHASED_EXTRA,
+                points: verification.points,
+                description: `Purchased ${verification.points} extra points`,
+            });
+            await this.pointHistoryRepository.save(pointHistory);
+
+            // TODO: Generate Invoice / Admin Notification
+            console.log(`Business ${businessId} purchased ${verification.points} points for £${verification.amount}`);
+
+            return {
+                success: true,
+                pointsPurchased: verification.points,
+                newBalance: await this.getMonthlyPointBalance(businessId)
+            };
+        } else {
+            throw new BadRequestException('Payment verification failed');
+        }
     }
 
     async resetMonthlyPoints(businessId: string) {

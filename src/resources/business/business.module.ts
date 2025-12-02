@@ -14,6 +14,7 @@ import { SystemSettingModule } from '../system-setting/system-setting.module';
 import { BusinessService } from './services/business.service';
 import { BusinessController } from './controllers/business.controller';
 import { AffiliateController } from './controllers/affiliate.controller';
+import { PaymentModule } from '../payment/payment.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AffiliateController } from './controllers/affiliate.controller';
     StaffModule,
     PaymentHistoryModule,
     SystemSettingModule,
+    PaymentModule,
   ],
   providers: [BusinessService],
   controllers: [BusinessController, AffiliateController],

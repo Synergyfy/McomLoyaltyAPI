@@ -80,6 +80,24 @@ export class PaypalService {
     return response;
   }
 
+  async createPointPurchaseOrder(amount: number, currency: string, businessId: string, points: number) {
+    const request: OrderRequest = {
+      intent: CheckoutPaymentIntent.Capture,
+      purchaseUnits: [
+        {
+          referenceId: businessId,
+          description: `Point Purchase: ${points} Points`,
+          amount: {
+            currencyCode: currency,
+            value: amount.toString(),
+          },
+        },
+      ],
+    };
+    const response = await this.orders.createOrder({ body: request });
+    return response;
+  }
+
   async capturePayment(orderId: string) {
     const response = await this.orders.captureOrder({ id: orderId });
     return response;

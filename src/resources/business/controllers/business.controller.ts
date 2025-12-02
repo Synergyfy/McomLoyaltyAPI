@@ -10,6 +10,7 @@ import { Role } from '../../../common/role.enum';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { BuyPointsDto } from '../dto/buy-points.dto';
 import { PointPurchaseConfigDto } from '../dto/point-purchase-config.dto';
+import { ConfirmPointPurchaseDto } from '../dto/confirm-point-purchase.dto';
 
 @ApiTags('Business Lifecycle')
 @Controller('business')
@@ -109,7 +110,16 @@ export class BusinessController {
   @ApiResponse({ status: 200, description: 'Points purchased successfully.' })
   @ApiBody({ type: BuyPointsDto })
   async buyExtraPoints(@Request() req, @Body(new ValidationPipe()) buyPointsDto: BuyPointsDto) {
-    return this.businessService.buyExtraPoints(req.user.id, buyPointsDto.points, buyPointsDto.paymentMethod);
+    return this.businessService.buyExtraPoints(req.user.id, buyPointsDto.points, buyPointsDto.provider);
+  }
+
+  @Roles(Role.Business)
+  @Post('points/buy/confirm')
+  @ApiOperation({ summary: 'Confirm point purchase' })
+  @ApiResponse({ status: 200, description: 'Point purchase confirmed.' })
+  @ApiBody({ type: ConfirmPointPurchaseDto })
+  async confirmPointPurchase(@Request() req, @Body(new ValidationPipe()) confirmDto: ConfirmPointPurchaseDto) {
+    return this.businessService.confirmPointPurchase(req.user.id, confirmDto.transactionId, confirmDto.provider);
   }
 
   @Roles(Role.Business)

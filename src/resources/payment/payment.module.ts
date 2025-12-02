@@ -21,5 +21,6 @@ import { QrPlaquesModule } from '../qr-plaques/qr-plaques.module';
   ],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService, PaypalService],
+  exports: [PaymentService],
 })
 export class PaymentModule { }
