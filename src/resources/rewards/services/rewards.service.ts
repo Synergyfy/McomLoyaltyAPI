@@ -222,6 +222,12 @@ export class RewardsService {
       disabled: reward.disabled,
     });
 
+    if (createBusinessRewardDto.point_required > reward.max_points) {
+      throw new ForbiddenException(
+        `Points required cannot exceed the maximum points set by admin (${reward.max_points})`,
+      );
+    }
+
     return this.businessRewardRepository.save(businessReward);
   }
 
@@ -234,6 +240,7 @@ export class RewardsService {
       business: { id: businessId },
       reward_source: RewardSource.BUSINESS,
       audience: RewardAudience.ALL_BUSINESS,
+      value: null, // Business cannot set value
     });
 
     const savedReward = await this.businessRewardRepository.save(businessReward);
@@ -319,6 +326,43 @@ export class RewardsService {
       .orderBy('reward.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
+
+    // Filter by audience
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ['sector'],
+    });
+
+    const membership = await this.membershipRepository.findOne({
+      where: { business: { id: businessId } },
+      relations: ['tier'],
+    });
+
+    if (!business || !membership) {
+      throw new NotFoundException('Business or membership not found');
+    }
+
+    queryBuilder.andWhere(
+      new Brackets((qb) => {
+        qb.where('reward.audience = :allAudience', {
+          allAudience: RewardAudience.ALL_BUSINESS,
+        })
+          .orWhere(
+            '(reward.audience = :sectorAudience AND :sectorId = ANY(SELECT "sectorId" FROM "reward_sectors_sector" WHERE "rewardId" = reward.id))',
+            {
+              sectorAudience: RewardAudience.SPECIFIC_SECTORS,
+              sectorId: business.sector.id,
+            },
+          )
+          .orWhere(
+            '(reward.audience = :tierAudience AND :tierId = ANY(SELECT "tierId" FROM "reward_tiers_tier" WHERE "rewardId" = reward.id))',
+            {
+              tierAudience: RewardAudience.SPECIFIC_TIERS,
+              tierId: membership.tier.id,
+            },
+          );
+      }),
+    );
 
     const [data, total] = await queryBuilder.getManyAndCount();
 

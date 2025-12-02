@@ -32,7 +32,7 @@ export class RedemptionService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   // Helper to find performer (Staff or Business)
   private async findPerformer(id: string, type: 'Staff' | 'Business') {
@@ -104,9 +104,9 @@ export class RedemptionService {
       }
 
       const whereCondition: any = {
-          participant: { id: participantId },
-          businessCampaign: { id: campaignId },
-        };
+        participant: { id: participantId },
+        businessCampaign: { id: campaignId },
+      };
 
       const participantCampaignBalance = await manager.findOne(ParticipantCampaignBalance, {
         where: whereCondition,
@@ -116,23 +116,23 @@ export class RedemptionService {
         throw new BadRequestException('Participant is not enrolled in this campaign');
       }
 
-      if (participantCampaignBalance.campaign_balance < reward.points_required) {
+      if (participantCampaignBalance.campaign_balance < reward.max_points) {
         throw new BadRequestException('Not enough points');
       }
 
-      participantCampaignBalance.campaign_balance -= reward.points_required;
-      participant.global_total_points -= reward.points_required;
-      businessCampaign.total_points_redeemed += reward.points_required;
+      participantCampaignBalance.campaign_balance -= reward.max_points;
+      participant.global_total_points -= reward.max_points;
+      businessCampaign.total_points_redeemed += reward.max_points;
 
       // Update business totals
       if (businessCampaign.business) {
-          businessCampaign.business.total_points_redeemed += reward.points_required;
-          await manager.save(businessCampaign.business);
+        businessCampaign.business.total_points_redeemed += reward.max_points;
+        await manager.save(businessCampaign.business);
       }
 
       const pointHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.REDEEM,
-        points: reward.points_required,
+        points: reward.max_points,
         participant,
         reward: reward,
         initiated_by_staff: staff,
@@ -155,7 +155,7 @@ export class RedemptionService {
 
       pointHistory.businessCampaign = businessCampaign;
       if (businessCampaign.campaign) {
-          pointHistory.campaign = businessCampaign.campaign;
+        pointHistory.campaign = businessCampaign.campaign;
       }
 
       await manager.save(participantCampaignBalance);
@@ -171,7 +171,7 @@ export class RedemptionService {
         await this.mailService.sendRewardRedeemedEmail(
           participant.email,
           reward.title,
-          reward.points_required,
+          reward.max_points,
           business.name,
           businessCampaign.name,
           participantCampaignBalance.campaign_balance
@@ -186,7 +186,7 @@ export class RedemptionService {
           await this.mailService.sendBusinessActivityEmail(
             businessOwner.email,
             'REDEEM',
-            reward.points_required,
+            reward.max_points,
             participant.name,
             staff ? staff.name : business.name,
             businessCampaign.name,
@@ -207,8 +207,8 @@ export class RedemptionService {
     }
   }
 
-   // Method A: Staff/Business scans Participant to Redeem
-   async redeemRewardByScan(
+  // Method A: Staff/Business scans Participant to Redeem
+  async redeemRewardByScan(
     performerId: string,
     performerType: 'Staff' | 'Business',
     participantCode: string,

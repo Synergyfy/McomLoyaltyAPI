@@ -73,7 +73,7 @@ describe('RewardsService', () => {
   describe('createReward', () => {
     const createRewardDto: CreateRewardDto = {
       title: 'Test Reward',
-      points_required: 100,
+      max_points: 100,
       value: 10,
       description: 'Test Description',
       image: 'image-url',

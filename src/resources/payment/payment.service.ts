@@ -398,6 +398,88 @@ export class PaymentService {
     }
   }
 
+  async initiatePointPurchase(user: any, points: number, amount: number, provider: string) {
+    if (provider === 'paypal') {
+      const order = await this.paypalService.createPointPurchaseOrder(amount, 'GBP', user.id, points);
+      return { orderId: order.result.id };
+    } else {
+      // Stripe
+      const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', {
+        businessId: user.id,
+        points: points,
+        type: 'POINT_PURCHASE',
+      });
+      return { clientSecret: paymentIntent.client_secret };
+    }
+  }
+
+  async verifyPointPurchase(user: any, transactionId: string, provider: string) {
+    if (provider === 'paypal') {
+      const capture = await this.paypalService.capturePayment(transactionId);
+      const result = capture.result as any;
+
+      if (result.status !== 'COMPLETED') {
+        throw new BadRequestException(`PayPal payment not completed. Status: ${result.status}`);
+      }
+
+      const purchaseUnit = result.purchaseUnits?.[0] || result.purchase_units?.[0];
+      if (!purchaseUnit) {
+        throw new BadRequestException('Invalid PayPal response: missing purchase information');
+      }
+
+      // Verify Business ID
+      const referenceId = purchaseUnit.referenceId || purchaseUnit.reference_id;
+      if (referenceId !== user.id) {
+        throw new BadRequestException('Payment belongs to a different business');
+      }
+
+      // Extract points from description (e.g., "Point Purchase: 100 Points")
+      const description = purchaseUnit.description;
+      const pointsMatch = description.match(/Point Purchase: (\d+) Points/);
+      if (!pointsMatch) {
+        throw new BadRequestException('Could not determine points from payment description');
+      }
+      const points = parseInt(pointsMatch[1], 10);
+
+      // Extract Amount
+      let amountValue: string | undefined;
+      if (purchaseUnit.payments?.captures?.length > 0) {
+        amountValue = purchaseUnit.payments.captures[0].amount?.value;
+      } else if (purchaseUnit.amount) {
+        amountValue = purchaseUnit.amount.value;
+      }
+
+      return {
+        status: 'succeeded',
+        points: points,
+        amount: parseFloat(amountValue || '0'),
+        transactionId: result.id,
+      };
+
+    } else {
+      // Stripe
+      const paymentIntent = await this.stripeService.verifyPayment(transactionId);
+      if (paymentIntent.status !== 'succeeded') {
+        throw new BadRequestException(`Stripe payment not succeeded. Status: ${paymentIntent.status}`);
+      }
+
+      if (paymentIntent.metadata.type !== 'POINT_PURCHASE') {
+        throw new BadRequestException('Invalid payment type');
+      }
+
+      if (paymentIntent.metadata.businessId !== user.id) {
+        throw new BadRequestException('Payment belongs to a different business');
+      }
+
+      return {
+        status: 'succeeded',
+        points: parseInt(paymentIntent.metadata.points, 10),
+        amount: paymentIntent.amount / 100,
+        transactionId: paymentIntent.id,
+      };
+    }
+  }
+
   async handleStripeWebhook(signature: string, rawBody: Buffer) {
     try {
       const event = this.stripeService.constructWebhookEvent(
