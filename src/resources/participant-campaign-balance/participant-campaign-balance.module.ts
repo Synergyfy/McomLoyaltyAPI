@@ -18,6 +18,7 @@ import { MailModule } from '../../mail/mail.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { TierProgressionModule } from '../tier-progression/tier-progression.module';
 import { MembershipModule } from '../membership/membership.module';
+import { PointPackageModule } from '../point-package/point-package.module';
 
 @Module({
     imports: [
@@ -36,6 +37,7 @@ import { MembershipModule } from '../membership/membership.module';
         forwardRef(() => CapabilityModule),
         forwardRef(() => TierProgressionModule),
         MembershipModule,
+        PointPackageModule,
     ],
     providers: [
         RedemptionService,

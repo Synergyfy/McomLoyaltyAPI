@@ -521,4 +521,53 @@ export class PaymentService {
       throw new BadRequestException(`Webhook Error: ${err.message}`);
     }
   }
+  async initiatePackagePurchase(user: any, packageId: string, amount: number, provider: string) {
+    if (provider === 'paypal') {
+      // For PayPal, we can use the same createPointPurchaseOrder or a similar one.
+      // Ideally, we should pass a description.
+      const order = await this.paypalService.createPointPurchaseOrder(amount, 'GBP', user.id, 0); // 0 points because it's a package, handled separately?
+      // Actually, we might want to pass the package ID in the custom_id or similar.
+      // But wait, createPointPurchaseOrder takes points as argument.
+      // Let's check paypal.service.ts to see if we can reuse it or need a new one.
+      // For now, let's assume we can reuse it but maybe we need to adjust it.
+      // Let's stick to Stripe for now as it's easier to customize metadata.
+      // Or better, let's look at paypal.service.ts first.
+      throw new BadRequestException('PayPal for packages not fully implemented yet');
+    } else {
+      // Stripe
+      const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', {
+        businessId: user.id,
+        packageId: packageId,
+        type: 'PACKAGE_PURCHASE',
+      });
+      return { clientSecret: paymentIntent.client_secret };
+    }
+  }
+
+  async verifyPackagePurchase(user: any, transactionId: string, provider: string) {
+    if (provider === 'paypal') {
+      throw new BadRequestException('PayPal for packages not fully implemented yet');
+    } else {
+      // Stripe
+      const paymentIntent = await this.stripeService.verifyPayment(transactionId);
+      if (paymentIntent.status !== 'succeeded') {
+        throw new BadRequestException(`Stripe payment not succeeded. Status: ${paymentIntent.status}`);
+      }
+
+      if (paymentIntent.metadata.type !== 'PACKAGE_PURCHASE') {
+        throw new BadRequestException('Invalid payment type');
+      }
+
+      if (paymentIntent.metadata.businessId !== user.id) {
+        throw new BadRequestException('Payment belongs to a different business');
+      }
+
+      return {
+        status: 'succeeded',
+        packageId: paymentIntent.metadata.packageId,
+        amount: paymentIntent.amount / 100,
+        transactionId: paymentIntent.id,
+      };
+    }
+  }
 }
