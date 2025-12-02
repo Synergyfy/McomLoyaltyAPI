@@ -24,6 +24,7 @@ import { In, Brackets } from 'typeorm';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 import { RewardSource } from '../enums/reward-source.enum';
+import { MembershipStatus } from '../../membership/entities/membership.entity';
 
 @Injectable()
 export class RewardsService {
@@ -334,33 +335,42 @@ export class RewardsService {
     });
 
     const membership = await this.membershipRepository.findOne({
-      where: { business: { id: businessId } },
+      where: {
+        business: { id: businessId },
+        status: MembershipStatus.ACTIVE,
+      },
       relations: ['tier'],
     });
 
-    if (!business || !membership) {
-      throw new NotFoundException('Business or membership not found');
+    if (!business) {
+      throw new NotFoundException('Business not found');
     }
 
     queryBuilder.andWhere(
       new Brackets((qb) => {
         qb.where('reward.audience = :allAudience', {
           allAudience: RewardAudience.ALL_BUSINESS,
-        })
-          .orWhere(
+        });
+
+        if (business.sector) {
+          qb.orWhere(
             '(reward.audience = :sectorAudience AND :sectorId = ANY(SELECT "sectorId" FROM "reward_sectors_sector" WHERE "rewardId" = reward.id))',
             {
               sectorAudience: RewardAudience.SPECIFIC_SECTORS,
               sectorId: business.sector.id,
             },
-          )
-          .orWhere(
+          );
+        }
+
+        if (membership && membership.tier) {
+          qb.orWhere(
             '(reward.audience = :tierAudience AND :tierId = ANY(SELECT "tierId" FROM "reward_tiers_tier" WHERE "rewardId" = reward.id))',
             {
               tierAudience: RewardAudience.SPECIFIC_TIERS,
               tierId: membership.tier.id,
             },
           );
+        }
       }),
     );
 
