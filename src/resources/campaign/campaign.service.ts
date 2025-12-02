@@ -871,7 +871,7 @@ export class CampaignService {
       .select([
         'r.id',
         'r.title',
-        'r.points_required',
+        'r.max_points',
         'COUNT(ph.id) AS total_redemptions',
       ])
       .groupBy('r.id')

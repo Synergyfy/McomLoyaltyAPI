@@ -13,7 +13,7 @@ export class Reward extends AbstractBaseEntity {
   title: string;
 
   @Column()
-  points_required: number;
+  max_points: number;
 
   @Column({ type: 'enum', enum: RewardType })
   reward_type: RewardType;

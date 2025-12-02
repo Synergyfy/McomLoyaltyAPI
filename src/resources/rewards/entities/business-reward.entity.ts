@@ -38,7 +38,7 @@ export class BusinessReward extends AbstractBaseEntity {
   })
   status: RewardStatus;
 
-  @Column()
+  @Column({ nullable: true })
   value: number;
 
   @Column()

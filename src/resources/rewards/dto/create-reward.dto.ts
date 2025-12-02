@@ -14,11 +14,11 @@ export class CreateRewardDto {
   title: string;
 
   @ApiProperty({
-    description: 'The points required to redeem the reward',
+    description: 'The maximum points allowed for this reward',
     example: 1000,
   })
   @IsNumber()
-  points_required: number;
+  max_points: number;
 
   @ApiProperty({
     description: 'The monetary value of the reward',
