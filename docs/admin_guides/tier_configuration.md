@@ -34,7 +34,8 @@ The `configuration` JSON object must adhere to the following structure:
     "canEditAdminTemplates": boolean,
     "hasAccessToAdvancedAnalytics": boolean,
     "hasAccessToCRM": boolean,
-    "canUpdateReward": boolean
+    "canUpdateReward": boolean,
+    "canCreateRewardFromScratch": boolean
   },
   "progressBonuses": {
     // Optional: Add bonus quotas based on progression level
@@ -88,6 +89,7 @@ The `configuration` JSON object must adhere to the following structure:
 | `hasAccessToAdvancedAnalytics` | `boolean` | Grants access to detailed analytics dashboards. |
 | `hasAccessToCRM` | `boolean` | Grants access to Customer Relationship Management features. |
 | `canUpdateReward` | `boolean` | If `true`, the business can edit their existing rewards. |
+| `canCreateRewardFromScratch` | `boolean` | If `true`, the business can create custom rewards. If `false`, they must use Admin-created templates. |
 
 #### 3. Progression Levels (Pro & ProPlus)
 This system allows businesses to unlock better features **without paying extra**, simply by being active and meeting conditions.
@@ -159,7 +161,8 @@ This tier starts restricted but unlocks features as the business grows.
       "canEditAdminTemplates": false,
       "hasAccessToAdvancedAnalytics": false,
       "hasAccessToCRM": false,
-      "canUpdateReward": false
+      "canUpdateReward": false,
+      "canCreateRewardFromScratch": false
     },
     "pro": {
         "conditions": {
@@ -226,7 +229,8 @@ This tier offers high limits, seasonal pricing, and progression rewards.
       "canEditAdminTemplates": true,
       "hasAccessToAdvancedAnalytics": true,
       "hasAccessToCRM": true,
-      "canUpdateReward": true
+      "canUpdateReward": true,
+      "canCreateRewardFromScratch": true
     },
     "winter": {
         "price": 149.99,
