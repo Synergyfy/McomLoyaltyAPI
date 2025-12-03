@@ -12,6 +12,7 @@ export interface TierFeatureFlags {
     hasAccessToAdvancedAnalytics: boolean;
     hasAccessToCRM: boolean;
     canUpdateReward: boolean;
+    canCreateRewardFromScratch: boolean;
 }
 
 export interface ProgressionConditions {

@@ -241,6 +241,20 @@ export class RewardsService {
     businessId: string,
     createBusinessRewardDto: CreateBusinessRewardDto,
   ): Promise<BusinessReward> {
+    const membership = await this.membershipRepository.findOne({
+      where: { business: { id: businessId } },
+      relations: ['tier'],
+    });
+
+    if (!membership || !membership.tier) {
+      throw new ForbiddenException('Business does not have a valid membership or tier');
+    }
+
+    // Check if the tier allows creating rewards from scratch
+    if (!membership.tier.configuration?.featureFlags?.canCreateRewardFromScratch) {
+      throw new ForbiddenException('Your current tier does not allow creating rewards from scratch');
+    }
+
     const businessReward = this.businessRewardRepository.create({
       ...createBusinessRewardDto,
       business: { id: businessId },
