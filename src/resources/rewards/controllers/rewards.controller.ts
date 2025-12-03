@@ -13,6 +13,8 @@ import { CapabilitiesGuard } from '../../capability/guards/capabilities.guard';
 import { CheckPermission } from '../../capability/decorators/check-permission.decorator';
 import { UseGuards } from '@nestjs/common';
 
+import { AddRewardToBusinessDto } from '../dto/add-reward-to-business.dto';
+
 @ApiTags('rewards')
 @Controller('rewards')
 export class RewardsController {
@@ -112,10 +114,10 @@ export class RewardsController {
   @CheckPermission(ActionType.ADD_REWARD_TO_BUSINESS)
   async addRewardToBusiness(
     @Param('rewardId') rewardId: string,
-    @Body() createBusinessRewardDto: CreateBusinessRewardDto,
+    @Body() addRewardToBusinessDto: AddRewardToBusinessDto,
     @CurrentUser() user: any,
   ) {
-    return this.rewardsService.addRewardToBusiness(rewardId, user.id, createBusinessRewardDto);
+    return this.rewardsService.addRewardToBusiness(rewardId, user.id, addRewardToBusinessDto);
   }
 
   @ApiOperation({ summary: 'Business: Create a new reward' })

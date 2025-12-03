@@ -43,14 +43,6 @@ export class CreateBusinessRewardDto {
   image?: string;
 
   @ApiProperty({
-    description: 'The monetary value of the reward',
-    example: 5.00,
-  })
-  @IsNumber()
-  @IsOptional()
-  value?: number;
-
-  @ApiProperty({
     description: 'The expiry date and time of the reward',
     example: '2024-12-31T23:59:59.000Z',
   })

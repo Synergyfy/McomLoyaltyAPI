@@ -24,6 +24,9 @@ import { In, Brackets } from 'typeorm';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
 import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 import { RewardSource } from '../enums/reward-source.enum';
+import { MembershipStatus } from '../../membership/entities/membership.entity';
+
+import { AddRewardToBusinessDto } from '../dto/add-reward-to-business.dto';
 
 @Injectable()
 export class RewardsService {
@@ -145,7 +148,7 @@ export class RewardsService {
   async addRewardToBusiness(
     rewardId: string,
     businessId: string,
-    createBusinessRewardDto: CreateBusinessRewardDto,
+    addRewardToBusinessDto: AddRewardToBusinessDto,
   ): Promise<BusinessReward> {
     const reward = await this.rewardRepository.findOne({
       where: { id: rewardId },
@@ -206,8 +209,16 @@ export class RewardsService {
       throw new ConflictException('Business already has this reward');
     }
 
+    const pointRequired = addRewardToBusinessDto.point_required ?? reward.max_points;
+    const quantity = addRewardToBusinessDto.quantity ?? reward.quantity;
+
+    if (pointRequired > reward.max_points) {
+      throw new ForbiddenException(
+        `Points required cannot exceed the maximum points set by admin (${reward.max_points})`,
+      );
+    }
+
     const businessReward = this.businessRewardRepository.create({
-      ...createBusinessRewardDto,
       reward,
       business: { id: businessId },
       title: reward.title,
@@ -216,17 +227,12 @@ export class RewardsService {
       audience: reward.audience,
       expiry_datetime: reward.expiry_datetime,
       status: reward.status,
-      value: reward.value,
       description: reward.description,
       image: reward.image,
       disabled: reward.disabled,
+      point_required: pointRequired,
+      quantity: quantity,
     });
-
-    if (createBusinessRewardDto.point_required > reward.max_points) {
-      throw new ForbiddenException(
-        `Points required cannot exceed the maximum points set by admin (${reward.max_points})`,
-      );
-    }
 
     return this.businessRewardRepository.save(businessReward);
   }
@@ -240,7 +246,6 @@ export class RewardsService {
       business: { id: businessId },
       reward_source: RewardSource.BUSINESS,
       audience: RewardAudience.ALL_BUSINESS,
-      value: null, // Business cannot set value
     });
 
     const savedReward = await this.businessRewardRepository.save(businessReward);
@@ -338,29 +343,46 @@ export class RewardsService {
       relations: ['tier'],
     });
 
-    if (!business || !membership) {
-      throw new NotFoundException('Business or membership not found');
+    if (!business) {
+      throw new NotFoundException('Business not found');
     }
+
+    if (!membership) {
+      throw new NotFoundException('Membership not found');
+    }
+
+    const tierId = membership.tier?.id;
 
     queryBuilder.andWhere(
       new Brackets((qb) => {
-        qb.where('reward.audience = :allAudience', {
+        // 1. Check Tier (Priority check)
+        if (tierId) {
+          qb.where(
+            '(reward.audience = :tierAudience AND :tierId = ANY(SELECT "tierId" FROM "reward_tiers_tier" WHERE "rewardId" = reward.id))',
+            {
+              tierAudience: RewardAudience.SPECIFIC_TIERS,
+              tierId: tierId,
+            },
+          );
+        } else {
+          qb.where('1=0');
+        }
+
+        // 2. Check All Business
+        qb.orWhere('reward.audience = :allAudience', {
           allAudience: RewardAudience.ALL_BUSINESS,
-        })
-          .orWhere(
+        });
+
+        // 3. Check Sector
+        if (business.sector) {
+          qb.orWhere(
             '(reward.audience = :sectorAudience AND :sectorId = ANY(SELECT "sectorId" FROM "reward_sectors_sector" WHERE "rewardId" = reward.id))',
             {
               sectorAudience: RewardAudience.SPECIFIC_SECTORS,
               sectorId: business.sector.id,
             },
-          )
-          .orWhere(
-            '(reward.audience = :tierAudience AND :tierId = ANY(SELECT "tierId" FROM "reward_tiers_tier" WHERE "rewardId" = reward.id))',
-            {
-              tierAudience: RewardAudience.SPECIFIC_TIERS,
-              tierId: membership.tier.id,
-            },
           );
+        }
       }),
     );
 
