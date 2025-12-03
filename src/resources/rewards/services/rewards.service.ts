@@ -227,7 +227,6 @@ export class RewardsService {
       audience: reward.audience,
       expiry_datetime: reward.expiry_datetime,
       status: reward.status,
-      value: reward.value,
       description: reward.description,
       image: reward.image,
       disabled: reward.disabled,
@@ -247,7 +246,6 @@ export class RewardsService {
       business: { id: businessId },
       reward_source: RewardSource.BUSINESS,
       audience: RewardAudience.ALL_BUSINESS,
-      value: null, // Business cannot set value
     });
 
     const savedReward = await this.businessRewardRepository.save(businessReward);
