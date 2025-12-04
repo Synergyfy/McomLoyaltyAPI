@@ -305,7 +305,7 @@ export class RewardsService {
     businessId: string,
   ): Promise<void> {
     await this.businessRewardRepository.delete({
-      reward: { id: rewardId },
+      id: rewardId,
       business: { id: businessId },
     });
   }
