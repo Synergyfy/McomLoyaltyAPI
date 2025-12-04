@@ -38,11 +38,9 @@ export class PointPackageController {
         return this.pointPackageService.create(createPointPackageDto);
     }
 
-    @Get('admin')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.Admin)
+    @Get('all')
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get all point packages (Admin)' })
+    @ApiOperation({ summary: 'Get all point packages' })
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })
     findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
@@ -130,10 +128,18 @@ export class PointPackageController {
     async getMyPackages(@Req() req) {
         return this.pointPackageService.getMyPackages(req.user.id);
     }
-    @Get('tier/:tierId')
+
+    @Get('business/balance')
     @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.Business, Role.Admin)
+    @Roles(Role.Business)
     @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get aggregate point balance from purchased packages' })
+    @ApiResponse({ status: 200, description: 'Return total balance of active point packages.' })
+    async getPointBalance(@Req() req) {
+        return this.pointPackageService.getAggregateBalance(req.user.id);
+    }
+
+    @Get('tier/:tierId')
     @ApiOperation({ summary: 'Get point packages for a specific tier' })
     @ApiParam({ name: 'tierId', description: 'The ID of the tier' })
     @ApiResponse({ status: 200, description: 'Return point packages for the tier.' })

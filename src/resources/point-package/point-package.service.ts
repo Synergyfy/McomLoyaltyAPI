@@ -7,7 +7,7 @@ import { UpdatePointPackageDto } from './dto/update-point-package.dto';
 import { Tier } from '../tier/entities/tier.entity';
 import { PaginationResult } from '../../common/interfaces/pagination-result.interface';
 
-import { BusinessPointPackage } from './entities/business-point-package.entity';
+import { BusinessPointPackage, BusinessPointPackageStatus } from './entities/business-point-package.entity';
 import { PaymentService } from '../payment/payment.service';
 import { BadRequestException } from '@nestjs/common';
 
@@ -214,5 +214,18 @@ export class PointPackageService {
             },
             order: { created_at: 'DESC' },
         });
+    }
+
+    async getAggregateBalance(businessId: string): Promise<{ total_balance: number }> {
+        const packages = await this.businessPointPackageRepository.find({
+            where: {
+                business: { id: businessId },
+                status: BusinessPointPackageStatus.ACTIVE,
+            },
+        });
+
+        const total_balance = packages.reduce((sum, pkg) => sum + pkg.remaining_points, 0);
+
+        return { total_balance };
     }
 }
