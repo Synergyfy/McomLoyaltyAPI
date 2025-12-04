@@ -147,4 +147,11 @@ export class BusinessController {
   async updateOwnProfile(@Request() req, @Body(new ValidationPipe()) updateBusinessProfileDto: UpdateBusinessProfileDto) {
     return this.businessService.updateOwnProfile(req.user.id, updateBusinessProfileDto);
   }
+  @Roles(Role.Business)
+  @Get('tier-usage')
+  @ApiOperation({ summary: 'Get business tier usage and limits' })
+  @ApiResponse({ status: 200, description: 'Return business tier usage and limits.' })
+  async getTierUsage(@Request() req) {
+    return this.businessService.getTierUsage(req.user.id);
+  }
 }

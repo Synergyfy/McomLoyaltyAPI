@@ -4,6 +4,10 @@ import { Repository, Between, MoreThanOrEqual } from 'typeorm';
 import { nanoid } from 'nanoid';
 import { Business } from '../entities/business.entity';
 import { Referral, ReferralStatus } from '../../referral/entities/referral.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { BusinessReward } from '../../rewards/entities/business-reward.entity';
+import { Staff } from '../../staff/entities/staff.entity';
+import { RewardStatus } from '../../rewards/enums/reward-status.enum';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
 import { UpdateBusinessProfileDto } from '../dto/update-business-profile.dto';
@@ -33,6 +37,12 @@ export class BusinessService {
         @InjectRepository(PointHistory)
         private readonly pointHistoryRepository: Repository<PointHistory>,
         private readonly systemSettingService: SystemSettingService,
+        @InjectRepository(BusinessCampaign)
+        private readonly businessCampaignRepository: Repository<BusinessCampaign>,
+        @InjectRepository(BusinessReward)
+        private readonly businessRewardRepository: Repository<BusinessReward>,
+        @InjectRepository(Staff)
+        private readonly staffRepository: Repository<Staff>,
         private readonly paymentService: PaymentService,
     ) { }
 
@@ -465,5 +475,89 @@ export class BusinessService {
     async updateOwnProfile(id: string, updateBusinessProfileDto: UpdateBusinessProfileDto): Promise<Business> {
         await this.businessRepository.update(id, updateBusinessProfileDto);
         return this.getOwnProfile(id);
+    }
+
+    async getTierUsage(businessId: string) {
+        const business = await this.findById(businessId);
+        if (!business) {
+            throw new NotFoundException('Business not found');
+        }
+
+        const payments = await this.paymentHistoryService.findByBusiness(businessId);
+        const latestPayment = payments[0];
+
+        if (!latestPayment || !latestPayment.membership) {
+            return {
+                tierName: 'Free',
+                features: {
+                    campaigns: { limit: 0, used: 0, remaining: 0 },
+                    rewards: { limit: 0, used: 0, remaining: 0 },
+                    teamMembers: { limit: 0, used: 0, remaining: 0 },
+                    monthlyPoints: { limit: 0, used: 0, remaining: 0 },
+                },
+            };
+        }
+
+        const membership = latestPayment.membership;
+        const tierConfig = membership.tier.configuration;
+        const quotas = tierConfig.quotas;
+
+        // Active Campaigns: Not disabled, and end_date >= now
+        const activeCampaignsCount = await this.businessCampaignRepository.count({
+            where: {
+                business: { id: businessId },
+                disabled: false,
+                end_date: MoreThanOrEqual(new Date()),
+            },
+        });
+
+        // Active Rewards: Status is ACTIVE
+        const activeRewardsCount = await this.businessRewardRepository.count({
+            where: {
+                business: { id: businessId },
+                status: RewardStatus.ACTIVE,
+            },
+        });
+
+        // Team Members
+        const teamMembersCount = await this.staffRepository.count({
+            where: {
+                business: { id: businessId },
+            },
+        });
+
+        // Points
+        const pointBalance = await this.getMonthlyPointBalance(businessId);
+
+        const calculateRemaining = (limit: number, used: number) => {
+            if (limit === -1) return -1; // Unlimited
+            return Math.max(0, limit - used);
+        };
+
+        return {
+            tierName: membership.tier.name,
+            features: {
+                campaigns: {
+                    limit: quotas.maxActiveCampaigns,
+                    used: activeCampaignsCount,
+                    remaining: calculateRemaining(quotas.maxActiveCampaigns, activeCampaignsCount),
+                },
+                rewards: {
+                    limit: quotas.maxActiveRewards,
+                    used: activeRewardsCount,
+                    remaining: calculateRemaining(quotas.maxActiveRewards, activeRewardsCount),
+                },
+                teamMembers: {
+                    limit: quotas.maxTeamMembers,
+                    used: teamMembersCount,
+                    remaining: calculateRemaining(quotas.maxTeamMembers, teamMembersCount),
+                },
+                monthlyPoints: {
+                    limit: pointBalance.monthlyLimit,
+                    used: pointBalance.used,
+                    remaining: pointBalance.remaining,
+                },
+            },
+        };
     }
 }
