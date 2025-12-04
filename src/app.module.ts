@@ -42,6 +42,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { SystemSettingModule } from './resources/system-setting/system-setting.module';
 import { PointPackageModule } from './resources/point-package/point-package.module';
 import { NotificationModule } from './resources/notification/notification.module';
+import { SetupModule } from './resources/setup/setup.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { NotificationModule } from './resources/notification/notification.module
     SystemSettingModule,
     PointPackageModule,
     NotificationModule,
+    SetupModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
