@@ -13,6 +13,7 @@ import { ParticipantCampaignBalanceService } from './services/participant-campai
 import { TransactionCode } from './entities/transaction-code.entity';
 import { Business } from '../business/entities/business.entity';
 import { TransactionCodeService } from './services/transaction-code.service';
+import { NotificationModule } from '../notification/notification.module';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 import { MailModule } from '../../mail/mail.module';
 import { CapabilityModule } from '../capability/capability.module';
@@ -38,6 +39,7 @@ import { PointPackageModule } from '../point-package/point-package.module';
         forwardRef(() => TierProgressionModule),
         MembershipModule,
         PointPackageModule,
+        NotificationModule,
     ],
     providers: [
         RedemptionService,

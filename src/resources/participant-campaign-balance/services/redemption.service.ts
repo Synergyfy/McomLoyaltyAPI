@@ -12,6 +12,8 @@ import { Reward } from '../../rewards/entities/reward.entity';
 import { PointHistory, PointHistoryType } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
 import { MailService } from '../../../mail/mail.service';
+import { NotificationService } from '../../notification/notification.service';
+import { NotificationType, NotificationRecipientType } from '../../notification/enums/notification-type.enum';
 
 @Injectable()
 export class RedemptionService {
@@ -32,6 +34,7 @@ export class RedemptionService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   // Helper to find performer (Staff or Business)
@@ -188,6 +191,31 @@ export class RedemptionService {
       await manager.save(participant);
       await manager.save(BusinessCampaign, businessCampaign);
       await manager.save(pointHistory);
+
+      // Notification: Reward Redeemed (Business)
+      try {
+        await this.notificationService.create(
+          'Reward Redeemed',
+          `Participant ${participant.name} redeemed reward ${reward.title}.`,
+          NotificationType.REWARD_REDEEMED,
+          NotificationRecipientType.BUSINESS,
+          business.id,
+          campaignId
+        );
+      } catch (e) { console.error(e); }
+
+      // Notification: Reward Redeemed (Participant)
+      try {
+        await this.notificationService.create(
+          'Reward Redeemed',
+          `You redeemed reward ${reward.title} at ${business.name}.`,
+          NotificationType.REWARD_REDEEMED,
+          NotificationRecipientType.USER,
+          participant.id,
+          campaignId
+        );
+      } catch (e) { console.error(e); }
+
 
       // Send email notifications
       const businessOwner = businessCampaign.business;

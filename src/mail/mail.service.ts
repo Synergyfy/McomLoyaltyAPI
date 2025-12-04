@@ -128,9 +128,28 @@ export class MailService {
     });
   }
 
-  async sendBusinessActivityEmail(email: string, activityType: 'EARN' | 'REDEEM', points: number, participantName: string, staffName: string, campaignName: string, details: string) {
-    const title = activityType === 'EARN' ? 'Points Awarded' : 'Reward Redeemed';
-    const color = activityType === 'EARN' ? '#10b981' : '#ea580c'; // Green for earn, Orange for redeem
+  async sendBusinessActivityEmail(email: string, activityType: 'EARN' | 'REDEEM' | 'ALLOWANCE_WARNING' | 'JOIN', points: number, participantName: string, staffName: string, campaignName: string, details: string) {
+    let title = '';
+    let color = '';
+
+    switch (activityType) {
+      case 'EARN':
+        title = 'Points Awarded';
+        color = '#10b981'; // Green
+        break;
+      case 'REDEEM':
+        title = 'Reward Redeemed';
+        color = '#ea580c'; // Orange
+        break;
+      case 'ALLOWANCE_WARNING':
+        title = 'Allowance Warning';
+        color = '#ef4444'; // Red
+        break;
+      case 'JOIN':
+        title = 'New Participant';
+        color = '#3b82f6'; // Blue
+        break;
+    }
 
     await this.mailerService.sendMail({
       to: email,
