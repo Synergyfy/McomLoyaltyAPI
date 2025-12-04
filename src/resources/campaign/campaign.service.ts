@@ -131,6 +131,17 @@ export class CampaignService {
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
       const { business_reward_ids } = createCampaignDto as CreateCampaignDto;
+
+      if (!business_reward_ids || business_reward_ids.length === 0) {
+        throw new BadRequestException('Business must add at least one reward to the campaign.');
+      }
+
+      // Check tier permission for reward count
+      await this.capabilityService.checkPermission(currentUser.id, ActionType.CREATE_CAMPAIGN, {
+        isFromScratch: true,
+        rewardCount: business_reward_ids.length,
+      });
+
       if (business_reward_ids && business_reward_ids.length > 0) {
         const businessRewards = await this.businessRewardRepository.find({
           where: { id: In(business_reward_ids) },
@@ -808,6 +819,7 @@ export class CampaignService {
   async claimCampaign(
     businessId: string,
     campaignId: string,
+    businessRewardIds: string[],
   ): Promise<BusinessCampaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
@@ -837,6 +849,31 @@ export class CampaignService {
     if (!business) {
       throw new NotFoundException('Business not found');
     }
+
+    // Fetch and validate business rewards
+    const businessRewards = await this.businessRewardRepository.find({
+      where: { id: In(businessRewardIds) },
+      relations: ['business', 'reward'],
+    });
+
+    if (businessRewards.length !== businessRewardIds.length) {
+      throw new BadRequestException('One or more business rewards not found.');
+    }
+
+    for (const reward of businessRewards) {
+      if (reward.business.id !== businessId) {
+        throw new UnauthorizedException(
+          `Business Reward with ID ${reward.id} does not belong to your business.`,
+        );
+      }
+    }
+
+    // Optional: Check if the number of rewards exceeds the template's reward count?
+    // The user requirement was about tier limits mostly.
+    // But if the template has 3 rewards, should the business be allowed to add 5?
+    // Usually a template defines the structure. If the template has slots for rewards, maybe we should respect that?
+    // The user said "make it such that it is the business adding their own rewards to the campaign".
+    // I will stick to tier limits which are enforced by the capability service check in the controller.
 
     const businessCampaign = this.businessCampaignRepository.create({
       business,
@@ -872,10 +909,8 @@ export class CampaignService {
       footer_text: campaign.footer_text,
     });
 
-    // Copy rewards from template
-    if (campaign.rewards) {
-      businessCampaign.rewards = campaign.rewards;
-    }
+    // Link business rewards
+    businessCampaign.businessRewards = businessRewards;
 
     return this.businessCampaignRepository.save(businessCampaign);
   }

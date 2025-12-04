@@ -22,6 +22,7 @@ import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-re
 import { CapabilityService, ActionType } from '../capability/capability.service';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { Campaign } from './entities/campaign.entity';
+import { ClaimCampaignDto } from './dto/claim-campaign.dto';
 
 @ApiTags('Business Campaigns')
 @ApiBearerAuth()
@@ -51,24 +52,23 @@ export class BusinessCampaignController {
   async claimCampaign(
     @CurrentUser() business: Business,
     @Param('campaignId', ParseUUIDPipe) campaignId: string,
+    @Body() claimCampaignDto: ClaimCampaignDto,
   ) {
     // Fetch campaign to check rewards and ensure it's a template
     const campaign = await this.campaignService.findOne(campaignId);
 
     // Ensure it's a Campaign (not BusinessCampaign) and has no business (template)
     // Note: findOne might return BusinessCampaign if ID matches, but claimCampaign service also checks.
-    // We just need reward count here.
-    let rewardCount = 0;
-    if (campaign instanceof Campaign) {
-      rewardCount = campaign.rewards?.length || 0;
-    }
+
+    // Use the count of rewards the business is trying to add
+    const rewardCount = claimCampaignDto.business_reward_ids.length;
 
     await this.capabilityService.checkPermission(business.id, ActionType.CREATE_CAMPAIGN, {
       isFromScratch: false,
       rewardCount,
     });
 
-    return this.campaignService.claimCampaign(business.id, campaignId);
+    return this.campaignService.claimCampaign(business.id, campaignId, claimCampaignDto.business_reward_ids);
   }
 
   @Get('my-created-campaigns')
