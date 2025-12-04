@@ -6,6 +6,7 @@ import { Business } from '../entities/business.entity';
 import { Referral, ReferralStatus } from '../../referral/entities/referral.entity';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
+import { UpdateBusinessProfileDto } from '../dto/update-business-profile.dto';
 import { OnboardingDto } from '../dto/onboarding.dto';
 import { HashService } from '../../../common/hash/hash.service';
 import { SectorService } from '../../sector/services/sector.service';
@@ -452,5 +453,17 @@ export class BusinessService {
             costPerPoint: costPerPoint,
             currency: 'GBP'
         };
+    }
+    async getOwnProfile(id: string): Promise<Business> {
+        const business = await this.findById(id, ['sector', 'category', 'subCategory']);
+        if (!business) {
+            throw new NotFoundException('Business not found');
+        }
+        return business;
+    }
+
+    async updateOwnProfile(id: string, updateBusinessProfileDto: UpdateBusinessProfileDto): Promise<Business> {
+        await this.businessRepository.update(id, updateBusinessProfileDto);
+        return this.getOwnProfile(id);
     }
 }
