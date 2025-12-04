@@ -21,6 +21,8 @@ import { CapabilityService, ActionType } from '../../capability/capability.servi
 import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 import { MembershipService } from '../../membership/membership.service';
 import { PointPackageService } from '../../point-package/point-package.service';
+import { NotificationService } from '../../notification/notification.service';
+import { NotificationType, NotificationRecipientType } from '../../notification/enums/notification-type.enum';
 
 @Injectable()
 export class PointEarningService {
@@ -45,6 +47,7 @@ export class PointEarningService {
     private readonly tierProgressionService: TierProgressionService,
     private readonly membershipService: MembershipService,
     private readonly pointPackageService: PointPackageService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   // Helper to find performer (Staff or Business)
@@ -129,6 +132,33 @@ export class PointEarningService {
 
         const pointsUsed = pointsUsedResult && pointsUsedResult.total ? Number(pointsUsedResult.total) : 0;
         const remainingMonthlyAllowance = Math.max(0, monthlyAllowance - pointsUsed);
+
+        // Notification: 80% Allowance Warning
+        const usageRatioBefore = pointsUsed / monthlyAllowance;
+        const usageRatioAfter = (pointsUsed + points) / monthlyAllowance;
+        if (usageRatioBefore < 0.8 && usageRatioAfter >= 0.8) {
+          try {
+            await this.notificationService.create(
+              'Point Allowance Warning',
+              `You have used over 80% of your monthly point allowance (${Math.round(usageRatioAfter * 100)}%).`,
+              NotificationType.ALLOWANCE_WARNING,
+              NotificationRecipientType.BUSINESS,
+              business.id
+            );
+
+            await this.mailService.sendBusinessActivityEmail(
+              business.email,
+              'ALLOWANCE_WARNING',
+              0,
+              'System',
+              'System',
+              'N/A',
+              `You have used over 80% of your monthly point allowance.`
+            );
+          } catch (e) {
+            console.error('Failed to send allowance warning:', e);
+          }
+        }
 
         let pointsToDeduct = points;
 
@@ -245,12 +275,14 @@ export class PointEarningService {
           },
         );
 
+        let isNewJoin = false;
         if (!participantCampaignBalance) {
           participantCampaignBalance =
             this.participantCampaignBalanceRepository.create({
               participant,
               campaign_balance: 0,
             });
+          isNewJoin = true;
 
           if (businessCampaign) {
             participantCampaignBalance.businessCampaign = businessCampaign;
@@ -260,6 +292,35 @@ export class PointEarningService {
           }
         }
         participantCampaignBalance.campaign_balance += points;
+
+        // Notification: Campaign Joined
+        if (isNewJoin) {
+          try {
+            await this.notificationService.create(
+              'New Campaign Joined',
+              `Participant ${participant.name} has joined campaign ${businessCampaign ? businessCampaign.name : 'Unknown'}.`,
+              NotificationType.CAMPAIGN_JOINED,
+              NotificationRecipientType.BUSINESS,
+              business.id,
+              campaignId
+            );
+
+            if (businessCampaign && businessCampaign.business) {
+              await this.mailService.sendBusinessActivityEmail(
+                businessCampaign.business.email,
+                'JOIN',
+                0,
+                participant.name,
+                'System',
+                businessCampaign.name,
+                'Participant joined the campaign'
+              );
+            }
+          } catch (e) {
+            console.error('Failed to send campaign join notification:', e);
+          }
+        }
+
         participant.global_total_points += points;
         activeCampaign.total_points_earned += points;
 
@@ -288,6 +349,30 @@ export class PointEarningService {
         }
 
         await manager.save(regularPointHistory);
+
+        // Notification: Point Awarded (Business)
+        try {
+          await this.notificationService.create(
+            'Points Awarded',
+            `You awarded ${points} points to ${participant.name}.`,
+            NotificationType.POINT_AWARDED,
+            NotificationRecipientType.BUSINESS,
+            business.id,
+            campaignId
+          );
+        } catch (e) { console.error(e); }
+
+        // Notification: Point Awarded (Participant)
+        try {
+          await this.notificationService.create(
+            'Points Received',
+            `You received ${points} points from ${business.name}.`,
+            NotificationType.POINT_AWARDED,
+            NotificationRecipientType.USER,
+            participant.id,
+            campaignId
+          );
+        } catch (e) { console.error(e); }
 
         // Send email notifications
         const businessOwner = businessCampaign.business;

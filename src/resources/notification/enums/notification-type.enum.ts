@@ -1,0 +1,11 @@
+export enum NotificationType {
+    POINT_AWARDED = 'POINT_AWARDED',
+    REWARD_REDEEMED = 'REWARD_REDEEMED',
+    ALLOWANCE_WARNING = 'ALLOWANCE_WARNING',
+    CAMPAIGN_JOINED = 'CAMPAIGN_JOINED',
+}
+
+export enum NotificationRecipientType {
+    BUSINESS = 'BUSINESS',
+    USER = 'USER', // Participant
+}
