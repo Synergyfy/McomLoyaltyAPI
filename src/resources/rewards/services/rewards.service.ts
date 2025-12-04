@@ -232,6 +232,7 @@ export class RewardsService {
       disabled: reward.disabled,
       point_required: pointRequired,
       quantity: quantity,
+      remaining_quantity: quantity,
     });
 
     return this.businessRewardRepository.save(businessReward);
@@ -260,6 +261,7 @@ export class RewardsService {
       business: { id: businessId },
       reward_source: RewardSource.BUSINESS,
       audience: RewardAudience.ALL_BUSINESS,
+      remaining_quantity: createBusinessRewardDto.quantity,
     });
 
     const savedReward = await this.businessRewardRepository.save(businessReward);

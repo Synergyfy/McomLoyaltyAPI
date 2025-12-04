@@ -103,6 +103,39 @@ export class RedemptionService {
         throw new BadRequestException('Reward is not available in this campaign');
       }
 
+      // Check stock and update quantity
+      const businessReward = await manager.findOne(BusinessReward, {
+        where: {
+          reward: { id: reward.id },
+          business: { id: business.id },
+        },
+      });
+
+      if (businessReward) {
+        if (businessReward.remaining_quantity !== null) {
+          if (businessReward.remaining_quantity <= 0) {
+            throw new BadRequestException('Reward is out of stock');
+          }
+          businessReward.remaining_quantity -= 1;
+          await manager.save(BusinessReward, businessReward);
+        } else if (businessReward.quantity !== null) {
+          // Initialize remaining_quantity logic
+          const pastRedemptions = await manager.count(PointHistory, {
+            where: {
+              business: { id: business.id },
+              reward: { id: reward.id },
+              type: PointHistoryType.REDEEM,
+            },
+          });
+          const currentRemaining = businessReward.quantity - pastRedemptions;
+          if (currentRemaining <= 0) {
+            throw new BadRequestException('Reward is out of stock');
+          }
+          businessReward.remaining_quantity = currentRemaining - 1;
+          await manager.save(BusinessReward, businessReward);
+        }
+      }
+
       const whereCondition: any = {
         participant: { id: participantId },
         businessCampaign: { id: campaignId },
@@ -142,13 +175,6 @@ export class RedemptionService {
       });
 
       // Try to find BusinessReward to link
-      const businessReward = await manager.findOne(BusinessReward, {
-        where: {
-          reward: { id: reward.id },
-          business: { id: business.id },
-        },
-      });
-
       if (businessReward) {
         pointHistory.businessReward = businessReward;
       }
