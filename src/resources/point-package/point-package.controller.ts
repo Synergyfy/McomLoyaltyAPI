@@ -13,7 +13,7 @@ import {
 import { PointPackageService } from './point-package.service';
 import { CreatePointPackageDto } from './dto/create-point-package.dto';
 import { UpdatePointPackageDto } from './dto/update-point-package.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -129,5 +129,15 @@ export class PointPackageController {
     @ApiOperation({ summary: 'Get my purchased point packages' })
     async getMyPackages(@Req() req) {
         return this.pointPackageService.getMyPackages(req.user.id);
+    }
+    @Get('tier/:tierId')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Business, Role.Admin)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get point packages for a specific tier' })
+    @ApiParam({ name: 'tierId', description: 'The ID of the tier' })
+    @ApiResponse({ status: 200, description: 'Return point packages for the tier.' })
+    async getPointPackagesForTier(@Param('tierId') tierId: string) {
+        return this.pointPackageService.findByTier(tierId);
     }
 }

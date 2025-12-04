@@ -206,4 +206,13 @@ export class PointPackageService {
             throw new BadRequestException(`Insufficient points. You need ${pointsToDeduct} more points from packages.`);
         }
     }
+    async findByTier(tierId: string): Promise<PointPackage[]> {
+        return this.pointPackageRepository.find({
+            where: {
+                tiers: { id: tierId },
+                is_active: true,
+            },
+            order: { created_at: 'DESC' },
+        });
+    }
 }
