@@ -83,15 +83,25 @@ export class PointPackageController {
     @Roles(Role.Business)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get available point packages for current business tier' })
-    async getAvailablePackages(@Req() req) {
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    async getAvailablePackages(@Req() req, @Query('page') page = 1, @Query('limit') limit = 10) {
         const businessId = req.user.id;
         const membership = await this.membershipService.findOneByBusinessId(businessId);
 
         if (!membership || !membership.tier) {
-            return [];
+            return {
+                data: [],
+                total: 0,
+                page: Number(page),
+                limit: Number(limit),
+                totalPages: 0,
+                next: null,
+                previous: null,
+            };
         }
 
-        return this.pointPackageService.getAvailablePackages(membership.tier.id);
+        return this.pointPackageService.getAvailablePackages(membership.tier.id, page, limit);
     }
 
     @Post('business/buy')
