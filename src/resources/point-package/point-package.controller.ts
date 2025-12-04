@@ -130,6 +130,17 @@ export class PointPackageController {
     async getMyPackages(@Req() req) {
         return this.pointPackageService.getMyPackages(req.user.id);
     }
+
+    @Get('business/balance')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.Business)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get aggregate point balance from purchased packages' })
+    @ApiResponse({ status: 200, description: 'Return total balance of active point packages.' })
+    async getPointBalance(@Req() req) {
+        return this.pointPackageService.getAggregateBalance(req.user.id);
+    }
+
     @Get('tier/:tierId')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.Business, Role.Admin)
