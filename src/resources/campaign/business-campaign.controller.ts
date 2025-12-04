@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Body,
   Param,
   Query,
   UseGuards,
@@ -18,6 +20,7 @@ import { CampaignService } from './campaign.service';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 import { CapabilityService, ActionType } from '../capability/capability.service';
+import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { Campaign } from './entities/campaign.entity';
 
 @ApiTags('Business Campaigns')
@@ -138,5 +141,15 @@ export class BusinessCampaignController {
       participantId,
       paginationDto,
     );
+  }
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a business campaign' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateCampaignDto: UpdateCampaignDto,
+    @CurrentUser() business: Business,
+  ) {
+    // We reuse the campaignService.update which now has the logic
+    return this.campaignService.update(id, updateCampaignDto, business);
   }
 }
