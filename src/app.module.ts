@@ -18,6 +18,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { MembershipGuard } from './common/guards/membership.guard';
 import { CampaignModule } from './resources/campaign/campaign.module';
 import { ParticipantModule } from './resources/participant/participant.module';
 import { CategoryModule } from './resources/category/category.module';

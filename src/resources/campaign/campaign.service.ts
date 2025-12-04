@@ -44,6 +44,7 @@ import { MailService } from 'src/mail/mail.service';
 import { CreateCampaignFromWishlistDto } from './dto/create-campaign-from-wishlist.dto';
 import { Tier } from '../tier/entities/tier.entity';
 import { TierProgressionService } from '../tier-progression/tier-progression.service';
+import { CapabilityService, ActionType } from '../capability/capability.service';
 
 @Injectable()
 export class CampaignService {
@@ -73,6 +74,8 @@ export class CampaignService {
     private readonly mailService: MailService,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
+    @Inject(forwardRef(() => CapabilityService))
+    private readonly capabilityService: CapabilityService,
   ) { }
 
   async create(
@@ -128,15 +131,38 @@ export class CampaignService {
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
       const { business_reward_ids } = createCampaignDto as CreateCampaignDto;
-      if (business_reward_ids) {
+
+      if (!business_reward_ids || business_reward_ids.length === 0) {
+        throw new BadRequestException('Business must add at least one reward to the campaign.');
+      }
+
+      // Check tier permission for reward count
+      await this.capabilityService.checkPermission(currentUser.id, ActionType.CREATE_CAMPAIGN, {
+        isFromScratch: true,
+        rewardCount: business_reward_ids.length,
+      });
+
+      if (business_reward_ids && business_reward_ids.length > 0) {
         const businessRewards = await this.businessRewardRepository.find({
           where: { id: In(business_reward_ids) },
-          relations: ['reward'],
+          relations: ['reward', 'business'],
         });
-        rewards = businessRewards.map((br) => br.reward);
+
+        // Validate that all found rewards belong to the current business
+        for (const reward of businessRewards) {
+          if (reward.business.id !== currentUser.id) {
+            throw new UnauthorizedException(`Business Reward with ID ${reward.id} does not belong to your business.`);
+          }
+        }
+
+        // Also check if all requested IDs were found (optional but good practice)
+        if (businessRewards.length !== business_reward_ids.length) {
+          throw new BadRequestException('One or more business rewards not found.');
+        }
+
+        businessCampaign.businessRewards = businessRewards;
       }
-      businessCampaign.rewards = rewards;
-      businessCampaign.rewards = rewards;
+      // businessCampaign.rewards = rewards; // Removed setting rewards
       const savedCampaign = await this.businessCampaignRepository.save(businessCampaign);
 
       // Check for promotion
@@ -430,7 +456,7 @@ export class CampaignService {
   async findOne(id: string, currentUser?: User): Promise<Campaign | BusinessCampaign> {
     const businessCampaign = await this.businessCampaignRepository.findOne({
       where: { id },
-      relations: ['business', 'rewards'],
+      relations: ['business', 'rewards', 'campaign', 'businessRewards'],
     });
 
     if (businessCampaign) {
@@ -483,27 +509,70 @@ export class CampaignService {
     currentUser: Business | Admin,
   ): Promise<Campaign | BusinessCampaign> {
     const campaign = await this.findOne(id, currentUser);
-    const { reward_ids, business_reward_ids, ...campaignData } =
-      updateCampaignDto;
+    const { reward_ids, business_reward_ids, ...campaignData } = updateCampaignDto;
     let rewards: Reward[] = [];
 
     if (currentUser.role === Role.Admin) {
-      if (reward_ids) {
-        rewards = await this.rewardRepository.findBy({
-          id: In(reward_ids),
-        });
+      // Admin updating Campaign
+      if (campaign instanceof Campaign) {
+        if (reward_ids) {
+          rewards = await this.rewardRepository.findBy({
+            id: In(reward_ids),
+          });
+          campaign.rewards = rewards;
+        }
       }
     } else {
-      if (business_reward_ids) {
-        const businessRewards = await this.businessRewardRepository.find({
-          where: { id: In(business_reward_ids) },
-          relations: ['reward'],
-        });
-        rewards = businessRewards.map((br) => br.reward);
+      // Business updating BusinessCampaign
+      if (campaign instanceof BusinessCampaign) {
+        // Check if claimed (Template)
+        if (campaign.campaign) {
+          await this.capabilityService.checkPermission(currentUser.id, ActionType.EDIT_TEMPLATE);
+
+          if (business_reward_ids && business_reward_ids.length > 0) {
+            throw new BadRequestException('Cannot add business rewards to a claimed campaign template.');
+          }
+
+          if (reward_ids) {
+            const newRewards = await this.rewardRepository.findBy({
+              id: In(reward_ids),
+            });
+            campaign.rewards = newRewards;
+          }
+        } else {
+          // Created from Scratch
+          if (reward_ids && reward_ids.length > 0) {
+            throw new BadRequestException('Cannot add admin rewards to a custom business campaign.');
+          }
+
+          if (business_reward_ids) {
+            const businessRewards = await this.businessRewardRepository.find({
+              where: { id: In(business_reward_ids) },
+              relations: ['reward'],
+            });
+            campaign.businessRewards = businessRewards;
+          }
+        }
+
+        // Validation: Ensure at least one type of reward is present
+        const hasRewards = campaign.rewards && campaign.rewards.length > 0;
+        const hasBusinessRewards = campaign.businessRewards && campaign.businessRewards.length > 0;
+
+        if (!hasRewards && !hasBusinessRewards) {
+          // Only throw if we actually modified something that resulted in empty rewards?
+          // Or always enforce?
+          // If it's an existing campaign, it should have rewards.
+          // If we are not updating rewards, hasRewards/hasBusinessRewards will reflect DB state (loaded in findOne).
+          // So this check is safe.
+          throw new BadRequestException('Campaign must have at least one reward.');
+        }
+
+        if (hasRewards && hasBusinessRewards) {
+          throw new BadRequestException('Campaign cannot have both admin rewards and business rewards.');
+        }
       }
     }
 
-    campaign.rewards = rewards;
     Object.assign(campaign, campaignData);
 
     if (campaign instanceof BusinessCampaign) {
@@ -750,6 +819,7 @@ export class CampaignService {
   async claimCampaign(
     businessId: string,
     campaignId: string,
+    businessRewardIds: string[],
   ): Promise<BusinessCampaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
@@ -779,6 +849,31 @@ export class CampaignService {
     if (!business) {
       throw new NotFoundException('Business not found');
     }
+
+    // Fetch and validate business rewards
+    const businessRewards = await this.businessRewardRepository.find({
+      where: { id: In(businessRewardIds) },
+      relations: ['business', 'reward'],
+    });
+
+    if (businessRewards.length !== businessRewardIds.length) {
+      throw new BadRequestException('One or more business rewards not found.');
+    }
+
+    for (const reward of businessRewards) {
+      if (reward.business.id !== businessId) {
+        throw new UnauthorizedException(
+          `Business Reward with ID ${reward.id} does not belong to your business.`,
+        );
+      }
+    }
+
+    // Optional: Check if the number of rewards exceeds the template's reward count?
+    // The user requirement was about tier limits mostly.
+    // But if the template has 3 rewards, should the business be allowed to add 5?
+    // Usually a template defines the structure. If the template has slots for rewards, maybe we should respect that?
+    // The user said "make it such that it is the business adding their own rewards to the campaign".
+    // I will stick to tier limits which are enforced by the capability service check in the controller.
 
     const businessCampaign = this.businessCampaignRepository.create({
       business,
@@ -813,6 +908,9 @@ export class CampaignService {
       contact_phone_number: campaign.contact_phone_number,
       footer_text: campaign.footer_text,
     });
+
+    // Link business rewards
+    businessCampaign.businessRewards = businessRewards;
 
     return this.businessCampaignRepository.save(businessCampaign);
   }

@@ -88,6 +88,10 @@ export class Business extends AbstractBaseEntity {
   @Column({ type: 'numeric', default: 0 })
   reputation_points: number;
 
+  @ApiProperty({ description: 'The profile image URL of the business', required: false })
+  @Column({ nullable: true })
+  profile_image: string;
+
   @OneToMany(() => Deal, (deal) => deal.business)
   deals: Deal[];
 

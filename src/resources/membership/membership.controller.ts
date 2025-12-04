@@ -5,13 +5,17 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Membership } from './entities/membership.entity';
 import { PaymentHistory } from '../payment-history/entities/payment-history.entity';
+import { JoinTrialDto } from './dto/join-trial.dto';
+import { Post, Body } from '@nestjs/common';
+import { SkipMembershipCheck } from '../../common/decorators/skip-membership-check.decorator';
 
 @ApiTags('Membership')
 @Controller('membership')
 @UseGuards(JwtAuthGuard)
+@SkipMembershipCheck()
 @ApiBearerAuth()
 export class MembershipController {
-  constructor(private readonly membershipService: MembershipService) {}
+  constructor(private readonly membershipService: MembershipService) { }
 
   @Get('my-membership')
   @ApiOperation({ summary: "Get the current user's membership" })
@@ -26,5 +30,13 @@ export class MembershipController {
   @ApiResponse({ status: 200, description: 'Return the payment history.', type: [PaymentHistory] })
   getMyPaymentHistory(@CurrentUser() user) {
     return this.membershipService.getMyPaymentHistory(user);
+  }
+
+  @Post('join-trial')
+  @ApiOperation({ summary: 'Join a tier with a trial membership' })
+  @ApiResponse({ status: 201, description: 'Trial membership created.', type: Membership })
+  @ApiResponse({ status: 400, description: 'Membership already exists.' })
+  joinTrial(@CurrentUser() user, @Body() joinTrialDto: JoinTrialDto) {
+    return this.membershipService.joinTrial(user, joinTrialDto);
   }
 }

@@ -98,13 +98,30 @@ export class PointPackageService {
         }
     }
 
-    async getAvailablePackages(tierId: string): Promise<PointPackage[]> {
-        return this.pointPackageRepository
+    async getAvailablePackages(tierId: string, page: number, limit: number): Promise<PaginationResult<PointPackage>> {
+        const [data, total] = await this.pointPackageRepository
             .createQueryBuilder('package')
             .innerJoin('package.tiers', 'tier')
             .where('tier.id = :tierId', { tierId })
             .andWhere('package.is_active = :isActive', { isActive: true })
-            .getMany();
+            .orderBy('package.created_at', 'DESC')
+            .skip((page - 1) * limit)
+            .take(limit)
+            .getManyAndCount();
+
+        const totalPages = Math.ceil(total / limit);
+        const next = page < totalPages ? Number(page) + 1 : null;
+        const previous = page > 1 ? Number(page) - 1 : null;
+
+        return {
+            data,
+            total,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages,
+            next,
+            previous,
+        };
     }
 
     async buyPackage(businessId: string, packageId: string, provider: string) {

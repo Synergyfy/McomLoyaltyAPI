@@ -12,13 +12,15 @@ import { Business } from '../business/entities/business.entity';
 import { Public } from '../../common/decorators/public.decorator';
 import { RawBody } from '../../common/decorators/raw-body.decorator';
 import { VerifySubscriptionDto } from './dto/verify-subscription.dto';
+import { SkipMembershipCheck } from '../../common/decorators/skip-membership-check.decorator';
 
 @ApiTags('Payment')
 @Controller('payment')
 @UseGuards(JwtAuthGuard)
+@SkipMembershipCheck()
 @ApiBearerAuth()
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(private readonly paymentService: PaymentService) { }
 
   @Post('stripe/initiate')
   @ApiOperation({ summary: 'Initiate a payment with Stripe' })

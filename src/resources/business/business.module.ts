@@ -3,6 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Business } from './entities/business.entity';
 import { Referral } from '../referral/entities/referral.entity';
 import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
+import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
+import { BusinessReward } from '../rewards/entities/business-reward.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { HashModule } from '../../common/hash/hash.module';
 import { SectorModule } from '../sector/sector.module';
 import { CategoryModule } from '../category/category.module';
@@ -18,7 +21,14 @@ import { PaymentModule } from '../payment/payment.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business, Referral, PointHistory]),
+    TypeOrmModule.forFeature([
+      Business,
+      Referral,
+      PointHistory,
+      BusinessCampaign,
+      BusinessReward,
+      Staff,
+    ]),
     HashModule,
     SectorModule,
     CategoryModule,

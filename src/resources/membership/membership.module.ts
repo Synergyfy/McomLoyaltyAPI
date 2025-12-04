@@ -5,8 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Membership } from './entities/membership.entity';
 import { PaymentHistory } from '../payment-history/entities/payment-history.entity';
 
+import { Tier } from '../tier/entities/tier.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Membership, PaymentHistory])],
+  imports: [TypeOrmModule.forFeature([Membership, PaymentHistory, Tier])],
   controllers: [MembershipController],
   providers: [MembershipService],
   exports: [MembershipService],

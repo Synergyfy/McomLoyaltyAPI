@@ -2,6 +2,7 @@ import { Controller, Post, Body, ValidationPipe, Get, Patch, Delete, Request, Us
 import { BusinessService } from '../services/business.service';
 import { CreateBusinessDto } from '../dto/create-business.dto';
 import { UpdateBusinessDto } from '../dto/update-business.dto';
+import { UpdateBusinessProfileDto } from '../dto/update-business-profile.dto';
 import { OnboardingDto } from '../dto/onboarding.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
@@ -128,5 +129,29 @@ export class BusinessController {
   @ApiResponse({ status: 200, description: 'Return point purchase configuration.', type: PointPurchaseConfigDto })
   async getPointPurchaseConfig(@Request() req) {
     return this.businessService.getPointPurchaseConfig(req.user.id);
+  }
+
+  @Roles(Role.Business)
+  @Get('me')
+  @ApiOperation({ summary: 'Get current business profile' })
+  @ApiResponse({ status: 200, description: 'Return current business profile.' })
+  async getOwnProfile(@Request() req) {
+    return this.businessService.getOwnProfile(req.user.id);
+  }
+
+  @Roles(Role.Business)
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current business profile' })
+  @ApiResponse({ status: 200, description: 'The business profile has been successfully updated.' })
+  @ApiBody({ type: UpdateBusinessProfileDto })
+  async updateOwnProfile(@Request() req, @Body(new ValidationPipe()) updateBusinessProfileDto: UpdateBusinessProfileDto) {
+    return this.businessService.updateOwnProfile(req.user.id, updateBusinessProfileDto);
+  }
+  @Roles(Role.Business)
+  @Get('tier-usage')
+  @ApiOperation({ summary: 'Get business tier usage and limits' })
+  @ApiResponse({ status: 200, description: 'Return business tier usage and limits.' })
+  async getTierUsage(@Request() req) {
+    return this.businessService.getTierUsage(req.user.id);
   }
 }
