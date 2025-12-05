@@ -28,4 +28,14 @@ export class InitiatePaymentDto {
   @IsOptional()
   @IsString()
   coupon_code?: string;
+
+  @ApiProperty({
+    description: 'Array of Point Package IDs to purchase as add-ons.',
+    example: ['pkg_123', 'pkg_456'],
+    required: false,
+    type: [String],
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  point_package_ids?: string[];
 }

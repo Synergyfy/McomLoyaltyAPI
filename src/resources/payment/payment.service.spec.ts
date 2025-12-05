@@ -12,6 +12,8 @@ import { Business } from '../business/entities/business.entity';
 import { ConfigService } from '@nestjs/config';
 import { QrPlaquesService } from '../qr-plaques/qr-plaques.service';
 import { PaymentProvider } from '../payment-history/entities/payment-history.entity';
+import { PointPackage } from '../point-package/entities/point-package.entity';
+import { BusinessPointPackage } from '../point-package/entities/business-point-package.entity';
 
 describe('PaymentService', () => {
   let service: PaymentService;
@@ -63,6 +65,16 @@ describe('PaymentService', () => {
     ensurePlaqueCountForBusiness: jest.fn(),
   };
 
+  const mockPointPackageRepository = {
+    find: jest.fn(),
+    findOne: jest.fn(),
+  };
+
+  const mockBusinessPointPackageRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -102,6 +114,14 @@ describe('PaymentService', () => {
         {
           provide: QrPlaquesService,
           useValue: mockQrPlaquesService,
+        },
+        {
+          provide: getRepositoryToken(PointPackage),
+          useValue: mockPointPackageRepository,
+        },
+        {
+          provide: getRepositoryToken(BusinessPointPackage),
+          useValue: mockBusinessPointPackageRepository,
         },
       ],
     }).compile();
@@ -175,6 +195,26 @@ describe('PaymentService', () => {
       expect(mockStripeService.createPaymentIntent).toHaveBeenCalledWith(0, 'gbp', {
         tier_id: '1',
         plan_type: PlanType.MONTHLY,
+      });
+    });
+
+    it('should initiate a stripe payment with point packages', async () => {
+      mockTierRepository.findOne.mockResolvedValue({ id: '1', name: 'Gold', monthly_price: 10, annual_price: 100 });
+      mockPointPackageRepository.find.mockResolvedValue([{ id: 'pkg1', name: 'Package 1', price: 20 }]);
+      mockPointPackageRepository.findOne.mockResolvedValue({ id: 'pkg1', name: 'Package 1', tiers: [{ id: '1' }] });
+      mockStripeService.createPaymentIntent.mockResolvedValue({ client_secret: 'secret' });
+
+      const result = await service.initiateStripePayment(
+        { tier_id: '1', plan_type: PlanType.MONTHLY, point_package_ids: ['pkg1'] },
+        {},
+      );
+
+      expect(result).toEqual({ clientSecret: 'secret' });
+      // Amount should be 10 (tier) + 20 (package) = 30 * 100 = 3000
+      expect(mockStripeService.createPaymentIntent).toHaveBeenCalledWith(3000, 'gbp', {
+        tier_id: '1',
+        plan_type: PlanType.MONTHLY,
+        point_package_ids: 'pkg1',
       });
     });
   });
@@ -306,7 +346,7 @@ describe('PaymentService', () => {
         status: 'ACTIVE',
         plan_id: 'P-123',
         billing_info: {
-            next_billing_time: '2025-01-01T00:00:00Z'
+          next_billing_time: '2025-01-01T00:00:00Z'
         }
       };
       mockPaypalService.getSubscription.mockResolvedValue(subscription);
