@@ -62,13 +62,13 @@ export class PaypalService {
     }
   }
 
-  async createOrder(amount: number, currency: string, tierId: string, planType: PlanType) {
+  async createOrder(amount: number, currency: string, tierId: string, description: string) {
     const request: OrderRequest = {
       intent: CheckoutPaymentIntent.Capture,
       purchaseUnits: [
         {
           referenceId: tierId,
-          description: planType,
+          description: description,
           amount: {
             currencyCode: currency,
             value: amount.toString(),

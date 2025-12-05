@@ -13,11 +13,13 @@ import {
 import { PointPackageService } from './point-package.service';
 import { CreatePointPackageDto } from './dto/create-point-package.dto';
 import { UpdatePointPackageDto } from './dto/update-point-package.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
+import { ConfirmPointPurchaseDto } from '../business/dto/confirm-point-purchase.dto';
+import { ConfirmPurchaseResponseDto } from './dto/confirm-purchase-response.dto';
 
 import { MembershipService } from '../membership/membership.service';
 
@@ -116,7 +118,9 @@ export class PointPackageController {
     @Roles(Role.Business)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Confirm a point package purchase' })
-    async confirmPurchase(@Req() req, @Body() body: { transactionId: string; provider: string }) {
+    @ApiBody({ type: ConfirmPointPurchaseDto })
+    @ApiResponse({ status: 201, description: 'Purchase confirmed successfully', type: ConfirmPurchaseResponseDto })
+    async confirmPurchase(@Req() req, @Body() body: ConfirmPointPurchaseDto): Promise<ConfirmPurchaseResponseDto> {
         return this.pointPackageService.confirmPurchase(req.user.id, body.transactionId, body.provider);
     }
 

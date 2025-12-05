@@ -16,6 +16,9 @@ import { SubscribeDto } from './dto/subscribe.dto';
 import { ConfigService } from '@nestjs/config';
 import { QrPlaquesService } from '../qr-plaques/qr-plaques.service';
 import { VerifySubscriptionDto } from './dto/verify-subscription.dto';
+import { PointPackage } from '../point-package/entities/point-package.entity';
+import { BusinessPointPackage } from '../point-package/entities/business-point-package.entity';
+import { In } from 'typeorm';
 
 @Injectable()
 export class PaymentService {
@@ -35,6 +38,10 @@ export class PaymentService {
     private readonly couponService: CouponService,
     private readonly configService: ConfigService,
     private readonly qrPlaquesService: QrPlaquesService,
+    @InjectRepository(PointPackage)
+    private readonly pointPackageRepository: Repository<PointPackage>,
+    @InjectRepository(BusinessPointPackage)
+    private readonly businessPointPackageRepository: Repository<BusinessPointPackage>,
   ) { }
 
   async initiateStripePayment(initiatePaymentDto: InitiatePaymentDto, user: any) {
@@ -42,11 +49,46 @@ export class PaymentService {
     if (!tier) {
       throw new NotFoundException('Tier not found');
     }
-    const amount = await this._calculateAmount(tier, initiatePaymentDto.plan_type, initiatePaymentDto.coupon_code);
-    const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', {
+    let amount = await this._calculateAmount(tier, initiatePaymentDto.plan_type, initiatePaymentDto.coupon_code);
+
+    let packageIdsString = '';
+    if (initiatePaymentDto.point_package_ids && initiatePaymentDto.point_package_ids.length > 0) {
+      const packages = await this.pointPackageRepository.find({
+        where: { id: In(initiatePaymentDto.point_package_ids), is_active: true }
+      });
+
+      if (packages.length !== initiatePaymentDto.point_package_ids.length) {
+        throw new NotFoundException('One or more point packages not found or inactive');
+      }
+
+      // Check if packages are available for this tier
+      for (const pkg of packages) {
+        // This check might be heavy if tiers are not loaded. 
+        // Ideally we should query with relations or builder.
+        // But let's assume if they have the ID they saw it in the list. 
+        // Strict check:
+        const packageWithTiers = await this.pointPackageRepository.findOne({
+          where: { id: pkg.id },
+          relations: ['tiers']
+        });
+        if (!packageWithTiers.tiers.some(t => t.id === tier.id)) {
+          throw new BadRequestException(`Package ${pkg.name} is not available for tier ${tier.name}`);
+        }
+        amount += Number(pkg.price);
+      }
+      packageIdsString = initiatePaymentDto.point_package_ids.join(',');
+    }
+
+    const metadata: any = {
       tier_id: tier.id,
       plan_type: initiatePaymentDto.plan_type,
-    });
+    };
+
+    if (packageIdsString) {
+      metadata.point_package_ids = packageIdsString;
+    }
+
+    const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', metadata);
     return { clientSecret: paymentIntent.client_secret };
   }
 
@@ -74,6 +116,11 @@ export class PaymentService {
         false,
         expiresAt,
       );
+
+      if (paymentIntent.metadata.point_package_ids) {
+        const packageIds = paymentIntent.metadata.point_package_ids.split(',');
+        await this._awardPackages(user.id, packageIds, paymentIntent.id);
+      }
     }
     return { status: paymentIntent.status };
   }
@@ -83,20 +130,44 @@ export class PaymentService {
     if (!tier) {
       throw new NotFoundException('Tier not found');
     }
-    const amount = await this._calculateAmount(tier, initiatePaymentDto.plan_type, initiatePaymentDto.coupon_code);
-    const order = await this.paypalService.createOrder(amount, 'GBP', tier.id, initiatePaymentDto.plan_type);
+    let amount = await this._calculateAmount(tier, initiatePaymentDto.plan_type, initiatePaymentDto.coupon_code);
+
+    let description = initiatePaymentDto.plan_type as string;
+
+    if (initiatePaymentDto.point_package_ids && initiatePaymentDto.point_package_ids.length > 0) {
+      const packages = await this.pointPackageRepository.find({
+        where: { id: In(initiatePaymentDto.point_package_ids), is_active: true }
+      });
+
+      if (packages.length !== initiatePaymentDto.point_package_ids.length) {
+        throw new NotFoundException('One or more point packages not found or inactive');
+      }
+
+      for (const pkg of packages) {
+        const packageWithTiers = await this.pointPackageRepository.findOne({
+          where: { id: pkg.id },
+          relations: ['tiers']
+        });
+        if (!packageWithTiers.tiers.some(t => t.id === tier.id)) {
+          throw new BadRequestException(`Package ${pkg.name} is not available for tier ${tier.name}`);
+        }
+        amount += Number(pkg.price);
+      }
+      // Format: PLAN_TYPE|PKG:id1,id2
+      description += `|PKG:${initiatePaymentDto.point_package_ids.join(',')}`;
+    }
+
+    const order = await this.paypalService.createOrder(amount, 'GBP', tier.id, description);
     return { orderId: order.result.id };
   }
 
   async verifyPaypalPayment(verifyPaymentDto: VerifyPaymentDto, user: any) {
     const capture = await this.paypalService.capturePayment(verifyPaymentDto.transaction_id);
-    // Use 'any' to bypass strict type checking for the potentially loose SDK response structure
     const result = capture.result as any;
 
     this.logger.debug(`PayPal Capture Result: ${JSON.stringify(result)}`);
 
     if (result.status === 'COMPLETED') {
-      // Handle both camelCase (SDK) and snake_case (Raw API) possibilities
       const purchaseUnits = result.purchaseUnits || result.purchase_units;
 
       if (!purchaseUnits || purchaseUnits.length === 0) {
@@ -105,8 +176,6 @@ export class PaymentService {
       }
 
       const purchaseUnit = purchaseUnits[0];
-
-      // Retrieve Reference ID (Tier ID)
       const tierId = purchaseUnit.referenceId || purchaseUnit.reference_id;
 
       if (!tierId) {
@@ -119,17 +188,15 @@ export class PaymentService {
         throw new NotFoundException(`Tier with ID ${tierId} not found`);
       }
 
-      // Retrieve Plan Type (Description)
-      const planType = purchaseUnit.description as PlanType;
+      // Description format: PLAN_TYPE or PLAN_TYPE|PKG:id1,id2
+      const fullDescription = purchaseUnit.description as string;
+      const [planTypeStr, pkgPart] = fullDescription.split('|PKG:');
+      const planType = planTypeStr as PlanType;
 
-      // Retrieve Amount
-      // In a captured order, amount is typically inside payments.captures[0].amount
       let amountValue: string | undefined;
-
       if (purchaseUnit.payments && purchaseUnit.payments.captures && purchaseUnit.payments.captures.length > 0) {
         amountValue = purchaseUnit.payments.captures[0].amount?.value;
       } else if (purchaseUnit.amount) {
-        // Fallback to top-level amount if available (unlikely for capture response but good for safety)
         amountValue = purchaseUnit.amount.value;
       }
 
@@ -138,7 +205,6 @@ export class PaymentService {
         throw new BadRequestException('Invalid PayPal response: missing amount');
       }
 
-      // Calculate Expiration
       const expiresAt = new Date();
       if (planType === PlanType.ANNUAL) {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -158,6 +224,11 @@ export class PaymentService {
         false,
         expiresAt,
       );
+
+      if (pkgPart) {
+        const packageIds = pkgPart.split(',');
+        await this._awardPackages(user.id, packageIds, result.id);
+      }
     }
     return { status: result.status };
   }
@@ -398,6 +469,25 @@ export class PaymentService {
     }
   }
 
+  private async _awardPackages(businessId: string, packageIds: string[], transactionId: string) {
+    const packages = await this.pointPackageRepository.find({
+      where: { id: In(packageIds) }
+    });
+
+    for (const pointPackage of packages) {
+      const businessPointPackage = this.businessPointPackageRepository.create({
+        business: { id: businessId },
+        package: pointPackage,
+        name: pointPackage.name,
+        initial_points: pointPackage.points,
+        remaining_points: pointPackage.points,
+        transaction_id: transactionId,
+      });
+
+      await this.businessPointPackageRepository.save(businessPointPackage);
+    }
+  }
+
   async initiatePointPurchase(user: any, points: number, amount: number, provider: string) {
     if (provider === 'paypal') {
       const order = await this.paypalService.createPointPurchaseOrder(amount, 'GBP', user.id, points);
@@ -521,17 +611,9 @@ export class PaymentService {
       throw new BadRequestException(`Webhook Error: ${err.message}`);
     }
   }
+
   async initiatePackagePurchase(user: any, packageId: string, amount: number, provider: string) {
     if (provider === 'paypal') {
-      // For PayPal, we can use the same createPointPurchaseOrder or a similar one.
-      // Ideally, we should pass a description.
-      const order = await this.paypalService.createPointPurchaseOrder(amount, 'GBP', user.id, 0); // 0 points because it's a package, handled separately?
-      // Actually, we might want to pass the package ID in the custom_id or similar.
-      // But wait, createPointPurchaseOrder takes points as argument.
-      // Let's check paypal.service.ts to see if we can reuse it or need a new one.
-      // For now, let's assume we can reuse it but maybe we need to adjust it.
-      // Let's stick to Stripe for now as it's easier to customize metadata.
-      // Or better, let's look at paypal.service.ts first.
       throw new BadRequestException('PayPal for packages not fully implemented yet');
     } else {
       // Stripe

@@ -439,10 +439,22 @@ export class RewardsService {
         id: rewardId,
         business: { id: businessId },
       },
+      relations: ['reward'],
     });
 
     if (!businessReward) {
       throw new NotFoundException('Reward not found or does not belong to this business');
+    }
+
+    if (
+      updateBusinessRewardDto.point_required !== undefined &&
+      businessReward.reward
+    ) {
+      if (updateBusinessRewardDto.point_required > businessReward.reward.max_points) {
+        throw new ForbiddenException(
+          `Points required cannot exceed the maximum points set by admin (${businessReward.reward.max_points})`,
+        );
+      }
     }
 
     Object.assign(businessReward, updateBusinessRewardDto);
