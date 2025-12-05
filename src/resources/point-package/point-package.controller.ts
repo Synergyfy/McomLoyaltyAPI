@@ -22,6 +22,7 @@ import { ConfirmPointPurchaseDto } from '../business/dto/confirm-point-purchase.
 import { ConfirmPurchaseResponseDto } from './dto/confirm-purchase-response.dto';
 
 import { MembershipService } from '../membership/membership.service';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Point Packages')
 @Controller('point-packages')
@@ -41,7 +42,7 @@ export class PointPackageController {
     }
 
     @Get('all')
-    @ApiBearerAuth()
+    @Public()
     @ApiOperation({ summary: 'Get all point packages' })
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -144,6 +145,7 @@ export class PointPackageController {
     }
 
     @Get('tier/:tierId')
+    @Public()
     @ApiOperation({ summary: 'Get point packages for a specific tier' })
     @ApiParam({ name: 'tierId', description: 'The ID of the tier' })
     @ApiResponse({ status: 200, description: 'Return point packages for the tier.' })
