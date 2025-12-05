@@ -12,9 +12,12 @@ import { CouponModule } from '../coupon/coupon.module';
 import { Business } from '../business/entities/business.entity';
 import { QrPlaquesModule } from '../qr-plaques/qr-plaques.module';
 
+import { PointPackage } from '../point-package/entities/point-package.entity';
+import { BusinessPointPackage } from '../point-package/entities/business-point-package.entity';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tier, Membership, PaymentHistory, Business]),
+    TypeOrmModule.forFeature([Tier, Membership, PaymentHistory, Business, PointPackage, BusinessPointPackage]),
     ConfigModule,
     CouponModule,
     QrPlaquesModule,
