@@ -25,6 +25,7 @@ import { PaginationResult } from '../../../common/interfaces/pagination-result.i
 import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 import { RewardSource } from '../enums/reward-source.enum';
 import { MembershipStatus } from '../../membership/entities/membership.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 
 import { AddRewardToBusinessDto } from '../dto/add-reward-to-business.dto';
 
@@ -43,6 +44,8 @@ export class RewardsService {
     private readonly sectorRepository: Repository<Sector>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
   ) { }
@@ -304,6 +307,22 @@ export class RewardsService {
     rewardId: string,
     businessId: string,
   ): Promise<void> {
+    const activeCampaignsCount = await this.businessCampaignRepository
+      .createQueryBuilder('businessCampaign')
+      .innerJoin('businessCampaign.rewards', 'reward')
+      .innerJoin('businessCampaign.participants', 'participant')
+      .where('reward.id = :rewardId', { rewardId })
+      .andWhere('businessCampaign.business.id = :businessId', { businessId })
+      .andWhere('businessCampaign.end_date > :now', { now: new Date() })
+      .andWhere('businessCampaign.disabled = :disabled', { disabled: false })
+      .getCount();
+
+    if (activeCampaignsCount > 0) {
+      throw new ConflictException(
+        'Cannot remove reward because it is being used in an active campaign with participants.',
+      );
+    }
+
     await this.businessRewardRepository.delete({
       id: rewardId,
       business: { id: businessId },
