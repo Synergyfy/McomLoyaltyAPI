@@ -34,7 +34,6 @@ import { CouponModule } from './resources/coupon/coupon.module';
 import { MembershipModule } from './resources/membership/membership.module';
 import { PaymentHistoryModule } from './resources/payment-history/payment-history.module';
 import { PaymentModule } from './resources/payment/payment.module';
-import { ProgressionModule } from './resources/progression/progression.module';
 import { PartnerModule } from './resources/partner/partner.module';
 import { WishlistModule } from './resources/wishlist/wishlist.module';
 import { CapabilityModule } from './resources/capability/capability.module';
@@ -44,6 +43,8 @@ import { PointPackageModule } from './resources/point-package/point-package.modu
 import { NotificationModule } from './resources/notification/notification.module';
 import { SetupModule } from './resources/setup/setup.module';
 import { MatchingPointModule } from './resources/matching-point/matching-point.module';
+import { ParticipantProgressionModule } from './resources/participant-progression/participant-progression.module';
+
 
 @Module({
   imports: [
@@ -79,8 +80,8 @@ import { MatchingPointModule } from './resources/matching-point/matching-point.m
     MembershipModule,
     PaymentHistoryModule,
     PaymentModule,
-    ProgressionModule,
     PartnerModule,
+    ParticipantProgressionModule,
     WishlistModule,
     CapabilityModule,
     SystemSettingModule,

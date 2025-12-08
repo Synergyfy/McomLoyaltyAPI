@@ -1,6 +1,5 @@
 import { Injectable, ForbiddenException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { MembershipService } from '../membership/membership.service';
-import { ProgressionService } from '../progression/progression.service';
 import { CampaignService } from '../campaign/campaign.service';
 import { TierConfig, SeasonalTierConfig, ProgressionBenefits } from '../tier/interfaces/tier-config.interface';
 import { MembershipStatus } from '../membership/entities/membership.entity';
@@ -30,7 +29,6 @@ export class CapabilityService {
 
     constructor(
         private readonly membershipService: MembershipService,
-        private readonly progressionService: ProgressionService,
         @Inject(forwardRef(() => CampaignService))
         private readonly campaignService: CampaignService,
         private readonly rewardsService: RewardsService,
@@ -86,14 +84,10 @@ export class CapabilityService {
             effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
         }
 
-        // 2. Fetch User's Progression Level
-        const progression = await this.progressionService.getBusinessProgression(userId);
-        const currentLevelName = progression?.currentLevel?.name;
-
         // 3. Calculate Effective Limits & Check Permissions
         switch (action) {
             case ActionType.CREATE_CAMPAIGN:
-                await this.checkCampaignLimit(userId, effectiveConfig, currentLevelName);
+                await this.checkCampaignLimit(userId, effectiveConfig);
                 if (!effectiveConfig.featureFlags.canCreateCampaignFromScratch && context?.isFromScratch) {
                     this.logger.warn(`User ${userId} tried to create campaign from scratch but is not allowed.`);
                     throw new ForbiddenException('Your tier does not allow creating campaigns from scratch.');
@@ -182,20 +176,11 @@ export class CapabilityService {
         return merged;
     }
 
-    private async checkCampaignLimit(userId: string, config: TierConfig, levelName?: string) {
+    private async checkCampaignLimit(userId: string, config: TierConfig) {
         const baseLimit = config.quotas.maxActiveCampaigns;
         if (baseLimit === -1) return; // Unlimited
 
-        let bonus = 0;
-        if (levelName && config.progressBonuses) {
-            const levelKey = levelName.toLowerCase().replace(/\s+/g, '_');
-            const bonusKey = `${levelKey}_campaign_bonus`;
-            if (config.progressBonuses[bonusKey]) {
-                bonus = config.progressBonuses[bonusKey];
-            }
-        }
-
-        const effectiveLimit = baseLimit + bonus;
+        const effectiveLimit = baseLimit;
         const currentUsage = await this.campaignService.countActiveCampaigns(userId);
 
         if (currentUsage >= effectiveLimit) {
