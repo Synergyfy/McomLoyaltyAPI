@@ -3,7 +3,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { WishlistService } from './wishlist.service';
 import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Participant } from '../participant/entities/participant.entity';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -12,6 +12,7 @@ import { Role } from 'src/common/role.enum';
 
 @ApiTags('wishlist')
 @Controller('wishlist')
+@ApiBearerAuth()
 export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) { }
 

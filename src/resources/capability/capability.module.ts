@@ -4,15 +4,13 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { Staff } from '../staff/entities/staff.entity';
 import { CapabilityService } from './capability.service';
 import { MembershipModule } from '../membership/membership.module';
-import { ProgressionModule } from '../progression/progression.module';
 import { CampaignModule } from '../campaign/campaign.module';
 import { RewardsModule } from '../rewards/rewards.module';
 
 @Module({
     imports: [
         MembershipModule,
-        ProgressionModule,
-        ProgressionModule,
+
         forwardRef(() => RewardsModule),
         forwardRef(() => CampaignModule),
         TypeOrmModule.forFeature([PointHistory, Staff]),
