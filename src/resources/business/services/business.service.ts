@@ -21,6 +21,8 @@ import { PaymentHistoryService } from '../../payment-history/payment-history.ser
 import { PointHistory, PointHistoryType } from '../../participant-campaign-balance/entities/point-history.entity';
 import { SystemSettingService } from '../../system-setting/services/system-setting.service';
 import { PaymentService } from '../../payment/payment.service';
+import { MatchingPointService } from '../../matching-point/services/matching-point.service';
+import { MatchingPointActivityType } from '../../matching-point/entities/matching-point-config.entity';
 
 @Injectable()
 export class BusinessService {
@@ -44,6 +46,7 @@ export class BusinessService {
         @InjectRepository(Staff)
         private readonly staffRepository: Repository<Staff>,
         private readonly paymentService: PaymentService,
+        private readonly matchingPointService: MatchingPointService,
     ) { }
 
     private async generateAffiliateCode(): Promise<string> {
@@ -165,6 +168,13 @@ export class BusinessService {
             const referrer = referral.referrer;
             referrer.referralPoints = (referrer.referralPoints || 0) + 100;
             await this.businessRepository.save(referrer);
+
+            // Award matching points
+            await this.matchingPointService.addPoints(
+                referrer.id,
+                MatchingPointActivityType.REFERRAL,
+                `Referral Completed: ${business.name}`,
+            );
         }
     }
 

@@ -20,6 +20,9 @@ import { PointPackage } from '../point-package/entities/point-package.entity';
 import { BusinessPointPackage } from '../point-package/entities/business-point-package.entity';
 import { In } from 'typeorm';
 
+import { MatchingPointService } from '../matching-point/services/matching-point.service';
+import { MatchingPointActivityType } from '../matching-point/entities/matching-point-config.entity';
+
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
@@ -42,6 +45,7 @@ export class PaymentService {
     private readonly pointPackageRepository: Repository<PointPackage>,
     @InjectRepository(BusinessPointPackage)
     private readonly businessPointPackageRepository: Repository<BusinessPointPackage>,
+    private readonly matchingPointService: MatchingPointService,
   ) { }
 
   async initiateStripePayment(initiatePaymentDto: InitiatePaymentDto, user: any) {
@@ -465,6 +469,15 @@ export class PaymentService {
         if (business) {
           await this.qrPlaquesService.ensurePlaqueCountForBusiness(business, tier.qrCodeCount);
         }
+      }
+
+      // Award Matching Points for Membership Payment
+      if (user.role === 'business') {
+        await this.matchingPointService.addPoints(
+          user.id,
+          MatchingPointActivityType.MEMBERSHIP_PAYMENT,
+          `Membership Payment: ${tier.name} (${planType})`,
+        );
       }
     }
   }

@@ -129,4 +129,8 @@ export class Business extends AbstractBaseEntity {
   @ApiProperty({ description: 'Extra points purchased by the business', default: 0 })
   @Column({ type: 'int', default: 0 })
   extraPoints: number;
+
+  @ApiProperty({ description: 'Matching points earned by the business', default: 0 })
+  @Column({ type: 'int', default: 0 })
+  matching_points: number;
 }

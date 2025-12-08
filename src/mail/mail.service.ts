@@ -267,4 +267,46 @@ export class MailService {
       `,
     });
   }
+  async sendMatchingPointsReceivedEmail(
+    to: string,
+    points: number,
+    activity: string,
+    totalBalance: number,
+  ) {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'You Earned Matching Points! 🎉',
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #ea580c; margin: 0; font-size: 28px; font-weight: 700;">Matching Points Earned!</h2>
+            <p style="color: #666; margin-top: 10px; font-size: 16px;">You've received points for: ${activity}</p>
+          </div>
+          
+          <div style="color: #333333; font-size: 16px; line-height: 1.6;">
+            <p>Hello,</p>
+            <p>You have successfully earned matching points.</p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <div style="display: inline-block; padding: 20px; border: 2px dashed #ea580c; border-radius: 12px; background-color: #fff7ed;">
+                <span style="display: block; color: #ea580c; font-size: 36px; font-weight: bold;">+${points}</span>
+                <span style="display: block; color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Matching Points</span>
+              </div>
+            </div>
+
+            <p style="text-align: center; font-size: 18px;">
+              Your new matching balance: <strong>${totalBalance}</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="font-size: 14px; color: #888; text-align: center;">
+              Best regards,<br>
+              <strong>The Mcom Loyalty Team</strong>
+            </p>
+          </div>
+        </div>
+      `,
+    });
+  }
 }

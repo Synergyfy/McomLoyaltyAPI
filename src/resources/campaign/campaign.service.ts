@@ -35,6 +35,8 @@ import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { nanoid } from 'nanoid';
+import { MatchingPointService } from '../matching-point/services/matching-point.service';
+import { MatchingPointActivityType } from '../matching-point/entities/matching-point-config.entity';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 import { PaginatedCampaignResponseDto } from './dto/paginated-campaign-response.dto';
 
@@ -76,6 +78,7 @@ export class CampaignService {
     private readonly tierProgressionService: TierProgressionService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
+    private readonly matchingPointService: MatchingPointService,
   ) { }
 
   async create(
@@ -167,6 +170,13 @@ export class CampaignService {
 
       // Check for promotion
       await this.tierProgressionService.checkAndPromote(currentUser.id);
+
+      // Award matching points
+      await this.matchingPointService.addPoints(
+        currentUser.id,
+        MatchingPointActivityType.CAMPAIGN_CREATION,
+        `Campaign Created: ${savedCampaign.name}`,
+      );
 
       return savedCampaign;
     }
