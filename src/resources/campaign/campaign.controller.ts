@@ -254,7 +254,7 @@ export class CampaignController {
   }
 
   @Get('all/public')
-  // @Public()
+  @Public()
   @ApiOperation({ summary: 'Get all public campaigns' })
   @ApiResponse({
     status: 200,
