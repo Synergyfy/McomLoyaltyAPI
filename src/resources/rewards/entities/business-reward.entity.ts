@@ -47,6 +47,9 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column()
   image: string;
 
+  @Column('text', { array: true, nullable: true })
+  gallery: string[];
+
   @Column({ default: false })
   disabled: boolean;
 
