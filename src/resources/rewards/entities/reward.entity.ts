@@ -71,6 +71,9 @@ export class Reward extends AbstractBaseEntity {
   @Column()
   image: string;
 
+  @Column('text', { array: true, nullable: true })
+  gallery: string[];
+
   @Column({ default: 0 })
   quantity: number;
 
