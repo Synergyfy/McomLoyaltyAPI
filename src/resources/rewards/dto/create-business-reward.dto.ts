@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, IsDateString, IsEnum, IsBoolean } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsDateString, IsEnum, IsBoolean, IsArray } from 'class-validator';
 import { RewardStatus } from '../enums/reward-status.enum';
 import { RewardType } from '../enums/reward-type.enum';
 
@@ -41,6 +41,15 @@ export class CreateBusinessRewardDto {
   @IsString()
   @IsOptional()
   image?: string;
+
+  @ApiProperty({
+    description: 'The gallery images of the reward',
+    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  gallery?: string[];
 
   @ApiProperty({
     description: 'The expiry date and time of the reward',
