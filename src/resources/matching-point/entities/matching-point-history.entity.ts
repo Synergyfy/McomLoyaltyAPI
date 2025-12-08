@@ -1,0 +1,24 @@
+import { Entity, Column, ManyToOne } from 'typeorm';
+import { ApiProperty } from '@nestjs/swagger';
+import { AbstractBaseEntity } from '../../../database/entities/base.entity';
+import { Business } from '../../business/entities/business.entity';
+import { MatchingPointActivityType } from './matching-point-config.entity';
+
+@Entity('matching_point_history')
+export class MatchingPointHistory extends AbstractBaseEntity {
+    @ApiProperty({ type: () => Business })
+    @ManyToOne(() => Business, { onDelete: 'CASCADE' })
+    business: Business;
+
+    @ApiProperty({ description: 'Points added or removed' })
+    @Column({ type: 'int' })
+    points: number;
+
+    @ApiProperty({ enum: MatchingPointActivityType, description: 'Type of activity' })
+    @Column({ type: 'enum', enum: MatchingPointActivityType })
+    activity_type: MatchingPointActivityType;
+
+    @ApiProperty({ description: 'Description or reason for these points' })
+    @Column({ nullable: true })
+    description: string;
+}

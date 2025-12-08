@@ -105,6 +105,20 @@ export class RewardsController {
     return this.rewardsService.getUnaddedRewards(user.id, page, limit);
   }
 
+  @ApiOperation({ summary: 'Business: Create a new reward' })
+  @ApiResponse({ status: 201, description: 'The reward has been successfully created.' })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Post('business/rewards/create')
+  @UseGuards(CapabilitiesGuard)
+  @CheckPermission(ActionType.CREATE_REWARD)
+  async createBusinessReward(
+    @Body() createBusinessRewardDto: CreateBusinessRewardDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.rewardsService.createBusinessReward(user.id, createBusinessRewardDto);
+  }
+
   @ApiOperation({ summary: 'Business: Add a reward to business' })
   @ApiResponse({ status: 201, description: 'The reward has been successfully added to the business.' })
   @Roles(Role.Business)
@@ -118,20 +132,6 @@ export class RewardsController {
     @CurrentUser() user: any,
   ) {
     return this.rewardsService.addRewardToBusiness(rewardId, user.id, addRewardToBusinessDto);
-  }
-
-  @ApiOperation({ summary: 'Business: Create a new reward' })
-  @ApiResponse({ status: 201, description: 'The reward has been successfully created.' })
-  @Roles(Role.Business)
-  @ApiBearerAuth()
-  @Post('business/rewards/create')
-  @UseGuards(CapabilitiesGuard)
-  @CheckPermission(ActionType.CREATE_REWARD)
-  async createBusinessReward(
-    @Body() createBusinessRewardDto: CreateBusinessRewardDto,
-    @CurrentUser() user: any,
-  ) {
-    return this.rewardsService.createBusinessReward(user.id, createBusinessRewardDto);
   }
 
   @ApiOperation({ summary: 'Business: Remove a reward from business' })

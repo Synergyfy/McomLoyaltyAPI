@@ -43,6 +43,7 @@ import { SystemSettingModule } from './resources/system-setting/system-setting.m
 import { PointPackageModule } from './resources/point-package/point-package.module';
 import { NotificationModule } from './resources/notification/notification.module';
 import { SetupModule } from './resources/setup/setup.module';
+import { MatchingPointModule } from './resources/matching-point/matching-point.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { SetupModule } from './resources/setup/setup.module';
     PointPackageModule,
     NotificationModule,
     SetupModule,
+    MatchingPointModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

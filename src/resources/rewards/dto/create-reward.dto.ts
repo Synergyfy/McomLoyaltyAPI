@@ -42,6 +42,15 @@ export class CreateRewardDto {
   image: string;
 
   @ApiProperty({
+    description: 'The gallery images of the reward',
+    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  gallery?: string[];
+
+  @ApiProperty({
     description: 'The quantity of the reward available',
     example: 100,
   })
