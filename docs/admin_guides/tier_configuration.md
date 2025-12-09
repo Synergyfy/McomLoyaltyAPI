@@ -130,6 +130,25 @@ Each seasonal variant object (`winter`, `summer`, etc.) can contain:
 *   **quotas / featureFlags / progressBonuses**: Partial configuration objects. Any values defined here will **override** the base configuration for users with that seasonal variant.
 *   **pro / pro_plus**: Specific progression rules for this season.
 
+#### 5. Trial Configuration
+You can define specific access control for users who are on a trial period. This configuration takes precedence over the base and seasonal configurations when a user is in trial mode.
+
+*   `quotas`: Overrides for base quotas.
+*   `featureFlags`: Overrides for feature flags.
+*   `progressBonuses`: Overrides for bonus points.
+
+```json
+"trial": {
+    "quotas": {
+        "maxActiveCampaigns": 2,
+        "monthlyPointsAllowance": 100
+    },
+    "featureFlags": {
+        "hasAccessToCRM": false
+    }
+}
+```
+
 ---
 
 ## API Usage Examples
@@ -258,10 +277,10 @@ The system calculates the **Effective Limit** dynamically whenever a user attemp
 2.  **Seasonal Override**: If the user has a seasonal variant (e.g., `winter`), merge the specific seasonal configuration.
 3.  **Progression Override**: If the user has reached `pro` or `pro_plus` level, merge the corresponding `benefits` configuration.
     *   *Note*: Seasonal progression rules take precedence over base progression rules if defined.
-4.  **Progress Bonuses**: Add any applicable "Business Progression" bonuses (e.g., "Active" status bonus).
+4.  **Trial Override**: If the user is on a **Trial** membership, merge the `trial` configuration. This overrides all other settings to ensure strict limits for trial users.
 
 **Formula**:
-> `Effective Limit` = (`Base` + `Seasonal Override` + `Progression Benefits`) + `Progress Level Bonus`
+> `Effective Limit` = (`Base` + `Seasonal Override` + `Progression Benefits` + `Trial Override`) + `Progress Level Bonus`
 
 **Scenario**:
 *   **Tier**: Bronze (Base Limit: 5)

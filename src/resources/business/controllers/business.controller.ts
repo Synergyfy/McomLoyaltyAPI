@@ -9,6 +9,7 @@ import { Public } from '../../../common/decorators/public.decorator';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Role } from '../../../common/role.enum';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { SkipMembershipCheck } from '../../../common/decorators/skip-membership-check.decorator';
 import { BuyPointsDto } from '../dto/buy-points.dto';
 import { PointPurchaseConfigDto } from '../dto/point-purchase-config.dto';
 import { ConfirmPointPurchaseDto } from '../dto/confirm-point-purchase.dto';
@@ -32,6 +33,7 @@ export class BusinessController {
 
   @ApiBearerAuth()
   @Roles(Role.Business)
+  @SkipMembershipCheck()
   @Post('onboarding')
   @ApiOperation({ summary: 'Onboard a new business with additional details' })
   @ApiResponse({ status: 201, description: 'The business has been successfully onboarded.' })

@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { MembershipService } from '../membership/membership.service';
 import { CampaignService } from '../campaign/campaign.service';
-import { TierConfig, SeasonalTierConfig, ProgressionBenefits } from '../tier/interfaces/tier-config.interface';
+import { TierConfig, SeasonalTierConfig, ProgressionBenefits, TrialTierConfig } from '../tier/interfaces/tier-config.interface';
 import { MembershipStatus } from '../membership/entities/membership.entity';
 import { RewardsService } from '../rewards/services/rewards.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -84,7 +84,18 @@ export class CapabilityService {
             effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
         }
 
-        // 3. Calculate Effective Limits & Check Permissions
+        if (progressionLevel === 'pro' && proConfig) {
+            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proConfig.benefits);
+        } else if (progressionLevel === 'pro_plus' && proPlusConfig) {
+            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
+        }
+
+        // 3. Apply Trial Configuration Overrides
+        if (membership.is_trial && tierConfig.trial) {
+            effectiveConfig = this.mergeTrialConfig(effectiveConfig, tierConfig.trial);
+        }
+
+        // 4. Calculate Effective Limits & Check Permissions
         switch (action) {
             case ActionType.CREATE_CAMPAIGN:
                 await this.checkCampaignLimit(userId, effectiveConfig);
@@ -174,6 +185,15 @@ export class CapabilityService {
         }
 
         return merged;
+    }
+
+    private mergeTrialConfig(base: TierConfig, trialConfig: TrialTierConfig): TierConfig {
+        return {
+            ...base,
+            quotas: { ...base.quotas, ...trialConfig.quotas },
+            featureFlags: { ...base.featureFlags, ...trialConfig.featureFlags },
+            progressBonuses: { ...base.progressBonuses, ...trialConfig.progressBonuses },
+        };
     }
 
     private async checkCampaignLimit(userId: string, config: TierConfig) {
