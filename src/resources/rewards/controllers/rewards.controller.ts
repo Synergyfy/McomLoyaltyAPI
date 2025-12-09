@@ -101,8 +101,8 @@ export class RewardsController {
   @Roles(Role.Business)
   @ApiBearerAuth()
   @Get('business/unadded-rewards')
-  async getUnaddedRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10) {
-    return this.rewardsService.getUnaddedRewards(user.id, page, limit);
+  async getUnaddedRewards(@CurrentUser() user: any, @Query('page') page: number = 1, @Query('limit') limit: number = 10, @Query('search') search?: string) {
+    return this.rewardsService.getUnaddedRewards(user.id, page, limit, search);
   }
 
   @ApiOperation({ summary: 'Business: Create a new reward' })

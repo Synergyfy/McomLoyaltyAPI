@@ -231,6 +231,12 @@ export class BusinessService {
     }
 
     async update(id: string, updateBusinessDto: UpdateBusinessDto): Promise<Business> {
+        if (updateBusinessDto.email) {
+            const existingBusiness = await this.findByEmail(updateBusinessDto.email);
+            if (existingBusiness && existingBusiness.id !== id) {
+                throw new ConflictException('Email already exists');
+            }
+        }
         await this.businessRepository.update(id, updateBusinessDto);
         return this.findById(id);
     }

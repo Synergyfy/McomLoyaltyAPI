@@ -58,6 +58,16 @@ export class AdminController {
     return this.adminService.create(createAdminDto);
   }
 
+  @Get('search')
+  @ApiOperation({ summary: 'Admin: Search businesses, participants, staffs, rewards, campaigns' })
+  @ApiResponse({ status: 200, description: 'Search results.' })
+  search(@Query('q') query: string) {
+    if (!query) {
+      return [];
+    }
+    return this.adminService.globalSearch(query);
+  }
+
 
 
 

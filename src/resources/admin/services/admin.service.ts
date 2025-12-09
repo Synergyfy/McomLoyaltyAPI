@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
 import { Business } from '../../business/entities/business.entity';
 import { BusinessService } from '../../business/services/business.service';
@@ -21,6 +21,9 @@ import { UpdateStaffDto } from '../../staff/dto/update-staff.dto';
 import { UpdateCampaignDto } from '../../campaign/dto/update-campaign.dto';
 import { Role } from '../../../common/role.enum';
 import { PaginationResult } from '../../../common/interfaces/pagination-result.interface';
+import { Staff } from '../../staff/entities/staff.entity';
+import { Reward } from '../../rewards/entities/reward.entity';
+import { Participant } from '../../participant/entities/participant.entity';
 
 @Injectable()
 export class AdminService {
@@ -29,6 +32,14 @@ export class AdminService {
     private readonly adminRepository: Repository<Admin>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
+    @InjectRepository(Staff)
+    private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(Reward)
+    private readonly rewardRepository: Repository<Reward>,
+    @InjectRepository(Participant)
+    private readonly participantRepository: Repository<Participant>,
     private readonly businessService: BusinessService,
     private readonly staffService: StaffService,
     private readonly campaignService: CampaignService,
@@ -59,6 +70,60 @@ export class AdminService {
 
   async findByEmail(email: string): Promise<Admin | undefined> {
     return this.adminRepository.findOne({ where: { email } });
+  }
+
+  async globalSearch(query: string) {
+    const term = `%${query}%`;
+    const [businesses, participants, staffs, rewards, campaigns] = await Promise.all([
+      this.businessRepository.find({
+        where: [
+          { name: ILike(term) },
+          { email: ILike(term) }
+        ],
+        select: ['id', 'name', 'email', 'profile_image', 'uniqueCode', 'role'],
+        take: 10
+      }),
+      this.participantRepository.find({
+        where: [
+          { name: ILike(term) },
+          { email: ILike(term) }
+        ],
+        select: ['id', 'name', 'email', 'uniqueCode', 'role'],
+        take: 10
+      }),
+      this.staffRepository.find({
+        where: [
+          { name: ILike(term) },
+          { email: ILike(term) }
+        ],
+        select: ['id', 'name', 'email', 'avatar', 'role'],
+        take: 10
+      }),
+      this.rewardRepository.find({
+        where: [
+          { title: ILike(term) },
+          { description: ILike(term) }
+        ],
+        select: ['id', 'title', 'description', 'image', 'value', 'max_points'],
+        take: 10
+      }),
+      this.campaignRepository.find({
+        where: [
+          { name: ILike(term) },
+          { campaign_message: ILike(term) }
+        ],
+        select: ['id', 'name', 'campaign_message', 'banner_url', 'uniqueCode'],
+        take: 10
+      })
+    ]);
+
+    return [
+      ...businesses.map(b => ({ ...b, tag: 'business' })),
+      ...participants.map(p => ({ ...p, tag: 'participant' })),
+      ...staffs.map(s => ({ ...s, tag: 'staff' })),
+      ...rewards.map(r => ({ ...r, tag: 'reward' })),
+      ...campaigns.map(c => ({ ...c, tag: 'campaign' }))
+    ];
   }
 
   async getBusinesses(page: number, limit: number): Promise<PaginationResult<Business>> {
