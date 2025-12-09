@@ -1,20 +1,44 @@
-import { Entity, Column, ManyToOne } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
+import { Participant } from '../../participant/entities/participant.entity';
+import { Campaign } from '../../campaign/entities/campaign.entity';
 
 export enum ReferralStatus {
-  PENDING = 'pending',
-  COMPLETED = 'completed',
+  PENDING = 'PENDING',
+  SUCCESSFUL = 'SUCCESSFUL',
 }
 
 @Entity('referrals')
 export class Referral extends AbstractBaseEntity {
-  @ManyToOne(() => Business)
-  referrer: Business;
+  @Column()
+  refereeEmail: string;
 
-  @ManyToOne(() => Business)
-  referred: Business;
-
-  @Column({ type: 'enum', enum: ReferralStatus, default: ReferralStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: ReferralStatus,
+    default: ReferralStatus.PENDING
+  })
   status: ReferralStatus;
+
+  @Column({ default: 0 })
+  pointsEarned: number;
+
+  // The person who sent the invite
+  @ManyToOne(() => Participant, (participant) => participant.referrals)
+  @JoinColumn({ name: 'referrer_id' })
+  referrer: Participant;
+
+  // The person who was invited (linked after they sign up)
+  @OneToOne(() => Participant, { nullable: true })
+  @JoinColumn({ name: 'referee_id' })
+  referee: Participant;
+
+  // Optional: The campaign context of the invite
+  @ManyToOne(() => Campaign, { nullable: true })
+  @JoinColumn({ name: 'campaign_id' })
+  campaign: Campaign;
+
+  // The code used (could be the referrer's unique code or a generated one)
+  @Column()
+  code: string;
 }

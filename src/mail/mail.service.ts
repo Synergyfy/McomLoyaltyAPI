@@ -309,4 +309,48 @@ export class MailService {
       `,
     });
   }
+
+  async sendLevelPromotionEmail(email: string, participantName: string, newLevelName: string, benefits: string[]) {
+    const benefitsHtml = benefits.map(b => `<li style="margin-bottom: 8px;">${b}</li>`).join('');
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `Congratulations! You are now ${newLevelName}! 🏆`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #ea580c; margin: 0; font-size: 28px; font-weight: 700;">Level Up!</h2>
+            <p style="color: #666; margin-top: 10px; font-size: 16px;">You've reached a new milestone</p>
+          </div>
+          
+          <div style="color: #333333; font-size: 16px; line-height: 1.6;">
+            <p>Hello <strong>${participantName}</strong>,</p>
+            <p>Congratulations! Your dedication has paid off. You have been promoted to the <strong>${newLevelName}</strong> level.</p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <span style="display: inline-block; background-color: #ea580c; color: #ffffff; font-size: 24px; font-weight: bold; padding: 16px 32px; border-radius: 8px; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+                ${newLevelName} Member
+              </span>
+            </div>
+            
+            <div style="background-color: #f9fafb; border-radius: 8px; padding: 25px; margin: 25px 0;">
+              <h3 style="margin-top: 0; color: #333; font-size: 18px;">Your New Benefits:</h3>
+              <ul style="padding-left: 20px; margin-bottom: 0; color: #555;">
+                ${benefitsHtml}
+              </ul>
+            </div>
+            
+            <p>Keep engaging to reach the next level!</p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="font-size: 14px; color: #888; text-align: center;">
+              Best regards,<br>
+              <strong>The Mcom Loyalty Team</strong>
+            </p>
+          </div>
+        </div>
+      `,
+    });
+  }
 }

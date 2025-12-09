@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { BusinessService } from '../services/business.service';
-import { ReferralService } from '../../referral/services/referral.service';
+import { ReferralService } from '../../referral/referral.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';

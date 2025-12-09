@@ -44,6 +44,7 @@ import { NotificationModule } from './resources/notification/notification.module
 import { SetupModule } from './resources/setup/setup.module';
 import { MatchingPointModule } from './resources/matching-point/matching-point.module';
 import { ParticipantProgressionModule } from './resources/participant-progression/participant-progression.module';
+import { ReferralModule } from './resources/referral/referral.module';
 
 
 @Module({
@@ -88,7 +89,9 @@ import { ParticipantProgressionModule } from './resources/participant-progressio
     PointPackageModule,
     NotificationModule,
     SetupModule,
+    SetupModule,
     MatchingPointModule,
+    ReferralModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

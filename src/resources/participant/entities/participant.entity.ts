@@ -8,6 +8,7 @@ import { ParticipantCampaignBalance } from '../../participant-campaign-balance/e
 import { DealRedemption } from '../../deal/entities/deal-redemption.entity';
 import { DealReview } from '../../deal/entities/deal-review.entity';
 import { ParticipantBadge } from '../../participant-progression/entities/participant-badge.entity';
+import { Referral } from '../../referral/entities/referral.entity';
 
 @Entity('participants')
 export class Participant extends AbstractBaseEntity {
@@ -63,4 +64,35 @@ export class Participant extends AbstractBaseEntity {
 
     @Column({ default: false })
     isEmailVerified: boolean;
+
+    @Column({ nullable: true })
+    phoneNumber: string;
+
+    @Column({ default: false })
+    isPhoneVerified: boolean;
+
+    @Column({ nullable: true, type: 'date' })
+    dob: Date;
+
+    @Column({ nullable: true })
+    address: string;
+
+    @Column({ nullable: true })
+    profilePhoto: string;
+
+    @OneToMany(() => Referral, (referral) => referral.referrer)
+    referrals: Referral[];
+
+    // --- Streak & Activity Tracking ---
+    @Column({ nullable: true })
+    lastLoginDate: Date;
+
+    @Column({ default: 0 })
+    currentLoginStreak: number;
+
+    @Column({ default: 0 })
+    dailyAppOpenCount: number;
+
+    @Column({ nullable: true })
+    lastAppOpenDate: Date;
 }

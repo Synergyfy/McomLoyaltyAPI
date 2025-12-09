@@ -57,6 +57,9 @@ export class PointHistory extends AbstractBaseEntity {
   business: Business;
 
   @Column({ nullable: true })
+  actionKey: string;
+
+  @Column({ nullable: true })
   redemption_code: string;
 
   @Column({ nullable: true })

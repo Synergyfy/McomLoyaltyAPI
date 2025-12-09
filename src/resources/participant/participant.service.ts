@@ -23,6 +23,9 @@ import { PaginationResult } from '../../common/interfaces/pagination-result.inte
 
 import { OtpService } from '../otp/otp.service';
 
+import { ParticipantProgressionService } from '../participant-progression/participant-progression.service';
+import { ReferralService } from '../referral/referral.service';
+
 @Injectable()
 export class ParticipantService {
   constructor(
@@ -39,6 +42,8 @@ export class ParticipantService {
     private readonly authService: AuthService,
     private readonly mailService: MailService,
     private readonly otpService: OtpService,
+    private readonly progressionService: ParticipantProgressionService,
+    private readonly referralService: ReferralService,
   ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
@@ -78,6 +83,17 @@ export class ParticipantService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpService.create(savedParticipant.email, otp);
     await this.mailService.sendOtp(savedParticipant.email, otp);
+
+    // Trigger Registration Reward
+    this.progressionService.triggerAction(savedParticipant.id, 'REGISTRATION');
+
+    // Process Referral if code provided
+    // Assuming createParticipantDto has a referralCode field or we extract it from somewhere else.
+    // If not in DTO, I should add it to DTO or check if it's passed differently.
+    // For now assuming it is in DTO as optional.
+    if ((createParticipantDto as any).referralCode) {
+      await this.referralService.processReferral((createParticipantDto as any).referralCode, savedParticipant);
+    }
 
     return this.authService.login(savedParticipant);
   }
@@ -152,6 +168,9 @@ export class ParticipantService {
         } catch (error) {
           console.error('Failed to send campaign joined email:', error);
         }
+
+        // Trigger Progression Action
+        this.progressionService.triggerAction(participant.id, 'CAMPAIGN_JOIN');
       }
 
       if (businessCampaign.signUpPoint) {
@@ -230,6 +249,9 @@ export class ParticipantService {
       } catch (error) {
         console.error('Failed to send campaign joined email:', error);
       }
+
+      // Trigger Progression Action
+      this.progressionService.triggerAction(participant.id, 'CAMPAIGN_JOIN');
     }
 
     if (campaign.signUpPoint) {
@@ -313,8 +335,24 @@ export class ParticipantService {
     if (!participant) {
       throw new NotFoundException('Participant not found');
     }
+
+    const wasComplete = this.isProfileComplete(participant);
+
     Object.assign(participant, attrs);
-    return this.participantRepository.save(participant);
+    const updated = await this.participantRepository.save(participant);
+
+    const isComplete = this.isProfileComplete(updated);
+
+    if (!wasComplete && isComplete) {
+      this.progressionService.triggerAction(id, 'PROFILE_COMPLETE');
+    }
+
+    return updated;
+  }
+
+  private isProfileComplete(p: Participant): boolean {
+    // Require Name, Email (always present), DOB, Address, Phone
+    return !!(p.name && p.dob && p.address && p.phoneNumber);
   }
 
   async removeFromCampaign(

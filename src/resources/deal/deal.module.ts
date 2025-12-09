@@ -11,9 +11,28 @@ import { CategoryModule } from '../category/category.module';
 import { IsDateAfter } from './validators/is-date-after.validator';
 import { Campaign } from '../campaign/entities/campaign.entity';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
+import { DealReview } from './entities/deal-review.entity';
+import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
+import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
+import { Participant } from '../participant/entities/participant.entity';
+import { AuthModule } from 'src/auth/auth.module';
+import { ParticipantProgressionModule } from '../participant-progression/participant-progression.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Deal, DealRedemption, Campaign, BusinessCampaign]), CategoryModule],
+  imports: [TypeOrmModule.forFeature([
+    Deal,
+    DealRedemption,
+    Campaign,
+    BusinessCampaign,
+    DealReview,
+    PointHistory,
+    ParticipantCampaignBalance,
+    Participant
+  ]),
+    CategoryModule,
+    AuthModule,
+    ParticipantProgressionModule,
+  ],
   controllers: [DealController, DealRedemptionController],
   providers: [DealService, DealRedemptionService, IsDateAfter],
 })
