@@ -198,6 +198,15 @@ export class CreateTierDto {
         price: 99.99,
         stripe_price_id: 'price_summer',
       },
+      trial: {
+        quotas: {
+          maxActiveCampaigns: 2,
+          maxActiveRewards: 5,
+        },
+        featureFlags: {
+          canCreateCampaignFromScratch: false,
+        }
+      }
     },
   })
   @IsOptional()

@@ -62,6 +62,14 @@ export interface SeasonalTierConfig {
     pro_plus?: ProgressionLevelConfig;
 }
 
+export interface TrialTierConfig {
+    quotas?: Partial<TierQuotas>;
+    featureFlags?: Partial<TierFeatureFlags>;
+    progressBonuses?: {
+        [key: string]: number;
+    };
+}
+
 export interface TierConfig {
     quotas: TierQuotas;
     featureFlags: TierFeatureFlags;
@@ -78,6 +86,9 @@ export interface TierConfig {
     summer?: SeasonalTierConfig;
     autumn?: SeasonalTierConfig;
     spring?: SeasonalTierConfig;
+
+    // Trial Configuration
+    trial?: TrialTierConfig;
 
     // Pricing overrides for variants
     monthly_price?: number;
