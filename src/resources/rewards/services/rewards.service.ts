@@ -333,6 +333,7 @@ export class RewardsService {
     businessId: string,
     page: number,
     limit: number,
+    search?: string,
   ): Promise<PaginationResult<Reward>> {
     // Get IDs of rewards already added by the business
     const addedRewards = await this.businessRewardRepository.find({
@@ -361,6 +362,15 @@ export class RewardsService {
       '(reward.expiry_datetime IS NULL OR reward.expiry_datetime > :now)',
       { now: new Date() },
     );
+
+    if (search) {
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('reward.title ILIKE :search', { search: `%${search}%` })
+            .orWhere('reward.description ILIKE :search', { search: `%${search}%` });
+        }),
+      );
+    }
 
     queryBuilder
       .orderBy('reward.created_at', 'DESC')
