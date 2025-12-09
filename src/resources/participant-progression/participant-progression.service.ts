@@ -83,6 +83,34 @@ export class ParticipantProgressionService {
 
     async addMatchingPoints(participantId: string, points: number, reason: string, actionKey?: string): Promise<void> {
         const participant = await this.participantRepository.findOne({ where: { id: participantId }, relations: ['currentBadge'] });
+        if (!participant) throw new NotFoundException('Participant not found');
+
+        let finalPoints = points;
+        if (participant.currentBadge && participant.currentBadge.multiplier > 1) {
+            finalPoints = Math.floor(points * participant.currentBadge.multiplier);
+        }
+
+        participant.matching_points = (participant.matching_points || 0) + finalPoints;
+        await this.participantRepository.save(participant);
+
+        // Record history
+        const history = this.pointHistoryRepository.create({
+            type: PointHistoryType.MATCHING,
+            points: finalPoints,
+            participant,
+            actionKey,
+            description: reason
+        });
+        await this.pointHistoryRepository.save(history);
+
+        // Send email for points
+        try {
+            await this.mailService.sendMatchingPointsReceivedEmail(participant.email, finalPoints, reason, participant.matching_points);
+        } catch (e) {
+            this.logger.error(`Failed to send matching points email to ${participant.email}`, e);
+        }
+
+        await this.checkAndPromote(participant);
     }
 
     // --- Promotion Logic ---
@@ -177,5 +205,77 @@ export class ParticipantProgressionService {
     async updateAction(id: string, dto: Partial<CreateEarningActionDto>) {
         await this.earningActionRepository.update(id, dto);
         return this.earningActionRepository.findOne({ where: { id } });
+    }
+
+    // --- Streak & Activity ---
+
+    async trackAppOpen(participantId: string): Promise<void> {
+        const participant = await this.participantRepository.findOne({ where: { id: participantId }, relations: ['currentBadge'] });
+        if (!participant) throw new NotFoundException('Participant not found');
+
+        const now = new Date();
+        const lastOpen = participant.lastAppOpenDate ? new Date(participant.lastAppOpenDate) : null;
+
+        let isNewDay = true;
+        if (lastOpen) {
+            isNewDay = now.toDateString() !== lastOpen.toDateString();
+        }
+
+        if (isNewDay) {
+            participant.dailyAppOpenCount = 0;
+            // Check streak logic here? 
+            // "tracks streaks (login ...)" -> Let's handle Login Streak in triggerAction('LOGIN_DAILY') instead.
+            // For App Open, we just track count.
+        }
+
+        participant.dailyAppOpenCount += 1;
+        participant.lastAppOpenDate = now;
+
+        await this.participantRepository.save(participant);
+
+        // Award points for App Open
+        // We can use the 'APP_OPEN' action key.
+        // The action itself can have limits (e.g. max 5 times a day).
+        await this.triggerAction(participantId, 'APP_OPEN', { dailyCount: participant.dailyAppOpenCount });
+    }
+
+    async handleLoginStreak(participantId: string): Promise<void> {
+        const participant = await this.participantRepository.findOne({ where: { id: participantId }, relations: ['currentBadge'] });
+        if (!participant) return;
+
+        const now = new Date();
+        const lastLogin = participant.lastLoginDate ? new Date(participant.lastLoginDate) : null;
+
+        // If logged in today already, do nothing? Or maybe we just update date.
+        // Actually, triggerAction('LOGIN_DAILY') limits to once a day via PointHistory.
+        // But for streak calculation, we need to know if it's a consecutive day.
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (lastLogin && lastLogin.toDateString() === now.toDateString()) {
+            // Already logged in today, do nothing for streak
+            return;
+        }
+
+        if (lastLogin && lastLogin.toDateString() === yesterday.toDateString()) {
+            participant.currentLoginStreak += 1;
+        } else {
+            // Broken streak (unless first login)
+            if (lastLogin) { // missed a day
+                participant.currentLoginStreak = 1;
+            } else {
+                participant.currentLoginStreak = 1;
+            }
+        }
+
+        participant.lastLoginDate = now;
+        await this.participantRepository.save(participant);
+
+        // Award points for streak milestones?
+        // e.g. 7 days streak
+        if (participant.currentLoginStreak % 7 === 0) {
+            await this.triggerAction(participantId, 'STREAK_7_DAY');
+        }
     }
 }

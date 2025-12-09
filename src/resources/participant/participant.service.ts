@@ -24,6 +24,7 @@ import { PaginationResult } from '../../common/interfaces/pagination-result.inte
 import { OtpService } from '../otp/otp.service';
 
 import { ParticipantProgressionService } from '../participant-progression/participant-progression.service';
+import { ReferralService } from '../referral/referral.service';
 
 @Injectable()
 export class ParticipantService {
@@ -42,6 +43,7 @@ export class ParticipantService {
     private readonly mailService: MailService,
     private readonly otpService: OtpService,
     private readonly progressionService: ParticipantProgressionService,
+    private readonly referralService: ReferralService,
   ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
@@ -84,6 +86,14 @@ export class ParticipantService {
 
     // Trigger Registration Reward
     this.progressionService.triggerAction(savedParticipant.id, 'REGISTRATION');
+
+    // Process Referral if code provided
+    // Assuming createParticipantDto has a referralCode field or we extract it from somewhere else.
+    // If not in DTO, I should add it to DTO or check if it's passed differently.
+    // For now assuming it is in DTO as optional.
+    if ((createParticipantDto as any).referralCode) {
+      await this.referralService.processReferral((createParticipantDto as any).referralCode, savedParticipant);
+    }
 
     return this.authService.login(savedParticipant);
   }

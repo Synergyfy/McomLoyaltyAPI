@@ -80,11 +80,17 @@ export class DealRedemptionService {
             if (deal.pointsEarned > 0) {
                 const participant = await queryRunner.manager.findOne('Participant', {
                     where: { id: user.id },
+                    relations: ['currentBadge'],
                     lock: { mode: 'pessimistic_write' },
                 }) as any;
 
                 if (participant) {
-                    participant.global_total_points += deal.pointsEarned * quantity;
+                    let pointsToEarn = deal.pointsEarned * quantity;
+                    if (participant.currentBadge && participant.currentBadge.multiplier > 1) {
+                        pointsToEarn = Math.floor(pointsToEarn * participant.currentBadge.multiplier);
+                    }
+
+                    participant.global_total_points += pointsToEarn;
                     await queryRunner.manager.save(participant);
                     // TODO: Insert PointHistory record for earning.
                 }

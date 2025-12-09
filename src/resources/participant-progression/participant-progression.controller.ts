@@ -87,4 +87,11 @@ export class ParticipantProgressionController {
         const participantId = req.user.id;
         return this.progressionService.triggerAction(participantId, dto.actionKey, dto.meta);
     }
+
+    @Post('track-app-open')
+    @Roles(Role.Participant)
+    @ApiOperation({ summary: 'Track app open event (Daily count & Streaks)' })
+    async trackAppOpen(@Req() req) {
+        return this.progressionService.trackAppOpen(req.user.id);
+    }
 }

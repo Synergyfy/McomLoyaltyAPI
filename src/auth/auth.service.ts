@@ -70,6 +70,7 @@ export class AuthService {
 
     if (user.role === Role.Participant) {
       // Trigger Daily Login Reward
+      await this.progressionService.handleLoginStreak(user.id);
       this.progressionService.triggerAction(user.id, 'LOGIN_DAILY');
     }
 

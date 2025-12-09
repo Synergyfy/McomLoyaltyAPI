@@ -12,6 +12,7 @@ import { BusinessCampaign } from '../campaign/entities/business-campaign.entity'
 import { MailModule } from '../../mail/mail.module';
 import { OtpModule } from '../otp/otp.module';
 import { ParticipantProgressionModule } from '../participant-progression/participant-progression.module';
+import { ReferralModule } from '../referral/referral.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ParticipantProgressionModule } from '../participant-progression/partici
     MailModule,
     OtpModule,
     ParticipantProgressionModule,
+    ReferralModule,
   ],
   controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],
