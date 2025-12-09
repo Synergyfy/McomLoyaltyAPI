@@ -8,6 +8,18 @@ export class ParticipantBadge extends AbstractBaseEntity {
     @Column({ unique: true })
     name: string;
 
+    @ApiProperty({ description: 'Priority level (1=lowest, 10=highest). Used for hierarchy.' })
+    @Column({ type: 'int', unique: true })
+    priority: number;
+
+    @ApiProperty({ description: 'Point multiplier (e.g. 1.2 for 20% bonus)' })
+    @Column({ type: 'float', default: 1.0 })
+    multiplier: number;
+
+    @ApiProperty({ description: 'List of benefits' })
+    @Column({ type: 'json', nullable: true })
+    benefits: string[];
+
     @ApiProperty({ description: 'Minimum combined points required' })
     @Column({ type: 'int', default: 0 })
     minPoints: number;
@@ -16,7 +28,7 @@ export class ParticipantBadge extends AbstractBaseEntity {
     @Column({ type: 'int', nullable: true })
     maxPoints: number;
 
-    @ApiProperty({ description: 'Benefits or privileges description' })
+    @ApiProperty({ description: 'Benefits or privileges description (Legacy/Display)' })
     @Column({ type: 'text', nullable: true })
     privileges: string;
 

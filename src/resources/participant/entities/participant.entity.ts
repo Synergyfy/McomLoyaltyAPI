@@ -63,4 +63,19 @@ export class Participant extends AbstractBaseEntity {
 
     @Column({ default: false })
     isEmailVerified: boolean;
+
+    @Column({ nullable: true })
+    phoneNumber: string;
+
+    @Column({ default: false })
+    isPhoneVerified: boolean;
+
+    @Column({ nullable: true, type: 'date' })
+    dob: Date;
+
+    @Column({ nullable: true })
+    address: string;
+
+    @Column({ nullable: true })
+    profilePhoto: string;
 }

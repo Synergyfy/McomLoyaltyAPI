@@ -19,6 +19,7 @@ import { PartnerLocalStrategy } from './partner-local.strategy';
 import { Business } from '../resources/business/entities/business.entity';
 import { Staff } from '../resources/staff/entities/staff.entity';
 import { Participant } from '../resources/participant/entities/participant.entity';
+import { ParticipantProgressionModule } from '../resources/participant-progression/participant-progression.module';
 
 @Module({
   imports: [
@@ -39,9 +40,10 @@ import { Participant } from '../resources/participant/entities/participant.entit
     BusinessModule,
     TypeOrmModule.forFeature([Membership, Business, Staff, Participant]),
     PartnerModule,
+    ParticipantProgressionModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, PartnerLocalStrategy],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

@@ -10,6 +10,18 @@ export class CreateParticipantBadgeDto {
     @IsInt()
     minPoints: number;
 
+    @ApiProperty()
+    @IsInt()
+    priority: number;
+
+    @ApiProperty()
+    @IsOptional()
+    multiplier?: number;
+
+    @ApiProperty()
+    @IsOptional()
+    benefits?: string[];
+
     @ApiProperty({ required: false })
     @IsInt()
     @IsOptional()

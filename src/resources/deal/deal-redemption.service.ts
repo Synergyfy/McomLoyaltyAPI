@@ -11,6 +11,7 @@ import { DealStatus } from './enums/deal-status.enum';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
+import { ParticipantProgressionService } from '../participant-progression/participant-progression.service';
 
 @Injectable()
 export class DealRedemptionService {
@@ -20,6 +21,7 @@ export class DealRedemptionService {
         @InjectRepository(Deal)
         private readonly dealRepository: Repository<Deal>,
         private readonly dataSource: DataSource,
+        private readonly progressionService: ParticipantProgressionService,
     ) { }
 
     async purchase(purchaseDealDto: PurchaseDealDto, user: User) {
@@ -89,6 +91,13 @@ export class DealRedemptionService {
             }
 
             await queryRunner.commitTransaction();
+
+            // Trigger Purchase Reward
+            // Use fire-and-forget to avoid blocking response or rolling back on reward failure (if preferred)
+            // But usually we await it.
+            this.progressionService.triggerAction(user.id, 'PURCHASE').catch(err => {
+                console.error('Failed to trigger purchase reward', err);
+            });
 
             return redemptions;
         } catch (err) {

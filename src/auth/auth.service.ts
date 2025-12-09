@@ -19,6 +19,8 @@ import { Staff } from '../resources/staff/entities/staff.entity';
 import { Participant } from '../resources/participant/entities/participant.entity';
 import { User } from 'src/common/interfaces/user.interface';
 
+import { ParticipantProgressionService } from '../resources/participant-progression/participant-progression.service';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -37,6 +39,7 @@ export class AuthService {
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
+    private readonly progressionService: ParticipantProgressionService,
   ) { }
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -64,6 +67,11 @@ export class AuthService {
       access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
     };
+
+    if (user.role === Role.Participant) {
+      // Trigger Daily Login Reward
+      this.progressionService.triggerAction(user.id, 'LOGIN_DAILY');
+    }
 
     if (user.role === Role.Business) {
       const business = await this.businessService.findById(user.id, ['sector']);
@@ -199,6 +207,8 @@ export class AuthService {
       await this.businessRepository.save(user as Business);
     } else {
       await this.participantRepository.save(user as Participant);
+      // Trigger Email Verified Reward
+      this.progressionService.triggerAction(user.id, 'EMAIL_VERIFIED');
     }
 
     await this.otpService.remove(validOtp.id);
