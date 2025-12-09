@@ -356,11 +356,15 @@ export class PaymentService {
         throw new BadRequestException('Invalid plan type for this tier');
       }
 
-      const trialPeriodDays = subscribeDto.is_trial ? 14 : undefined;
+      const trialPeriodDays = subscribeDto.is_trial ? (subscribeDto.trial_days || 14) : undefined;
 
-      await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
+      const subscription = await this.stripeService.createSubscription(stripeCustomerId, priceId, trialPeriodDays);
 
-      return { status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful' };
+      return {
+        status: subscribeDto.is_trial ? 'Trial started' : 'Subscription successful',
+        subscriptionId: subscription.id,
+        clientSecret: (subscription as any).latest_invoice?.payment_intent?.client_secret
+      };
     }
   }
 

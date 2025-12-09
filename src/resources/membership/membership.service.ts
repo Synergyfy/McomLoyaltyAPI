@@ -8,6 +8,8 @@ import { JoinTrialDto } from './dto/join-trial.dto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Business } from '../business/entities/business.entity';
 import { MembershipStatus, PlanType } from './entities/membership.entity';
+import { PaymentService } from '../payment/payment.service';
+import { PaymentProvider } from '../payment-history/entities/payment-history.entity';
 
 @Injectable()
 export class MembershipService {
@@ -18,6 +20,7 @@ export class MembershipService {
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    private readonly paymentService: PaymentService,
   ) { }
 
   async findOneByBusinessId(businessId: string) {
@@ -66,12 +69,63 @@ export class MembershipService {
 
     const startsAt = new Date();
     const expiresAt = new Date();
-    expiresAt.setDate(startsAt.getDate() + 30);
+    const trialDays = 30; // Default trial period
+    expiresAt.setDate(startsAt.getDate() + trialDays);
 
+    let provider = PaymentProvider.STRIPE; // Default
+    let transactionId = null;
+
+    if (joinTrialDto.payment_token || joinTrialDto.provider === 'paypal') {
+      // Create a subscription with trial
+      const subscribeParams: any = {
+        tier_id: tier.id,
+        plan_type: PlanType.MONTHLY, // Default to monthly after trial
+        provider: joinTrialDto.provider === 'paypal' ? PaymentProvider.PAYPAL : PaymentProvider.STRIPE,
+        is_trial: true,
+        trial_days: trialDays
+      };
+
+      if (joinTrialDto.payment_token) subscribeParams.payment_token = joinTrialDto.payment_token;
+      if (joinTrialDto.return_url) subscribeParams.return_url = joinTrialDto.return_url;
+      if (joinTrialDto.cancel_url) subscribeParams.cancel_url = joinTrialDto.cancel_url;
+
+      const subscribeResult = await this.paymentService.subscribe(subscribeParams, user);
+
+      if (subscribeResult.subscriptionId) {
+        transactionId = subscribeResult.subscriptionId;
+      }
+
+      // If approvalUrl is present (PayPal), we return it. 
+      // The membership is created as ACTIVE trial, but for PayPal it might remain pending until user approves?
+      // For now, consistent with requirements, we persist it.
+
+      if (joinTrialDto.provider === 'paypal') provider = PaymentProvider.PAYPAL;
+
+      const membership = this.membershipRepository.create({
+        business: { id: user.id } as Business,
+        tier,
+        plan_type: PlanType.MONTHLY,
+        starts_at: startsAt,
+        expires_at: expiresAt,
+        status: MembershipStatus.ACTIVE,
+        is_trial: true,
+        transaction_id: transactionId,
+        payment_provider: provider
+      });
+
+      await this.membershipRepository.save(membership);
+
+      return {
+        ...membership,
+        approvalUrl: (subscribeResult as any).approvalUrl
+      };
+    }
+
+    // Fallback if no payment info provided
     const membership = this.membershipRepository.create({
       business: { id: user.id } as Business,
       tier,
-      plan_type: PlanType.MONTHLY, // Default to monthly for trial? Or maybe irrelevant.
+      plan_type: PlanType.MONTHLY,
       starts_at: startsAt,
       expires_at: expiresAt,
       status: MembershipStatus.ACTIVE,

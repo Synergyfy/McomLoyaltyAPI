@@ -70,4 +70,12 @@ export class SubscribeDto {
   @IsOptional()
   @IsBoolean()
   is_trial?: boolean;
+
+  @ApiProperty({
+    description: 'Number of trial days.',
+    example: 14,
+    required: false
+  })
+  @IsOptional()
+  trial_days?: number;
 }
