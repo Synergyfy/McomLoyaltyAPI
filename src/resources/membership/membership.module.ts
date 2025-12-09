@@ -7,8 +7,13 @@ import { PaymentHistory } from '../payment-history/entities/payment-history.enti
 
 import { Tier } from '../tier/entities/tier.entity';
 
+import { PaymentModule } from '../payment/payment.module';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Membership, PaymentHistory, Tier])],
+  imports: [
+    TypeOrmModule.forFeature([Membership, PaymentHistory, Tier]),
+    PaymentModule,
+  ],
   controllers: [MembershipController],
   providers: [MembershipService],
   exports: [MembershipService],

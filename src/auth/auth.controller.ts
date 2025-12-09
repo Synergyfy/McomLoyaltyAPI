@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './local-auth.guard';
@@ -19,11 +19,12 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/role.enum';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../common/interfaces/user.interface';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @UseGuards(LocalAuthGuard)
@@ -130,5 +131,37 @@ export class AuthController {
     @CurrentUser() currentUser: User,
   ): Promise<{ uniqueCode: string }> {
     return this.authService.getUniqueCode(currentUser);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @ApiBody({ type: VerifyEmailDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully.',
+    schema: {
+      example: {
+        message: 'Email verified successfully',
+        access_token: 'new_access_token',
+        refresh_token: 'new_refresh_token',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid OTP or User not found.' })
+  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    return this.authService.verifyEmail(
+      verifyEmailDto.email,
+      verifyEmailDto.otp,
+    );
+  }
+
+  @Post('resend-otp')
+  @ApiResponse({ status: 200, description: 'OTP sent successfully or Account already verified.' })
+  @ApiResponse({ status: 401, description: 'User not found.' })
+  async resendOtp(@CurrentUser() user: User) {
+    if (!user.email) {
+      throw new UnauthorizedException('User email not found');
+    }
+    return this.authService.resendVerificationOtp(user.email);
   }
 }

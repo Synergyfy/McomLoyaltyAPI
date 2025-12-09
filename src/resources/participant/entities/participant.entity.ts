@@ -60,4 +60,7 @@ export class Participant extends AbstractBaseEntity {
 
     @Column({ default: false })
     isDisabled: boolean;
+
+    @Column({ default: false })
+    isEmailVerified: boolean;
 }

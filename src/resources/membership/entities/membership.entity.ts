@@ -15,6 +15,7 @@ export enum PlanType {
 }
 
 import { Business } from '../../business/entities/business.entity';
+import { PaymentProvider } from '../../payment-history/entities/payment-history.entity';
 
 @Entity()
 export class Membership extends AbstractBaseEntity {
@@ -53,4 +54,10 @@ export class Membership extends AbstractBaseEntity {
     default: 'basic',
   })
   progression_level: 'basic' | 'pro' | 'pro_plus';
+
+  @Column({ nullable: true })
+  transaction_id: string;
+
+  @Column({ type: 'enum', enum: PaymentProvider, nullable: true })
+  payment_provider: PaymentProvider;
 }

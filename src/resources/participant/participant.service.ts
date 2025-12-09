@@ -21,6 +21,8 @@ import { PointHistoryType } from '../participant-campaign-balance/entities/point
 import { MailService } from '../../mail/mail.service';
 import { PaginationResult } from '../../common/interfaces/pagination-result.interface';
 
+import { OtpService } from '../otp/otp.service';
+
 @Injectable()
 export class ParticipantService {
   constructor(
@@ -36,6 +38,7 @@ export class ParticipantService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     private readonly authService: AuthService,
     private readonly mailService: MailService,
+    private readonly otpService: OtpService,
   ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
@@ -70,6 +73,11 @@ export class ParticipantService {
     if (campaignId) {
       await this.joinCampaign(savedParticipant.id, campaignId);
     }
+
+    // Send OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.otpService.create(savedParticipant.email, otp);
+    await this.mailService.sendOtp(savedParticipant.email, otp);
 
     return this.authService.login(savedParticipant);
   }

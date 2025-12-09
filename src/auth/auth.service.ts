@@ -43,17 +43,23 @@ export class AuthService {
     const user = await this.userService.findOne(email);
     if (user && (await this.hashService.comparePassword(pass, user.password))) {
       const { password, ...result } = user;
-      return result;
+      return { ...result, isEmailVerified: user.isEmailVerified };
     }
     throw new UnauthorizedException('Invalid login credentials');
   }
 
   async login(user: any) {
-    const payload = { username: user.email, sub: user.id, role: user.role };
+    const payload = {
+      username: user.email,
+      sub: user.id,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+    };
     const response: any = {
       user: {
         name: user.name,
         role: user.role,
+        isEmailVerified: user.isEmailVerified,
       },
       access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
@@ -66,10 +72,17 @@ export class AuthService {
       const membership = await this.membershipRepository.findOne({
         where: { business: { id: user.id }, status: MembershipStatus.ACTIVE },
       });
+      const hasActiveSubscription = !!membership || (membership && membership.is_trial);
+
       response.user.subscription = {
         isActive: !!membership,
         isTrial: membership ? membership.is_trial : false,
       };
+
+      // Update payload
+      const newPayload = { ...payload, hasActiveSubscription };
+      response.access_token = this.jwtService.sign(newPayload, { expiresIn: '1h' });
+      response.refresh_token = this.jwtService.sign(newPayload, { expiresIn: '7d' });
     }
 
     return response;
@@ -144,6 +157,90 @@ export class AuthService {
       return result;
     }
     throw new UnauthorizedException('Invalid login credentials');
+  }
+
+  async verifyEmail(email: string, otp: string) {
+    const validOtp = await this.otpService.findOne(email, otp);
+
+    if (!validOtp) {
+      throw new UnauthorizedException('Invalid OTP');
+    }
+
+    if (validOtp.expiresAt < new Date()) {
+      throw new UnauthorizedException('OTP has expired');
+    }
+
+    let user: Business | Participant;
+    let userType: 'business' | 'participant';
+
+    // Try finding in Business
+    user = await this.businessRepository.findOneBy({ email });
+    if (user) {
+      userType = 'business';
+    } else {
+      // Try finding in Participant
+      user = await this.participantRepository.findOneBy({ email });
+      if (user) {
+        userType = 'participant';
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      return { message: 'Email already verified' };
+    }
+
+    user.isEmailVerified = true;
+
+    if (userType === 'business') {
+      await this.businessRepository.save(user as Business);
+    } else {
+      await this.participantRepository.save(user as Participant);
+    }
+
+    await this.otpService.remove(validOtp.id);
+
+    // Generate new token for the user with isEmailVerified: true
+    const payload = {
+      username: user.email,
+      sub: user.id,
+      role: user.role,
+      isEmailVerified: true,
+    };
+
+    return {
+      message: 'Email verified successfully',
+      access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
+    };
+  }
+
+  async resendVerificationOtp(email: string) {
+    let user: Business | Participant;
+
+    // Try finding in Business
+    user = await this.businessRepository.findOneBy({ email });
+    if (!user) {
+      // Try finding in Participant
+      user = await this.participantRepository.findOneBy({ email });
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      return { message: 'Account is already verified' };
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.otpService.create(user.email, otp);
+    await this.mailService.sendOtp(user.email, otp);
+
+    return { message: 'OTP sent successfully' };
   }
 
   async loginPartner(partner: any) {
