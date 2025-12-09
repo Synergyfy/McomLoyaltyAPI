@@ -10,6 +10,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
 import { MailModule } from '../../mail/mail.module';
+import { OtpModule } from '../otp/otp.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MailModule } from '../../mail/mail.module';
     ]),
     AuthModule,
     MailModule,
+    OtpModule,
   ],
   controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],

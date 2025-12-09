@@ -24,6 +24,9 @@ import { PaymentService } from '../../payment/payment.service';
 import { MatchingPointService } from '../../matching-point/services/matching-point.service';
 import { MatchingPointActivityType } from '../../matching-point/entities/matching-point-config.entity';
 
+import { OtpService } from '../../otp/otp.service';
+import { MailService } from '../../../mail/mail.service';
+
 @Injectable()
 export class BusinessService {
     constructor(
@@ -47,6 +50,8 @@ export class BusinessService {
         private readonly staffRepository: Repository<Staff>,
         private readonly paymentService: PaymentService,
         private readonly matchingPointService: MatchingPointService,
+        private readonly otpService: OtpService,
+        private readonly mailService: MailService,
     ) { }
 
     private async generateAffiliateCode(): Promise<string> {
@@ -99,6 +104,11 @@ export class BusinessService {
             });
             await this.referralRepository.save(referral);
         }
+
+        // Send OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        await this.otpService.create(newBusiness.email, otp);
+        await this.mailService.sendOtp(newBusiness.email, otp);
 
         return newBusiness;
     }

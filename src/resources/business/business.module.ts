@@ -18,6 +18,8 @@ import { BusinessService } from './services/business.service';
 import { BusinessController } from './controllers/business.controller';
 import { AffiliateController } from './controllers/affiliate.controller';
 import { PaymentModule } from '../payment/payment.module';
+import { OtpModule } from '../otp/otp.module';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { PaymentModule } from '../payment/payment.module';
     PaymentHistoryModule,
     SystemSettingModule,
     PaymentModule,
+    OtpModule,
+    MailModule,
   ],
   providers: [BusinessService],
   controllers: [BusinessController, AffiliateController],

@@ -6,7 +6,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -28,6 +28,26 @@ export class RolesGuard implements CanActivate {
     if (!user) {
       return false;
     }
+
+    if (
+      user.role === Role.Business &&
+      !user.isEmailVerified &&
+      requiredRoles.includes(Role.Business)
+    ) {
+      return false;
+    }
+
+    // Check for active subscription for Business role
+    if (
+      user.role === Role.Business &&
+      requiredRoles.includes(Role.Business) &&
+      !user.hasActiveSubscription
+    ) {
+      // Allow access to auth related endpoints or subscription setup endpoints if we had them excluded, but for now block everything else.
+      // Ideally we might whitelist some endpoints, but user said "any business role guarded endpoint"
+      return false;
+    }
+
     return requiredRoles.some((role) => user.role === role);
   }
 }

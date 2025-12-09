@@ -133,4 +133,8 @@ export class Business extends AbstractBaseEntity {
   @ApiProperty({ description: 'Matching points earned by the business', default: 0 })
   @Column({ type: 'int', default: 0 })
   matching_points: number;
+
+  @ApiProperty({ description: 'Whether the business email is verified', default: false })
+  @Column({ default: false })
+  isEmailVerified: boolean;
 }
