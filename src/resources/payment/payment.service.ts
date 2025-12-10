@@ -92,7 +92,7 @@ export class PaymentService {
       metadata.point_package_ids = packageIdsString;
     }
 
-    const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', metadata);
+    const paymentIntent = await this.stripeService.createPaymentIntent(Math.round(amount * 100), 'gbp', metadata);
     return { clientSecret: paymentIntent.client_secret };
   }
 
@@ -511,7 +511,7 @@ export class PaymentService {
       return { orderId: order.result.id };
     } else {
       // Stripe
-      const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', {
+      const paymentIntent = await this.stripeService.createPaymentIntent(Math.round(amount * 100), 'gbp', {
         businessId: user.id,
         points: points,
         type: 'POINT_PURCHASE',
@@ -634,7 +634,7 @@ export class PaymentService {
       throw new BadRequestException('PayPal for packages not fully implemented yet');
     } else {
       // Stripe
-      const paymentIntent = await this.stripeService.createPaymentIntent(amount * 100, 'gbp', {
+      const paymentIntent = await this.stripeService.createPaymentIntent(Math.round(amount * 100), 'gbp', {
         businessId: user.id,
         packageId: packageId,
         type: 'PACKAGE_PURCHASE',
