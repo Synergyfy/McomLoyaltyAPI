@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -23,7 +23,7 @@ import { BusinessPointPackage } from '../point-package/entities/business-point-p
     ConfigModule,
     CouponModule,
     QrPlaquesModule,
-    AuthModule,
+    forwardRef(() => AuthModule),
     UserModule,
   ],
   controllers: [PaymentController],

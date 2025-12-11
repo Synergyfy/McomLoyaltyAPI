@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Headers, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Headers, Req, Inject, forwardRef } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
@@ -24,6 +24,7 @@ import { UserService } from '../../user/user.service';
 export class PaymentController {
   constructor(
     private readonly paymentService: PaymentService,
+    @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
     private readonly userService: UserService,
   ) { }

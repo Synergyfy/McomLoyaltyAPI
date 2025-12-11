@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { UserService } from '../user/user.service';
 import { HashService } from '../common/hash/hash.service';
 import { JwtService } from '@nestjs/jwt';
@@ -29,6 +29,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
+    @Inject(forwardRef(() => BusinessService))
     private readonly businessService: BusinessService,
     private readonly partnerService: PartnerService,
     @InjectRepository(Membership)
