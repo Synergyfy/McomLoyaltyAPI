@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,6 +11,8 @@ import { ConfigModule } from '@nestjs/config';
 import { CouponModule } from '../coupon/coupon.module';
 import { Business } from '../business/entities/business.entity';
 import { QrPlaquesModule } from '../qr-plaques/qr-plaques.module';
+import { AuthModule } from '../../auth/auth.module';
+import { UserModule } from '../../user/user.module';
 
 import { PointPackage } from '../point-package/entities/point-package.entity';
 import { BusinessPointPackage } from '../point-package/entities/business-point-package.entity';
@@ -21,6 +23,8 @@ import { BusinessPointPackage } from '../point-package/entities/business-point-p
     ConfigModule,
     CouponModule,
     QrPlaquesModule,
+    forwardRef(() => AuthModule),
+    UserModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService, PaypalService],
