@@ -318,6 +318,10 @@ export class PaymentService {
       throw new NotFoundException('Tier not found');
     }
 
+    this.logger.debug(`Subscribe Request: Tier=${tier.name}, PlanType=${subscribeDto.plan_type}`);
+    this.logger.debug(`Tier Config: Stripe(M=${tier.stripe_monthly_price_id}, Q=${tier.stripe_quarterly_price_id}, A=${tier.stripe_annual_price_id})`);
+    this.logger.debug(`Tier Config: PayPal(M=${tier.paypal_monthly_plan_id}, Q=${tier.paypal_quarterly_plan_id}, A=${tier.paypal_annual_plan_id})`);
+
     if (subscribeDto.provider === PaymentProvider.PAYPAL) {
       const planId = this._getPaypalPlanIdForPlan(tier, subscribeDto.plan_type);
       if (!planId) {
@@ -353,7 +357,11 @@ export class PaymentService {
 
       const priceId = this._getPriceIdForPlan(tier, subscribeDto.plan_type);
       if (!priceId) {
-        throw new BadRequestException('Invalid plan type for this tier');
+        throw new BadRequestException(`Tier '${tier.name}' is missing the Stripe Price ID configuration for plan type '${subscribeDto.plan_type}'. Please update the tier configuration.`);
+      }
+
+      if (priceId.startsWith('prod_')) {
+        throw new BadRequestException(`The configured Stripe Price ID '${priceId}' for Tier '${tier.name}' appears to be a Product ID (starts with 'prod_'). Please use a Price ID (starts with 'price_' or 'plan_').`);
       }
 
       const trialPeriodDays = subscribeDto.is_trial ? (subscribeDto.trial_days || 14) : undefined;

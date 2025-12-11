@@ -75,11 +75,26 @@ export class MembershipService {
     let provider = PaymentProvider.STRIPE; // Default
     let transactionId = null;
 
+    let planType: PlanType;
+
+    if (joinTrialDto.provider === 'paypal') {
+      if (tier.paypal_monthly_plan_id) planType = PlanType.MONTHLY;
+      else if (tier.paypal_annual_plan_id) planType = PlanType.ANNUAL;
+      else if (tier.paypal_quarterly_plan_id) planType = PlanType.QUARTERLY;
+    } else {
+      if (tier.stripe_monthly_price_id) planType = PlanType.MONTHLY;
+      else if (tier.stripe_annual_price_id) planType = PlanType.ANNUAL;
+      else if (tier.stripe_quarterly_price_id) planType = PlanType.QUARTERLY;
+    }
+
+    // Default to monthly if still not found (legacy behavior)
+    if (!planType) planType = PlanType.MONTHLY;
+
     if (joinTrialDto.payment_token || joinTrialDto.provider === 'paypal') {
       // Create a subscription with trial
       const subscribeParams: any = {
         tier_id: tier.id,
-        plan_type: PlanType.MONTHLY, // Default to monthly after trial
+        plan_type: planType,
         provider: joinTrialDto.provider === 'paypal' ? PaymentProvider.PAYPAL : PaymentProvider.STRIPE,
         is_trial: true,
         trial_days: trialDays
@@ -104,7 +119,7 @@ export class MembershipService {
       const membership = this.membershipRepository.create({
         business: { id: user.id } as Business,
         tier,
-        plan_type: PlanType.MONTHLY,
+        plan_type: planType,
         starts_at: startsAt,
         expires_at: expiresAt,
         status: MembershipStatus.ACTIVE,
@@ -125,7 +140,7 @@ export class MembershipService {
     const membership = this.membershipRepository.create({
       business: { id: user.id } as Business,
       tier,
-      plan_type: PlanType.MONTHLY,
+      plan_type: planType,
       starts_at: startsAt,
       expires_at: expiresAt,
       status: MembershipStatus.ACTIVE,
