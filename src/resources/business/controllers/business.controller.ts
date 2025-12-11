@@ -61,6 +61,7 @@ export class BusinessController {
   }
 
   @Roles(Role.Business)
+  @SkipMembershipCheck()
   @Get('subscription')
   @ApiOperation({ summary: 'Get business subscription level' })
   @ApiResponse({ status: 200, description: 'Return business subscription details.' })
