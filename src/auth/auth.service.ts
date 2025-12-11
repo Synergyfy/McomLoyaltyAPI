@@ -80,19 +80,31 @@ export class AuthService {
       response.user.isOnboarded = !!business.sector;
 
       const membership = await this.membershipRepository.findOne({
-        where: { business: { id: user.id }, status: MembershipStatus.ACTIVE },
+        where: { business: { id: user.id } },
+        order: { created_at: 'DESC' },
       });
-      const hasActiveSubscription = !!membership || (membership && membership.is_trial);
+
+      const isTrialValid =
+        membership &&
+        membership.is_trial &&
+        new Date(membership.expires_at) > new Date();
+      const isActive = membership && membership.status === MembershipStatus.ACTIVE;
+
+      const hasActiveSubscription = isActive || isTrialValid;
 
       response.user.subscription = {
-        isActive: !!membership,
+        isActive: isActive,
         isTrial: membership ? membership.is_trial : false,
       };
 
       // Update payload
       const newPayload = { ...payload, hasActiveSubscription };
-      response.access_token = this.jwtService.sign(newPayload, { expiresIn: '1h' });
-      response.refresh_token = this.jwtService.sign(newPayload, { expiresIn: '7d' });
+      response.access_token = this.jwtService.sign(newPayload, {
+        expiresIn: '1h',
+      });
+      response.refresh_token = this.jwtService.sign(newPayload, {
+        expiresIn: '7d',
+      });
     }
 
     return response;
@@ -221,7 +233,23 @@ export class AuthService {
       sub: user.id,
       role: user.role,
       isEmailVerified: true,
+      hasActiveSubscription: false,
     };
+
+    if (userType === 'business') {
+      const membership = await this.membershipRepository.findOne({
+        where: { business: { id: user.id } },
+        order: { created_at: 'DESC' },
+      });
+
+      const isTrialValid =
+        membership &&
+        membership.is_trial &&
+        new Date(membership.expires_at) > new Date();
+      const isActive = membership && membership.status === MembershipStatus.ACTIVE;
+
+      payload.hasActiveSubscription = isActive || isTrialValid;
+    }
 
     return {
       message: 'Email verified successfully',

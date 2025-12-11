@@ -40,4 +40,5 @@ export class JoinTrialDto {
     @IsOptional()
     @IsString()
     cancel_url?: string;
+
 }

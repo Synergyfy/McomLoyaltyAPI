@@ -26,7 +26,10 @@ export class StripeService {
     return await this.stripe.customers.create({
       name,
       email,
-      source: token,
+      payment_method: token,
+      invoice_settings: {
+        default_payment_method: token,
+      },
     });
   }
 
@@ -45,6 +48,15 @@ export class StripeService {
       items: [{ price: priceId }],
       trial_period_days: trialPeriodDays,
     });
+  }
+
+  async getPriceForProduct(productId: string) {
+    const prices = await this.stripe.prices.list({
+      product: productId,
+      active: true,
+      limit: 1,
+    });
+    return prices.data.length > 0 ? prices.data[0].id : null;
   }
 
   constructWebhookEvent(payload: Buffer, signature: string, secret: string) {
