@@ -273,8 +273,50 @@ export class BusinessService {
                 throw new ConflictException('Email already exists');
             }
         }
-        await this.businessRepository.update(id, updateBusinessDto);
-        return this.findById(id);
+
+        const business = await this.findById(id, ['sector', 'category', 'subCategory']);
+        if (!business) {
+            throw new NotFoundException('Business not found');
+        }
+
+        const { sector: sectorId, category: categoryId, subCategory: subCategoryId, ...rest } = updateBusinessDto;
+
+        let sector = business.sector;
+        let category = business.category;
+        let subCategory = business.subCategory;
+
+        if (sectorId) {
+            sector = await this.sectorService.findOne(sectorId);
+            if (!sector) throw new NotFoundException('Sector not found');
+        }
+
+        if (categoryId) {
+            category = await this.categoryService.findOne(categoryId);
+            if (!category) throw new NotFoundException('Category not found');
+            // If sector is changing or already exists, validation must match
+            if (sector && category.sector && category.sector.id !== sector.id) {
+                throw new BadRequestException('Category does not belong to the selected Sector');
+            }
+        }
+
+        if (subCategoryId) {
+            subCategory = await this.subcategoryService.findOne(subCategoryId);
+            if (!subCategory) throw new NotFoundException('SubCategory not found');
+            // If category is changing or already exists, validation must match
+            if (category && subCategory.category && subCategory.category.id !== category.id) {
+                throw new BadRequestException('SubCategory does not belong to the selected Category');
+            }
+        }
+
+        // Construct update object with explicit relations
+        const updates: any = { ...rest };
+        if (sectorId) updates.sector = sector;
+        if (categoryId) updates.category = category;
+        if (subCategoryId) updates.subCategory = subCategory;
+
+        const updatedBusiness = this.businessRepository.merge(business, updates);
+        await this.businessRepository.save(updatedBusiness);
+        return this.findById(id, ['sector', 'category', 'subCategory']);
     }
 
     async delete(id: string): Promise<void> {

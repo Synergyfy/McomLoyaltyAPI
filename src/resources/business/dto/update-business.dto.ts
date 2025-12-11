@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsEmail, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEmail, IsObject, IsUUID, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateBusinessDto {
@@ -33,9 +33,32 @@ export class UpdateBusinessDto {
   socialMedia?: Record<string, string>;
 
   @ApiProperty({ description: 'Profile image URL', required: false })
-  @IsString()
+  @IsUrl()
   @IsOptional()
   profile_image?: string;
+
+  @ApiProperty({ description: 'Banner image URL', required: false })
+  @IsUrl()
+  @IsOptional()
+  banner?: string;
+
+  @ApiProperty({ description: 'Sector ID', required: false })
+  @IsString()
+  @IsOptional()
+  @IsUUID()
+  sector?: string;
+
+  @ApiProperty({ description: 'Category ID', required: false })
+  @IsString()
+  @IsOptional()
+  @IsUUID()
+  category?: string;
+
+  @ApiProperty({ description: 'SubCategory ID', required: false })
+  @IsString()
+  @IsOptional()
+  @IsUUID()
+  subCategory?: string;
 
   @ApiProperty({ description: 'Is the business disabled?', required: false })
   @IsBoolean()
