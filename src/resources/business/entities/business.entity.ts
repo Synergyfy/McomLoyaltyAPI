@@ -92,6 +92,10 @@ export class Business extends AbstractBaseEntity {
   @Column({ nullable: true })
   profile_image: string;
 
+  @ApiProperty({ description: 'The banner image URL of the business', required: false })
+  @Column({ nullable: true })
+  banner: string;
+
   @OneToMany(() => Deal, (deal) => deal.business)
   deals: Deal[];
 

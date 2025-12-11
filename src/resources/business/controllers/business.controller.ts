@@ -48,7 +48,7 @@ export class BusinessController {
   @ApiOperation({ summary: 'Get business profile' })
   @ApiResponse({ status: 200, description: 'Return business profile.' })
   async getProfile(@Request() req) {
-    return this.businessService.findById(req.user.id);
+    return this.businessService.findById(req.user.id, ['sector', 'category', 'subCategory']);
   }
 
   @Roles(Role.Business)
