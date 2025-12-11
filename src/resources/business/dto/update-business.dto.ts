@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsEmail, IsObject, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEmail, IsObject, IsUUID, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateBusinessDto {
@@ -33,12 +33,12 @@ export class UpdateBusinessDto {
   socialMedia?: Record<string, string>;
 
   @ApiProperty({ description: 'Profile image URL', required: false })
-  @IsString()
+  @IsUrl()
   @IsOptional()
   profile_image?: string;
 
   @ApiProperty({ description: 'Banner image URL', required: false })
-  @IsString()
+  @IsUrl()
   @IsOptional()
   banner?: string;
 
