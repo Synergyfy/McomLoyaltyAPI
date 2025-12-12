@@ -47,8 +47,11 @@ import { ParticipantProgressionModule } from './resources/participant-progressio
 import { ReferralModule } from './resources/referral/referral.module';
 
 
+import { NetworkModule } from './resources/network/network.module';
+
 @Module({
   imports: [
+    NetworkModule,
     SeederModule,
     MailModule,
     BusinessModule,

@@ -12,6 +12,7 @@ import { Deal } from '../../deal/entities/deal.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
 import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
 import { Membership } from '../../membership/entities/membership.entity';
+import { Network } from '../../network/entities/network.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -141,4 +142,7 @@ export class Business extends AbstractBaseEntity {
   @ApiProperty({ description: 'Whether the business email is verified', default: false })
   @Column({ default: false })
   isEmailVerified: boolean;
+
+  @OneToMany(() => Network, (network) => network.business)
+  network: Network[];
 }
