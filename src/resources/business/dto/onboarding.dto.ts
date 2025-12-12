@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsUrl, IsUUID, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUrl, IsUUID, IsInt, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class OnboardingDto {
@@ -36,8 +36,9 @@ export class OnboardingDto {
   @IsOptional()
   socialMedia?: Record<string, any>;
 
-  @ApiProperty({ description: 'The number of businesses they can refer.', example: 10 })
-  @IsInt()
+  @ApiProperty({ description: 'The number of businesses they can refer.', example: '12-24' })
+  @IsString()
+  @IsIn(['12-24', '25-49', '50-99', '100+'])
   @IsNotEmpty()
-  referralCapacity: number;
+  referralCapacity: string;
 }
