@@ -9,6 +9,11 @@ export class GetNetworkDto extends PaginationDto {
     @IsString()
     search?: string;
 
+    @ApiPropertyOptional({ description: 'Filter by business ID' })
+    @IsOptional()
+    @IsString()
+    businessId?: string;
+
     @ApiPropertyOptional({ enum: NetworkLocationTag })
     @IsOptional()
     @IsEnum(NetworkLocationTag)
