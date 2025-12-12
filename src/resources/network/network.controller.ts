@@ -50,13 +50,15 @@ export class NetworkController {
     }
 
     @Get()
-    @Roles(Role.Business)
+    @Roles(Role.Business, Role.Admin)
     @ApiOperation({ summary: 'Get list of network contacts' })
-    @ApiResponse({ status: 200, type: GetNetworkDto }) // Note: Returns paginated response, schema might be dynamic
+    @ApiResponse({ status: 200, type: GetNetworkDto })
     findAll(
         @Query(new ValidationPipe({ transform: true })) query: GetNetworkDto,
-        @CurrentUser() business: Business,
+        @CurrentUser() user: any,
     ) {
-        return this.networkService.findAll(query, business);
+        // If user is a Business, force filtering by their ID
+        const businessId = user.role === Role.Business ? user.id : undefined;
+        return this.networkService.findAll(query, businessId);
     }
 }

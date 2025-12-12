@@ -123,11 +123,15 @@ export class NetworkService {
         };
     }
 
-    async findAll(query: GetNetworkDto, business: Business) {
+    async findAll(query: GetNetworkDto, businessId?: string) {
         const { page, limit, search, locationTag, relationshipTag, status, sortBy, sortOrder } = query;
+        const filterBusinessId = businessId || query.businessId;
 
-        const qb = this.networkRepository.createQueryBuilder('network')
-            .where('network.businessId = :businessId', { businessId: business.id });
+        const qb = this.networkRepository.createQueryBuilder('network');
+
+        if (filterBusinessId) {
+            qb.where('network.businessId = :businessId', { businessId: filterBusinessId });
+        }
 
         if (search) {
             qb.andWhere(
