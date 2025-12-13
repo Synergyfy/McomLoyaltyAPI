@@ -3,6 +3,7 @@ import {
     ConflictException,
     Injectable,
     InternalServerErrorException,
+    NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,6 +12,7 @@ import { CreateNetworkDto } from './dto/create-network.dto';
 import { Business } from '../business/entities/business.entity';
 import { BulkImportNetworkDto } from './dto/bulk-import-network.dto';
 import { GetNetworkDto } from './dto/get-network.dto';
+import { UpdateNetworkDto } from './dto/update-network.dto';
 
 @Injectable()
 export class NetworkService {
@@ -181,5 +183,33 @@ export class NetworkService {
                 prevPage,
             }
         };
+    }
+
+    async update(id: string, updateNetworkDto: UpdateNetworkDto, business: Business) {
+        const network = await this.findOne(id, business.id);
+
+        Object.assign(network, {
+            ...updateNetworkDto,
+            hasSharingPermission: updateNetworkDto.hasPermission ?? network.hasSharingPermission,
+        });
+
+        return await this.networkRepository.save(network);
+    }
+
+    async remove(id: string, business: Business) {
+        const network = await this.findOne(id, business.id);
+        return await this.networkRepository.softRemove(network);
+    }
+
+    async findOne(id: string, businessId: string) {
+        const network = await this.networkRepository.findOne({
+            where: { id, business: { id: businessId } },
+        });
+
+        if (!network) {
+            throw new NotFoundException(`Network contact with ID ${id} not found`);
+        }
+
+        return network;
     }
 }
