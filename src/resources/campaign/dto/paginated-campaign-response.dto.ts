@@ -1,9 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, getSchemaPath } from '@nestjs/swagger';
 import { Campaign } from '../entities/campaign.entity';
+import { BusinessCampaign } from '../entities/business-campaign.entity';
 
 export class PaginatedCampaignResponseDto {
-  @ApiProperty({ type: () => [Campaign] })
-  data: Campaign[];
+  @ApiProperty({
+    type: 'array',
+    items: {
+      oneOf: [
+        { $ref: getSchemaPath(Campaign) },
+        { $ref: getSchemaPath(BusinessCampaign) },
+      ],
+    },
+  })
+  data: (Campaign | BusinessCampaign)[];
 
   @ApiProperty({ example: 100, description: 'Total number of items' })
   total: number;
