@@ -773,7 +773,7 @@ export class CampaignService {
 
     const qb = this.businessCampaignRepository.createQueryBuilder('campaign')
       .leftJoinAndSelect('campaign.business', 'business')
-      .leftJoinAndSelect('campaign.businessRewards', 'businessRewards')
+      .innerJoinAndSelect('campaign.businessRewards', 'businessRewards')
       .where('campaign.disabled = :disabled', { disabled: false })
       .andWhere('campaign.start_date <= :now', { now: new Date() })
       .andWhere('campaign.end_date >= :now', { now: new Date() })
