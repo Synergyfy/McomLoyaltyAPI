@@ -770,11 +770,18 @@ export class CampaignService {
     const limit = parseInt(query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.campaignRepository.findAndCount({
-      where: { disabled: false },
-      skip,
-      take: limit,
-    });
+    const qb = this.businessCampaignRepository.createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.business', 'business')
+      .leftJoinAndSelect('campaign.businessRewards', 'businessRewards')
+      .where('campaign.disabled = :disabled', { disabled: false })
+      .andWhere('campaign.start_date <= :now', { now: new Date() })
+      .andWhere('campaign.end_date >= :now', { now: new Date() })
+      .andWhere('(businessRewards.remaining_quantity > 0 OR businessRewards.remaining_quantity IS NULL)')
+      .orderBy('campaign.created_at', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
 
     const totalPages = Math.ceil(total / limit);
     const next = page < totalPages ? Number(page) + 1 : null;
