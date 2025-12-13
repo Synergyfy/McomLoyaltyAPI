@@ -26,6 +26,9 @@ export enum NetworkStatus {
 @Index(['business', 'email'], { unique: true, where: '"email" IS NOT NULL' })
 @Index(['business', 'phone'], { unique: true })
 export class Network extends AbstractBaseEntity {
+    @ApiProperty({ description: 'Permission to share information', default: false })
+    @Column({ default: false })
+    hasSharingPermission: boolean;
     @ApiProperty({ description: 'Full name of the network contact' })
     @Column()
     fullName: string;

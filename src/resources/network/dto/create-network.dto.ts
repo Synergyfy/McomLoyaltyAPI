@@ -32,4 +32,8 @@ export class CreateNetworkDto {
     @IsNotEmpty()
     @IsEnum(NetworkRelationshipTag)
     relationshipTag: NetworkRelationshipTag;
+
+    @ApiPropertyOptional({ description: 'Permission to share information', default: false })
+    @IsOptional()
+    hasPermission?: boolean;
 }
