@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
@@ -36,14 +36,17 @@ export class Business extends AbstractBaseEntity {
   @Column({ nullable: true })
   address: string;
 
+  @Index()
   @ApiProperty({ type: () => Sector, description: 'The sector the business belongs to' })
   @ManyToOne(() => Sector, (sector) => sector.businesses)
   sector: Sector;
 
+  @Index()
   @ApiProperty({ type: () => Category, description: 'The category the business belongs to' })
   @ManyToOne(() => Category, (category) => category.businesses)
   category: Category;
 
+  @Index()
   @ApiProperty({ type: () => SubCategory, description: 'The subcategory the business belongs to' })
   @ManyToOne(() => SubCategory, (subCategory) => subCategory.businesses)
   subCategory: SubCategory;
