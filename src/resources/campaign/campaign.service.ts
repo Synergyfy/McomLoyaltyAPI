@@ -39,7 +39,7 @@ import { MatchingPointService } from '../matching-point/services/matching-point.
 import { MatchingPointActivityType } from '../matching-point/entities/matching-point-config.entity';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 import { PaginatedCampaignResponseDto } from './dto/paginated-campaign-response.dto';
-import { PublicCampaignQueryDto } from './dto/public-campaign-query.dto';
+import { PublicCampaignQueryDto, CampaignSortOrder } from './dto/public-campaign-query.dto';
 
 import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
 import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
@@ -795,7 +795,8 @@ export class CampaignService {
       qb.andWhere('campaign.name ILIKE :search', { search: `%${query.search}%` });
     }
 
-    qb.orderBy('campaign.created_at', 'DESC')
+    const sortOrder = query.sort || CampaignSortOrder.DESC;
+    qb.orderBy('campaign.created_at', sortOrder)
       .skip(skip)
       .take(limit);
 
