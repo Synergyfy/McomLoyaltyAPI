@@ -39,6 +39,7 @@ import { MatchingPointService } from '../matching-point/services/matching-point.
 import { MatchingPointActivityType } from '../matching-point/entities/matching-point-config.entity';
 import { PaginatedCustomerActivityResponseDto } from './dto/customer-activity-response.dto';
 import { PaginatedCampaignResponseDto } from './dto/paginated-campaign-response.dto';
+import { PublicCampaignQueryDto, CampaignSortOrder } from './dto/public-campaign-query.dto';
 
 import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
 import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
@@ -765,9 +766,9 @@ export class CampaignService {
     return this.campaignRepository.save(campaign);
   }
 
-  async findAllPublic(query: any): Promise<PaginatedCampaignResponseDto> {
-    const page = parseInt(query.page, 10) || 1;
-    const limit = parseInt(query.limit, 10) || 10;
+  async findAllPublic(query: PublicCampaignQueryDto): Promise<PaginatedCampaignResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
     const skip = (page - 1) * limit;
 
     const qb = this.businessCampaignRepository.createQueryBuilder('campaign')
@@ -776,8 +777,26 @@ export class CampaignService {
       .where('campaign.disabled = :disabled', { disabled: false })
       .andWhere('campaign.start_date <= :now', { now: new Date() })
       .andWhere('campaign.end_date >= :now', { now: new Date() })
-      .andWhere('(businessRewards.remaining_quantity > 0 OR businessRewards.remaining_quantity IS NULL)')
-      .orderBy('campaign.created_at', 'DESC')
+      .andWhere('(businessRewards.remaining_quantity > 0 OR businessRewards.remaining_quantity IS NULL)');
+
+    if (query.sectorId) {
+      qb.andWhere('business.sector = :sectorId', { sectorId: query.sectorId });
+    }
+
+    if (query.categoryId) {
+      qb.andWhere('business.category = :categoryId', { categoryId: query.categoryId });
+    }
+
+    if (query.subCategoryId) {
+      qb.andWhere('business.subCategory = :subCategoryId', { subCategoryId: query.subCategoryId });
+    }
+
+    if (query.search) {
+      qb.andWhere('campaign.name ILIKE :search', { search: `%${query.search}%` });
+    }
+
+    const sortOrder = query.sort || CampaignSortOrder.DESC;
+    qb.orderBy('campaign.created_at', sortOrder)
       .skip(skip)
       .take(limit);
 

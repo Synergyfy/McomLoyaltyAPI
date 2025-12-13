@@ -6,6 +6,7 @@ import {
   JoinTable,
   JoinColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
@@ -33,6 +34,7 @@ export class BusinessCampaign extends AbstractBaseEntity {
   uniqueCode: string;
 
   // Copied fields from Campaign
+  @Index()
   @Column()
   name: string;
 

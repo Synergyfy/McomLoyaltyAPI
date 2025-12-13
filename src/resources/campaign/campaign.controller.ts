@@ -30,6 +30,7 @@ import { Admin } from '../admin/entities/admin.entity';
 import { Public } from 'src/common/decorators/public.decorator';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
+import { PublicCampaignQueryDto } from './dto/public-campaign-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -260,7 +261,7 @@ export class CampaignController {
     status: 200,
     description: 'Returns a paginated list of public campaigns.',
   })
-  findAllPublic(@Query() query: any) {
+  findAllPublic(@Query() query: PublicCampaignQueryDto) {
     return this.campaignService.findAllPublic(query);
   }
 
