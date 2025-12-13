@@ -2,7 +2,10 @@ import {
     Controller,
     Get,
     Post,
+    Patch,
+    Delete,
     Body,
+    Param,
     Query,
     UseGuards,
     ValidationPipe,
@@ -11,6 +14,7 @@ import { NetworkService } from './network.service';
 import { CreateNetworkDto } from './dto/create-network.dto';
 import { BulkImportNetworkDto } from './dto/bulk-import-network.dto';
 import { GetNetworkDto } from './dto/get-network.dto';
+import { UpdateNetworkDto } from './dto/update-network.dto';
 import { Role } from '../../common/role.enum';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -57,8 +61,32 @@ export class NetworkController {
         @Query(new ValidationPipe({ transform: true })) query: GetNetworkDto,
         @CurrentUser() user: any,
     ) {
-        // If user is a Business, force filtering by their ID
         const businessId = user.role === Role.Business ? user.id : undefined;
         return this.networkService.findAll(query, businessId);
+    }
+
+    @Patch(':id')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Update a network contact' })
+    @ApiResponse({ status: 200, description: 'Contact updated successfully.' })
+    @ApiResponse({ status: 404, description: 'Contact not found.' })
+    update(
+        @Param('id') id: string,
+        @Body() updateNetworkDto: UpdateNetworkDto,
+        @CurrentUser() business: Business,
+    ) {
+        return this.networkService.update(id, updateNetworkDto, business);
+    }
+
+    @Delete(':id')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Delete a network contact' })
+    @ApiResponse({ status: 200, description: 'Contact deleted successfully.' })
+    @ApiResponse({ status: 404, description: 'Contact not found.' })
+    remove(
+        @Param('id') id: string,
+        @CurrentUser() business: Business,
+    ) {
+        return this.networkService.remove(id, business);
     }
 }
