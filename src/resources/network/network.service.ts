@@ -43,6 +43,7 @@ export class NetworkService {
         try {
             const network = this.networkRepository.create({
                 ...createNetworkDto,
+                hasSharingPermission: createNetworkDto.hasPermission,
                 business,
             });
             return await this.networkRepository.save(network);
@@ -103,6 +104,7 @@ export class NetworkService {
 
                 toInsert.push(this.networkRepository.create({
                     ...contact,
+                    hasSharingPermission: bulkImportDto.hasPermission ?? contact.hasPermission,
                     business
                 }));
             }
@@ -152,7 +154,14 @@ export class NetworkService {
             qb.andWhere('network.status = :status', { status });
         }
 
-        qb.orderBy(`network.${sortBy}`, sortOrder as 'ASC' | 'DESC');
+        const sortMapping: Record<string, string> = {
+            createdAt: 'created_at',
+            updatedAt: 'updated_at',
+        };
+
+        const sortField = sortMapping[sortBy] || sortBy;
+
+        qb.orderBy(`network.${sortField}`, sortOrder as 'ASC' | 'DESC');
 
         // Pagination logic
         const skip = (page - 1) * limit;
