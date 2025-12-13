@@ -797,17 +797,33 @@ export class CampaignService {
 
     const sortOrder = query.sort || CampaignSortOrder.DESC;
     qb.orderBy('campaign.created_at', sortOrder)
+      .leftJoinAndSelect('business.sector', 'sector')
+      .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.subCategory', 'subCategory')
       .skip(skip)
       .take(limit);
 
     const [data, total] = await qb.getManyAndCount();
+
+    const flattenedData = data.map((campaign: any) => {
+      if (campaign.business) {
+        campaign.business.sectorName = campaign.business.sector?.name;
+        campaign.business.categoryName = campaign.business.category?.name;
+        campaign.business.subCategoryName = campaign.business.subCategory?.name;
+
+        delete campaign.business.sector;
+        delete campaign.business.category;
+        delete campaign.business.subCategory;
+      }
+      return campaign;
+    });
 
     const totalPages = Math.ceil(total / limit);
     const next = page < totalPages ? Number(page) + 1 : null;
     const previous = page > 1 ? Number(page) - 1 : null;
 
     return {
-      data,
+      data: flattenedData,
       total,
       page: Number(page),
       limit: Number(limit),
