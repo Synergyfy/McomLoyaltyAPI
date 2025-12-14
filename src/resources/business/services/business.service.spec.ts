@@ -85,20 +85,21 @@ describe('BusinessService', () => {
         phone: '+1234567890',
         address: '123 Foodie Lane, Culinary City',
         sectorId: 'some-sector-uuid',
-        referralCapacity: 10,
+        referralCapacity: '12+',
       };
 
       const existingBusiness = new Business();
       mockBusinessRepository.findOne.mockResolvedValue(existingBusiness);
       mockSectorService.findOne.mockResolvedValue({ id: onboardingDto.sectorId });
 
-      const { sectorId, ...rest } = onboardingDto;
+      const { sectorId, referralCapacity, ...rest } = onboardingDto;
       const expectedSaveObject = {
         ...existingBusiness,
         ...rest,
         sector: { id: sectorId },
         category: null,
         subCategory: null,
+        referralCapacity: 12,
       };
       mockBusinessRepository.save.mockResolvedValue(expectedSaveObject);
 
@@ -115,7 +116,7 @@ describe('BusinessService', () => {
         phone: '+1234567890',
         address: '123 Foodie Lane, Culinary City',
         sectorId: 'some-sector-uuid',
-        referralCapacity: 10,
+        referralCapacity: '12+',
       };
 
       mockBusinessRepository.findOne.mockResolvedValue(null);
