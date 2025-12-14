@@ -71,8 +71,8 @@ export class Business extends AbstractBaseEntity {
   role: Role;
 
   @ApiProperty({ description: 'The referral capacity of the business', required: false })
-  @Column({ nullable: true })
-  referralCapacity?: string;
+  @Column({ type: 'int', nullable: true })
+  referralCapacity?: number;
 
   @ApiProperty({ description: 'The affiliate code of the business', required: false })
   @Column({ unique: true, nullable: true })

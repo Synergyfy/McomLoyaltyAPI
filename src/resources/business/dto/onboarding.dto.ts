@@ -36,9 +36,9 @@ export class OnboardingDto {
   @IsOptional()
   socialMedia?: Record<string, any>;
 
-  @ApiProperty({ description: 'The number of businesses they can refer.', example: '12-24' })
+  @ApiProperty({ description: 'The number of businesses they can refer.', example: '12+' })
   @IsString()
-  @IsIn(['12-24', '25-49', '50-99', '100+'])
+  @IsIn(['12+', '25+', '50+', '100+'])
   @IsNotEmpty()
   referralCapacity: string;
 }

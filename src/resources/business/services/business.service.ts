@@ -142,7 +142,10 @@ export class BusinessService {
             throw new NotFoundException('Business not found');
         }
 
-        const { sectorId, categoryId, subCategoryId, ...rest } = onboardingDto;
+        const { sectorId, categoryId, subCategoryId, referralCapacity, ...rest } = onboardingDto;
+
+        // Transform referralCapacity: "12+" -> 12
+        const transformedReferralCapacity = referralCapacity ? parseInt(referralCapacity.replace('+', ''), 10) : null;
 
         const sector = await this.sectorService.findOne(sectorId);
         if (!sector) {
@@ -177,6 +180,7 @@ export class BusinessService {
             sector,
             category,
             subCategory,
+            referralCapacity: transformedReferralCapacity,
         };
 
         const savedBusiness = await this.businessRepository.save(updatedBusiness);
