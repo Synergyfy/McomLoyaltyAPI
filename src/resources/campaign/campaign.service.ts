@@ -1163,12 +1163,12 @@ export class CampaignService {
     if (isUuid) {
       businessCampaign = await this.businessCampaignRepository.findOne({
         where: { id: identifier },
-        relations: ['campaign', 'business', 'rewards'],
+        relations: ['campaign', 'business', 'businessRewards'],
       });
     } else {
       businessCampaign = await this.businessCampaignRepository.findOne({
         where: { uniqueCode: identifier },
-        relations: ['campaign', 'business', 'rewards'],
+        relations: ['campaign', 'business', 'businessRewards'],
       });
     }
 
