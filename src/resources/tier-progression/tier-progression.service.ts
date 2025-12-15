@@ -9,6 +9,7 @@ import { TierConfig, SeasonalTierConfig, ProgressionConditions } from '../tier/i
 import { InjectRepository } from '@nestjs/typeorm';
 import { Business } from '../business/entities/business.entity';
 import { Repository } from 'typeorm';
+import { TierType } from '../tier/entities/tier-type.enum';
 
 @Injectable()
 export class TierProgressionService {
@@ -31,20 +32,17 @@ export class TierProgressionService {
             return;
         }
 
+        // If Seasonal, no progression
+        if (membership.tier.type === TierType.SEASONAL) {
+            return;
+        }
+
         const tierConfig = membership.tier.configuration;
-        const variant = membership.variant;
         const currentLevel = membership.progression_level;
 
-        // Determine effective seasonal config
-        let seasonalConfig: SeasonalTierConfig | undefined;
-        if (variant === 'winter' && tierConfig.winter) seasonalConfig = tierConfig.winter;
-        else if (variant === 'summer' && tierConfig.summer) seasonalConfig = tierConfig.summer;
-        else if (variant === 'autumn' && tierConfig.autumn) seasonalConfig = tierConfig.autumn;
-        else if (variant === 'spring' && tierConfig.spring) seasonalConfig = tierConfig.spring;
-
-        // Get progression rules
-        const proConfig = seasonalConfig?.pro || tierConfig.pro;
-        const proPlusConfig = seasonalConfig?.pro_plus || tierConfig.pro_plus;
+        // Get progression rules directly from standard config
+        const proConfig = tierConfig.pro;
+        const proPlusConfig = tierConfig.pro_plus;
 
         // Gather metrics
         const metrics = await this.getProgressionMetrics(userId, membership.starts_at);

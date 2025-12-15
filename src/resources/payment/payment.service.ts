@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { Tier } from '../tier/entities/tier.entity';
+import { TierType } from '../tier/entities/tier-type.enum';
 import { Membership, MembershipStatus, PlanType } from '../membership/entities/membership.entity';
 import { PaymentHistory } from '../payment-history/entities/payment-history.entity';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
@@ -53,6 +54,33 @@ export class PaymentService {
     if (!tier) {
       throw new NotFoundException('Tier not found');
     }
+    if (tier.type === TierType.SEASONAL) {
+      if (!tier.start_date || !tier.end_date) {
+        throw new BadRequestException('Seasonal tier configuration error: missing dates');
+      }
+
+      // Check for overlapping seasonal tiers
+      const activeSeasonal = await this.membershipRepository.find({
+        where: {
+          business: { id: user.id },
+          status: MembershipStatus.ACTIVE,
+          tier: { type: TierType.SEASONAL }
+        },
+        relations: ['tier'] // Ensure tier relation is loaded
+      });
+
+      const overlap = activeSeasonal.some(m => {
+        // Fallback to tier dates if membership dates are missing (shouldn't happen for valid seasonal)
+        const mStart = m.starts_at || m.tier.start_date;
+        const mEnd = m.expires_at || m.tier.end_date;
+        return tier.start_date <= mEnd && tier.end_date >= mStart;
+      });
+
+      if (overlap) {
+        throw new BadRequestException('You cannot purchase a seasonal tier that overlaps with an existing seasonal membership.');
+      }
+    }
+
     let amount = await this._calculateAmount(tier, initiatePaymentDto.plan_type, initiatePaymentDto.coupon_code);
 
     let packageIdsString = '';
@@ -134,6 +162,31 @@ export class PaymentService {
     if (!tier) {
       throw new NotFoundException('Tier not found');
     }
+    if (tier.type === TierType.SEASONAL) {
+      if (!tier.start_date || !tier.end_date) {
+        throw new BadRequestException('Seasonal tier configuration error: missing dates');
+      }
+      // Check for overlapping seasonal tiers
+      const activeSeasonal = await this.membershipRepository.find({
+        where: {
+          business: { id: user.id },
+          status: MembershipStatus.ACTIVE,
+          tier: { type: TierType.SEASONAL }
+        },
+        relations: ['tier']
+      });
+
+      const overlap = activeSeasonal.some(m => {
+        const mStart = m.starts_at || m.tier.start_date;
+        const mEnd = m.expires_at || m.tier.end_date;
+        return tier.start_date <= mEnd && tier.end_date >= mStart;
+      });
+
+      if (overlap) {
+        throw new BadRequestException('You cannot purchase a seasonal tier that overlaps with an existing seasonal membership.');
+      }
+    }
+
     let amount = await this._calculateAmount(tier, initiatePaymentDto.plan_type, initiatePaymentDto.coupon_code);
 
     let description = initiatePaymentDto.plan_type as string;
@@ -403,6 +456,9 @@ export class PaymentService {
   }
 
   private _calculateAmountForSubscription(tier: Tier, planType: PlanType): number {
+    if (tier.type === TierType.SEASONAL) {
+      return Number(tier.fixed_price || 0);
+    }
     if (planType === PlanType.ANNUAL) {
       return tier.annual_price;
     }
@@ -439,16 +495,47 @@ export class PaymentService {
     isTrial: boolean = false,
     expiresAt: Date,
   ) {
-    let membership = await this.membershipRepository.findOne({ where: { business: { id: user.id } } });
-    const startsAt = new Date();
+    let membership: Membership | null = null;
+    const startsAt = (tier.type === TierType.SEASONAL && tier.start_date) ? tier.start_date : new Date();
+    // For Seasonal, expiresAt passed might be calculated from Annual logic if planType was defaulted. 
+    // We should ensure it matches tier info if Seasonal.
+    const effectiveExpiresAt = (tier.type === TierType.SEASONAL && tier.end_date) ? tier.end_date : expiresAt;
+
+    if (tier.type === TierType.SEASONAL) {
+      // For Seasonal: Always create new unless updating the EXACT same purchased tier (e.g. repayment?)
+      // Assuming duplicate purchase is blocked at initiate, we create new.
+      // We'll check if one exists just in case to update transaction ID or similar.
+      membership = await this.membershipRepository.findOne({
+        where: { business: { id: user.id }, tier: { id: tier.id } }
+      });
+    } else {
+      // For Standard: Find existing Standard membership to update
+      membership = await this.membershipRepository.findOne({
+        where: {
+          business: { id: user.id },
+          tier: { type: TierType.STANDARD }
+        }
+      });
+
+      // If no Standard found, check if ANY membership exists (legacy fallback)
+      if (!membership) {
+        const anyMembership = await this.membershipRepository.findOne({ where: { business: { id: user.id } }, relations: ['tier'] });
+        if (anyMembership && (!anyMembership.tier || anyMembership.tier.type === TierType.STANDARD)) {
+          membership = anyMembership;
+        }
+        // If existing is Seasonal, we DO NOT overwrite it. We create a NEW Standard.
+      }
+    }
 
     if (membership) {
       membership.tier = tier;
       membership.plan_type = planType;
       membership.starts_at = startsAt;
-      membership.expires_at = expiresAt;
+      membership.expires_at = effectiveExpiresAt;
       membership.status = MembershipStatus.ACTIVE;
       membership.is_trial = isTrial;
+      if (transactionId) membership.transaction_id = transactionId;
+      if (provider) membership.payment_provider = provider;
       await this.membershipRepository.save(membership);
     } else {
       membership = this.membershipRepository.create({
@@ -456,9 +543,11 @@ export class PaymentService {
         tier,
         plan_type: planType,
         starts_at: startsAt,
-        expires_at: expiresAt,
+        expires_at: effectiveExpiresAt,
         status: MembershipStatus.ACTIVE,
         is_trial: isTrial,
+        transaction_id: transactionId,
+        payment_provider: provider,
       });
       await this.membershipRepository.save(membership);
     }

@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, Inject, forwardRef, Logger } from '@nes
 import { MembershipService } from '../membership/membership.service';
 import { CampaignService } from '../campaign/campaign.service';
 import { TierConfig, SeasonalTierConfig, ProgressionBenefits, TrialTierConfig } from '../tier/interfaces/tier-config.interface';
+import { TierType } from '../tier/entities/tier-type.enum';
 import { MembershipStatus } from '../membership/entities/membership.entity';
 import { RewardsService } from '../rewards/services/rewards.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -39,60 +40,68 @@ export class CapabilityService {
     ) { }
 
     async checkPermission(userId: string, action: ActionType, context?: any): Promise<void> {
-        // 1. Fetch User's Tier via Membership
-        const membership = await this.membershipService.findOneByBusinessId(userId);
-        if (!membership || membership.status !== MembershipStatus.ACTIVE) {
+        // 1. Fetch User's Active Memberships
+        const memberships = await this.membershipService.findActiveMemberships(userId);
+
+        let standardMembership = memberships.find(m => m.tier && m.tier.type === TierType.STANDARD);
+
+        // Filter valid seasonal memberships (active dates)
+        const seasonalMemberships = memberships.filter(m => {
+            if (!m.tier || m.tier.type !== TierType.SEASONAL) return false;
+            const now = new Date();
+            // Use membership dates as primary truth, fallback to tier dates
+            const start = m.starts_at || m.tier.start_date;
+            const end = m.expires_at || m.tier.end_date;
+            // Check if NOW is within [start, end]
+            return (!start || now >= start) && (!end || now <= end);
+        });
+
+        if (!standardMembership && seasonalMemberships.length === 0) {
             this.logger.warn(`User ${userId} has no active membership.`);
             throw new ForbiddenException('Active membership required.');
         }
 
-        const tierConfig = membership.tier.configuration;
-        if (!tierConfig) {
+        let effectiveConfig: TierConfig = null;
+
+        if (standardMembership && standardMembership.tier.configuration) {
+            effectiveConfig = { ...standardMembership.tier.configuration };
+
+            const progressionLevel = standardMembership.progression_level;
+            const proConfig = effectiveConfig.pro;
+            const proPlusConfig = effectiveConfig.pro_plus;
+
+            // Apply Progression Level Overrides (Standard Only)
+            if (progressionLevel === 'pro' && proConfig) {
+                effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proConfig.benefits);
+            } else if (progressionLevel === 'pro_plus' && proPlusConfig) {
+                effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
+            }
+
+            // Apply Trial Configuration Overrides
+            if (standardMembership.is_trial && effectiveConfig.trial) {
+                effectiveConfig = this.mergeTrialConfig(effectiveConfig, effectiveConfig.trial);
+            }
+        }
+
+        // If no standard, start with first seasonal
+        if (!effectiveConfig && seasonalMemberships.length > 0) {
+            effectiveConfig = { ...seasonalMemberships[0].tier.configuration };
+        }
+
+        if (!effectiveConfig) {
             this.logger.warn(`User ${userId} has no tier configuration.`);
             throw new ForbiddenException('Tier configuration missing.');
         }
 
-        // Determine effective configuration based on variant and progression level
-        let effectiveConfig = { ...tierConfig };
-        const variant = membership.variant;
-        const progressionLevel = membership.progression_level;
+        // Apply Seasonal Overrides (Overlay on top of Standard or Base Seasonal)
+        for (const seaMem of seasonalMemberships) {
+            // If we started with this seasonal one, skip
+            if (!standardMembership && seaMem === seasonalMemberships[0]) continue;
 
-        // 1. Apply Seasonal Variant Overrides
-        let seasonalConfig: SeasonalTierConfig | undefined;
-        if (variant === 'winter' && tierConfig.winter) {
-            seasonalConfig = tierConfig.winter;
-        } else if (variant === 'summer' && tierConfig.summer) {
-            seasonalConfig = tierConfig.summer;
-        } else if (variant === 'autumn' && tierConfig.autumn) {
-            seasonalConfig = tierConfig.autumn;
-        } else if (variant === 'spring' && tierConfig.spring) {
-            seasonalConfig = tierConfig.spring;
-        }
-
-        if (seasonalConfig) {
-            effectiveConfig = this.mergeSeasonalConfig(effectiveConfig, seasonalConfig);
-        }
-
-        // 2. Apply Progression Level Overrides (Pro / ProPlus)
-        // Check if seasonal config has specific progression rules, otherwise use base tier rules
-        const proConfig = seasonalConfig?.pro || tierConfig.pro;
-        const proPlusConfig = seasonalConfig?.pro_plus || tierConfig.pro_plus;
-
-        if (progressionLevel === 'pro' && proConfig) {
-            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proConfig.benefits);
-        } else if (progressionLevel === 'pro_plus' && proPlusConfig) {
-            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
-        }
-
-        if (progressionLevel === 'pro' && proConfig) {
-            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proConfig.benefits);
-        } else if (progressionLevel === 'pro_plus' && proPlusConfig) {
-            effectiveConfig = this.mergeProgressionBenefits(effectiveConfig, proPlusConfig.benefits);
-        }
-
-        // 3. Apply Trial Configuration Overrides
-        if (membership.is_trial && tierConfig.trial) {
-            effectiveConfig = this.mergeTrialConfig(effectiveConfig, tierConfig.trial);
+            if (seaMem.tier.configuration) {
+                // We treat the seasonal tier config as an "override"
+                effectiveConfig = this.mergeSeasonalConfig(effectiveConfig, seaMem.tier.configuration as any);
+            }
         }
 
         // 4. Calculate Effective Limits & Check Permissions
