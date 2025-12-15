@@ -13,6 +13,7 @@ import { SkipMembershipCheck } from '../../../common/decorators/skip-membership-
 import { BuyPointsDto } from '../dto/buy-points.dto';
 import { PointPurchaseConfigDto } from '../dto/point-purchase-config.dto';
 import { ConfirmPointPurchaseDto } from '../dto/confirm-point-purchase.dto';
+import { ReferralStatsResponseDto } from '../dto/referral-stats-response.dto';
 
 @ApiTags('Business Lifecycle')
 @Controller('business')
@@ -161,7 +162,7 @@ export class BusinessController {
   @Roles(Role.Business)
   @Get('referral-stats')
   @ApiOperation({ summary: 'Get business referral capacity stats' })
-  @ApiResponse({ status: 200, description: 'Return business referral stats (capacity, uploaded, remaining, percentage).' })
+  @ApiResponse({ status: 200, description: 'Return business referral stats (capacity, uploaded, remaining, percentage).', type: ReferralStatsResponseDto })
   async getReferralStats(@Request() req) {
     return this.businessService.getReferralStats(req.user.id);
   }
