@@ -81,7 +81,7 @@ export class Business extends AbstractBaseEntity {
   @ManyToOne(() => Business, (business) => business.referrals)
   referredBy: Business;
 
-  @OneToMany(() => Referral, (referral) => referral.referrer)
+  @OneToMany(() => Referral, (referral) => referral.referrerBusiness)
   referrals: Referral[];
 
   @ApiProperty({ description: 'The referral points of the business', default: 0 })

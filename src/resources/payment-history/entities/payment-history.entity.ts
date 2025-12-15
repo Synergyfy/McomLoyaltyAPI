@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Business } from '../../business/entities/business.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Membership } from '../../membership/entities/membership.entity';
@@ -26,6 +26,7 @@ export class PaymentHistory extends AbstractBaseEntity {
   @JoinColumn({ name: 'user_id' })
   user: Business;
 
+  @Index()
   @Column()
   user_type: string;
 
@@ -35,15 +36,19 @@ export class PaymentHistory extends AbstractBaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
+  @Index()
   @Column({ type: 'enum', enum: PaymentProvider })
   payment_provider: PaymentProvider;
 
+  @Index()
   @Column()
   transaction_id: string;
 
+  @Index()
   @Column({ type: 'enum', enum: PaymentStatus })
   status: PaymentStatus;
 
+  @Index()
   @Column({ type: 'enum', enum: PurchaseType, default: PurchaseType.MEMBERSHIP })
   purchaseType: PurchaseType;
 

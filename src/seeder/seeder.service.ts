@@ -223,12 +223,13 @@ export class SeederService {
     // Create Referrals
     for (let i = 0; i < businesses.length; i++) {
       if (i > 0) {
-        // Skipping Business Referrals as Entity is updated for Participants
-        // await this.referralRepository.save({
-        //   referrer: businesses[i - 1],
-        //   referred: businesses[i],
-        //   status: ReferralStatus.SUCCESSFUL,
-        // });
+        await this.referralRepository.save({
+          referrerBusiness: businesses[i - 1],
+          refereeBusiness: businesses[i],
+          status: ReferralStatus.SUCCESSFUL,
+          code: 'SEED',
+          refereeEmail: businesses[i].email
+        });
       }
     }
 

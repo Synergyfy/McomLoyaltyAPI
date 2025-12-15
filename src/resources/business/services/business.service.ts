@@ -98,34 +98,16 @@ export class BusinessService {
         const newBusiness = await this.businessRepository.save(business);
 
         if (referrer) {
-            // Referral Entity is designed for Participant referrals.
-            // Business referrals seem to be different logic or need different entity if they refer other businesses?
-            // However, the error is about property mismatch. 
-            // If Business referrals share the same table, we need to adjust types.
-            // But Referral entity has 'referrer: Participant' and 'referee: Participant'.
-            // It seems BusinessService is trying to use Referral entity for Business-to-Business referrals.
-            // WE NEED TO FIX THIS: Either make Referral entity support Business, or remove this logic if unused.
-            // Assuming we want to support it, we need to update Entity or simply comment out this incompatible logic for now if it's not part of current task.
-            // Given the user instruction "fix", and the fact I just created Referral entity for Participants,
-            // this BusinessService code is likely legacy or conflated. 
-            // Checking the file, it imports Referral from my new file.
-            // So I broke existing Business referral logic.
-            // Quick fix: Update Referral entity to allow Business? Or assuming this is a mistake?
-            // Actually, looking at `SeederService`, it also creates Business-to-Business referrals.
-            // So the intention IS to share the table.
-            // I should update Referral entity to support Business or just fix the property names if I can't change entity.
-            // Wait, I cannot change Entity easily without migration.
-            // Better to comment out this broken logic for Business referrals temporarily,
-            // OR if I am confident, I can change the properties to match what I have.
-            // But I don't have 'business' fields in Referral entity.
-
-            // Let's comment it out to unblock compilation for now, as my task was Participant Referrals.
-            // OR better, create a TODO.
-            // const referral = this.referralRepository.create({
-            //     referrer,
-            //     referred: newBusiness,
-            // });
-            // await this.referralRepository.save(referral);
+            // Create Business-to-Business Referral
+            const referral = this.referralRepository.create({
+                referrerBusiness: referrer,
+                refereeBusiness: newBusiness,
+                status: ReferralStatus.PENDING,
+                // code can be referrer's affiliate code for tracking context
+                code: referrer.affiliateCode || 'system',
+                refereeEmail: newBusiness.email
+            });
+            await this.referralRepository.save(referral);
         }
 
         // Send OTP
@@ -193,29 +175,28 @@ export class BusinessService {
     }
 
     private async completeReferral(business: Business): Promise<void> {
-        // FIXME: Update to support new Referral entity structure or separate Business Referral
-        /*
         const referral = await this.referralRepository.findOne({
-            where: { referred: { id: business.id } },
-            relations: ['referrer'],
+            where: { refereeBusiness: { id: business.id } },
+            relations: ['referrerBusiness'],
         });
 
         if (referral && referral.status === ReferralStatus.PENDING) {
-            referral.status = ReferralStatus.COMPLETED;
+            referral.status = ReferralStatus.SUCCESSFUL;
             await this.referralRepository.save(referral);
 
-            const referrer = referral.referrer;
-            referrer.referralPoints = (referrer.referralPoints || 0) + 100;
-            await this.businessRepository.save(referrer);
+            const referrer = referral.referrerBusiness;
+            if (referrer) {
+                referrer.referralPoints = (Number(referrer.referralPoints) || 0) + 100;
+                await this.businessRepository.save(referrer);
 
-            // Award matching points
-            await this.matchingPointService.addPoints(
-                referrer.id,
-                MatchingPointActivityType.REFERRAL,
-                `Referral Completed: ${business.name}`,
-            );
+                // Award matching points
+                await this.matchingPointService.addPoints(
+                    referrer.id,
+                    MatchingPointActivityType.REFERRAL,
+                    `Referral Completed: ${business.name}`,
+                );
+            }
         }
-        */
     }
 
     async findByEmail(email: string): Promise<Business | undefined> {
