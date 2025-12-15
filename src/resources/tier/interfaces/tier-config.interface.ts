@@ -81,11 +81,8 @@ export interface TierConfig {
     pro?: ProgressionLevelConfig;
     pro_plus?: ProgressionLevelConfig;
 
-    // Seasonal Variants
-    winter?: SeasonalTierConfig;
-    summer?: SeasonalTierConfig;
-    autumn?: SeasonalTierConfig;
-    spring?: SeasonalTierConfig;
+    // Seasonal Variants removed
+
 
     // Trial Configuration
     trial?: TrialTierConfig;

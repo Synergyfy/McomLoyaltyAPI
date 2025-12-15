@@ -10,6 +10,8 @@ import { Business } from '../business/entities/business.entity';
 import { MembershipStatus, PlanType } from './entities/membership.entity';
 import { PaymentService } from '../payment/payment.service';
 import { PaymentProvider } from '../payment-history/entities/payment-history.entity';
+import { TierType } from '../tier/entities/tier-type.enum';
+import { MoreThan, LessThanOrEqual, MoreThanOrEqual, LessThan } from 'typeorm';
 
 @Injectable()
 export class MembershipService {
@@ -24,10 +26,47 @@ export class MembershipService {
   ) { }
 
   async findOneByBusinessId(businessId: string) {
-    return await this.membershipRepository.findOne({
+    // Prefer Standard tier if multiple exist, otherwise just one
+    const memberships = await this.membershipRepository.find({
       where: { business: { id: businessId } },
       relations: ['tier'],
     });
+    // Return standard if exists, else first one
+    const standard = memberships.find(m => m.tier && m.tier.type === TierType.STANDARD);
+    return standard || memberships[0];
+  }
+
+  async findActiveMemberships(businessId: string) {
+    return await this.membershipRepository.find({
+      where: {
+        business: { id: businessId },
+        status: MembershipStatus.ACTIVE
+      },
+      relations: ['tier'],
+    });
+  }
+
+  async checkSeasonalOverlap(businessId: string, startDate: Date, endDate: Date): Promise<boolean> {
+    const activeSeasonal = await this.membershipRepository.find({
+      where: {
+        business: { id: businessId },
+        status: MembershipStatus.ACTIVE,
+        tier: { type: TierType.SEASONAL }
+      },
+      relations: ['tier']
+    });
+
+    for (const membership of activeSeasonal) {
+      // Membership dates usually align with Tier dates for seasonal, but relies on what was saved
+      const memStart = membership.starts_at;
+      const memEnd = membership.expires_at;
+
+      // Check Overlap: (StartA <= EndB) and (EndA >= StartB)
+      if (startDate <= memEnd && endDate >= memStart) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async getMyMembership(user: any) {

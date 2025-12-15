@@ -12,7 +12,7 @@ export class InitiatePaymentDto {
   tier_id: string;
 
   @ApiProperty({
-    description: 'The type of plan to purchase.',
+    description: 'The type of plan to purchase. Ignored if the tier is Seasonal (defaults to fixed price).',
     enum: PlanType,
     example: PlanType.MONTHLY,
   })

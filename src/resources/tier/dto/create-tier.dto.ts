@@ -1,7 +1,8 @@
-import { IsNotEmpty, IsString, IsNumber, IsArray, IsOptional, IsEnum, IsObject } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, IsArray, IsOptional, IsEnum, IsObject, ValidateIf, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TierStatus } from '../entities/tier-status.enum';
 import { TierConfig } from '../interfaces/tier-config.interface';
+import { TierType } from '../entities/tier-type.enum';
 
 export class CreateTierDto {
   @ApiProperty({
@@ -13,10 +14,56 @@ export class CreateTierDto {
   name: string;
 
   @ApiProperty({
+    description: 'The type of the tier (standard or seasonal)',
+    example: TierType.STANDARD,
+    enum: TierType,
+    default: TierType.STANDARD,
+  })
+  @IsOptional()
+  @IsEnum(TierType)
+  type: TierType;
+
+  @ApiProperty({
+    description: 'Start date for seasonal tier',
+    example: '2025-06-01T00:00:00Z',
+  })
+  @ValidateIf(o => o.type === TierType.SEASONAL)
+  @IsNotEmpty()
+  @IsDateString()
+  start_date: Date;
+
+  @ApiProperty({
+    description: 'End date for seasonal tier',
+    example: '2025-08-31T00:00:00Z',
+  })
+  @ValidateIf(o => o.type === TierType.SEASONAL)
+  @IsNotEmpty()
+  @IsDateString()
+  end_date: Date;
+
+  @ApiProperty({
+    description: 'Color code for the tier',
+    example: '#FF5733',
+  })
+  @IsOptional()
+  @IsString()
+  color_code: string;
+
+  @ApiProperty({
+    description: 'Fixed price for seasonal tier',
+    example: 99.99,
+  })
+  @ValidateIf(o => o.type === TierType.SEASONAL)
+  @IsNotEmpty()
+  @IsNumber()
+  fixed_price: number;
+
+  @ApiProperty({
     description: 'The monthly price of the tier.',
     example: 45,
   })
   @IsNotEmpty()
+  @ValidateIf(o => !o.type || o.type === TierType.STANDARD)
   @IsNumber()
   monthly_price: number;
 
@@ -25,6 +72,7 @@ export class CreateTierDto {
     example: 540,
   })
   @IsNotEmpty()
+  @ValidateIf(o => !o.type || o.type === TierType.STANDARD)
   @IsNumber()
   annual_price: number;
 
@@ -33,6 +81,7 @@ export class CreateTierDto {
     example: 135,
   })
   @IsNotEmpty()
+  @ValidateIf(o => !o.type || o.type === TierType.STANDARD)
   @IsNumber()
   quaterly_price: number;
 
