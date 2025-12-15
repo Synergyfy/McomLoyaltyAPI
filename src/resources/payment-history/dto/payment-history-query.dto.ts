@@ -42,5 +42,10 @@ export class PaymentHistoryQueryDto extends PaginationDto {
     @Type(() => Number)
     @IsNumber()
     max_amount?: number;
+
+    @ApiProperty({ required: false, enum: ['ASC', 'DESC'], description: 'Sort by creation date' })
+    @IsOptional()
+    @IsString()
+    sort?: 'ASC' | 'DESC';
 }
 

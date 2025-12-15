@@ -12,14 +12,14 @@ export class PaymentHistoryService {
   ) { }
 
   async findAll(query: PaymentHistoryQueryDto) {
-    const { page, limit, search, status, payment_provider, user_type, purchase_type, min_amount, max_amount } = query;
+    const { page, limit, search, status, payment_provider, user_type, purchase_type, min_amount, max_amount, sort } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.paymentHistoryRepository.createQueryBuilder('paymentHistory')
       .leftJoinAndSelect('paymentHistory.user', 'user')
       .skip(skip)
       .take(limit)
-      .orderBy('paymentHistory.created_at', 'DESC');
+      .orderBy('paymentHistory.created_at', sort || 'DESC');
 
     if (status) {
       queryBuilder.andWhere('paymentHistory.status = :status', { status });

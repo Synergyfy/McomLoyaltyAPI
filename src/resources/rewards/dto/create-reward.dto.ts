@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNumber, IsOptional, IsEnum, IsArray, IsDateString } from 'class-validator';
 import { RewardType } from '../enums/reward-type.enum';
-import { RewardSource } from '../enums/reward-source.enum';
 import { RewardAudience } from '../enums/reward-audience.enum';
 import { RewardStatus } from '../enums/reward-status.enum';
 
@@ -66,13 +65,6 @@ export class CreateRewardDto {
   @IsEnum(RewardType)
   reward_type: RewardType;
 
-  @ApiProperty({
-    enum: RewardSource,
-    description: 'The source of the reward',
-    example: RewardSource.MCOM_VAULT,
-  })
-  @IsEnum(RewardSource)
-  reward_source: RewardSource;
 
   @ApiProperty({
     enum: RewardAudience,
