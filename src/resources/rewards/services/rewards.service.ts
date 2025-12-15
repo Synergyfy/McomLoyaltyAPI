@@ -226,7 +226,7 @@ export class RewardsService {
       business: { id: businessId },
       title: reward.title,
       reward_type: reward.reward_type,
-      reward_source: reward.reward_source,
+      reward_source: RewardSource.MCOM_VAULT,
       audience: reward.audience,
       expiry_datetime: reward.expiry_datetime,
       status: reward.status,
