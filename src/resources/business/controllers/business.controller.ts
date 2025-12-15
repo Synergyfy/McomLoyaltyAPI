@@ -157,4 +157,12 @@ export class BusinessController {
   async getTierUsage(@Request() req) {
     return this.businessService.getTierUsage(req.user.id);
   }
+
+  @Roles(Role.Business)
+  @Get('referral-stats')
+  @ApiOperation({ summary: 'Get business referral capacity stats' })
+  @ApiResponse({ status: 200, description: 'Return business referral stats (capacity, uploaded, remaining, percentage).' })
+  async getReferralStats(@Request() req) {
+    return this.businessService.getReferralStats(req.user.id);
+  }
 }

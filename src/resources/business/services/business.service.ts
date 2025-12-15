@@ -639,4 +639,27 @@ export class BusinessService {
             },
         };
     }
+    async getReferralStats(businessId: string) {
+        const business = await this.findById(businessId);
+        if (!business) {
+            throw new NotFoundException('Business not found');
+        }
+
+        const uploadedCount = await this.businessRepository.manager.count('Network', {
+            where: {
+                business: { id: businessId }
+            }
+        });
+
+        const capacity = business.referralCapacity || 0;
+        const remaining = Math.max(0, capacity - uploadedCount);
+        const percentage = capacity > 0 ? (uploadedCount / capacity) * 100 : 0;
+
+        return {
+            referralCapacity: capacity,
+            uploaded: uploadedCount,
+            remaining: remaining,
+            percentage: parseFloat(percentage.toFixed(2))
+        };
+    }
 }
