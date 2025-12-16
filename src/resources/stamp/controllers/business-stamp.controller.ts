@@ -32,42 +32,42 @@ export class BusinessStampController {
   @ApiOperation({ summary: 'Activate a stamp reward template' })
   @ApiCreatedResponse({ type: BusinessStampReward })
   activate(@CurrentUser() user: any, @Body() dto: ActivateStampRewardDto) {
-    // CurrentUser for Business role usually has the business ID or user ID linked to business.
-    // Assuming user.id is the business id or user has a businessId property.
-    // Based on memory: "For endpoints specific to an authenticated user ... use @CurrentUser"
-    // And "There is no central user table; user data is stored in separate tables... A UserService provides a unified interface".
-    // If logged in as Business, user.id is likely the business entity ID.
+    // Only Business Owners can activate rewards
     return this.stampService.activateTemplate(user.id, dto);
   }
 
   @Get('active')
-  @Roles(Role.Business)
+  @Roles(Role.Business, Role.Staff)
   @ApiOperation({ summary: 'List active stamp rewards' })
   @ApiOkResponse({ type: [BusinessStampReward] })
-  getActive(@CurrentUser() user: any) {
-    return this.stampService.getBusinessActiveRewards(user.id);
+  async getActive(@CurrentUser() user: any) {
+    const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+    return this.stampService.getBusinessActiveRewards(businessId);
   }
 
   @Get('stats')
-  @Roles(Role.Business)
+  @Roles(Role.Business, Role.Staff)
   @ApiOperation({ summary: 'Get statistics for active stamp rewards' })
-  getStats(@CurrentUser() user: any) {
-    return this.stampService.getBusinessRewardStats(user.id);
+  async getStats(@CurrentUser() user: any) {
+    const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+    return this.stampService.getBusinessRewardStats(businessId);
   }
 
   @Post('scan')
-  @Roles(Role.Business)
+  @Roles(Role.Business, Role.Staff)
   @ApiOperation({ summary: 'Scan participant QR to add a stamp' })
   @ApiCreatedResponse({ type: StampCard })
-  addStamp(@CurrentUser() user: any, @Body() dto: ScanParticipantQrDto) {
-    return this.stampService.addStampByScan(user.id, dto);
+  async addStamp(@CurrentUser() user: any, @Body() dto: ScanParticipantQrDto) {
+    const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+    return this.stampService.addStampByScan(businessId, dto);
   }
 
   @Post('redeem')
-  @Roles(Role.Business)
+  @Roles(Role.Business, Role.Staff)
   @ApiOperation({ summary: 'Redeem a completed stamp card' })
   @ApiOkResponse({ type: StampCard })
-  redeem(@CurrentUser() user: any, @Body() dto: RedeemStampCardDto) {
-      return this.stampService.redeemReward(user.id, dto.participantUniqueCode);
+  async redeem(@CurrentUser() user: any, @Body() dto: RedeemStampCardDto) {
+      const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+      return this.stampService.redeemReward(businessId, dto.participantUniqueCode);
   }
 }

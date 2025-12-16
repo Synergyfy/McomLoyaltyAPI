@@ -8,9 +8,10 @@ import { StampRewardTemplate } from './entities/stamp-reward-template.entity';
 import { BusinessStampReward } from './entities/business-stamp-reward.entity';
 import { StampCard } from './entities/stamp-card.entity';
 import { StampEvent } from './entities/stamp-event.entity';
-import { Participant } from '../../participant/entities/participant.entity';
-import { Business } from '../../business/entities/business.entity';
-import { ParticipantCampaignBalanceModule } from '../../participant-campaign-balance/participant-campaign-balance.module';
+import { Participant } from '../participant/entities/participant.entity';
+import { Business } from '../business/entities/business.entity';
+import { ParticipantCampaignBalanceModule } from '../participant-campaign-balance/participant-campaign-balance.module';
+import { Staff } from '../staff/entities/staff.entity';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ParticipantCampaignBalanceModule } from '../../participant-campaign-bal
       StampEvent,
       Participant,
       Business,
+      Staff,
     ]),
     ParticipantCampaignBalanceModule, // For hybrid points
   ],

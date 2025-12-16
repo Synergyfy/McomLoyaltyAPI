@@ -10,6 +10,7 @@ import { UpdateStampTemplateDto } from '../dto/update-stamp-template.dto';
 import { ActivateStampRewardDto } from '../dto/activate-stamp-reward.dto';
 import { Participant } from '../../participant/entities/participant.entity';
 import { Business } from '../../business/entities/business.entity';
+import { Staff } from '../../staff/entities/staff.entity';
 import { StampCardStatus } from '../enums/stamp-card-status.enum';
 import { StampTriggerMethod } from '../enums/stamp-trigger-method.enum';
 import { ScanParticipantQrDto } from '../dto/scan-participant-qr.dto';
@@ -30,6 +31,8 @@ export class StampService {
     private participantRepo: Repository<Participant>,
     @InjectRepository(Business)
     private businessRepo: Repository<Business>,
+    @InjectRepository(Staff)
+    private staffRepo: Repository<Staff>,
     private dataSource: DataSource,
     // Assuming this service exists and can add points.
     // Ideally we should use a PointService or similar if it's generic,
@@ -144,6 +147,23 @@ export class StampService {
   }
 
   // --- Core Logic (Scanning, Earning, Redeeming) ---
+
+  /**
+   * Resolves the Business ID for a given user (Business Owner or Staff).
+   */
+  async resolveBusinessId(userId: string, role: string): Promise<string> {
+      if (role === 'business') {
+          return userId;
+      } else if (role === 'staff') {
+          const staff = await this.staffRepo.findOne({
+              where: { id: userId },
+              relations: ['business']
+          });
+          if (!staff || !staff.business) throw new ForbiddenException('Staff not associated with a business');
+          return staff.business.id;
+      }
+      throw new ForbiddenException('Invalid role for business operations');
+  }
 
   /**
    * Generic method to add a stamp.

@@ -7,6 +7,7 @@ import { StampCard } from '../entities/stamp-card.entity';
 import { StampEvent } from '../entities/stamp-event.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { Business } from '../../business/entities/business.entity';
+import { Staff } from '../../staff/entities/staff.entity';
 import { DataSource, Repository } from 'typeorm';
 import { StampTriggerMethod } from '../enums/stamp-trigger-method.enum';
 import { StampCardStatus } from '../enums/stamp-card-status.enum';
@@ -45,6 +46,7 @@ describe('StampService', () => {
         { provide: getRepositoryToken(StampEvent), useValue: mockRepo },
         { provide: getRepositoryToken(Participant), useValue: mockRepo },
         { provide: getRepositoryToken(Business), useValue: mockRepo },
+        { provide: getRepositoryToken(Staff), useValue: mockRepo },
         { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
