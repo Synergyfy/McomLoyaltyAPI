@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { StampService } from '../services/stamp.service';
 import { ActivateStampRewardDto } from '../dto/activate-stamp-reward.dto';
@@ -68,6 +68,41 @@ export class BusinessStampController {
   @ApiOkResponse({ type: StampCard })
   async redeem(@CurrentUser() user: any, @Body() dto: RedeemStampCardDto) {
       const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
-      return this.stampService.redeemReward(businessId, dto.participantUniqueCode);
+      return this.stampService.redeemReward(businessId, dto.participantUniqueCode, dto.stampCardId);
+  }
+
+  @Post('active/:id/pause')
+  @Roles(Role.Business, Role.Staff)
+  @ApiOperation({ summary: 'Pause a reward' })
+  @ApiOkResponse({ type: BusinessStampReward })
+  async pause(@CurrentUser() user: any, @Param('id') id: string) {
+      const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+      return this.stampService.pauseReward(businessId, id);
+  }
+
+  @Post('active/:id/resume')
+  @Roles(Role.Business, Role.Staff)
+  @ApiOperation({ summary: 'Resume a reward' })
+  @ApiOkResponse({ type: BusinessStampReward })
+  async resume(@CurrentUser() user: any, @Param('id') id: string) {
+      const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+      return this.stampService.resumeReward(businessId, id);
+  }
+
+  @Delete('active/:id')
+  @Roles(Role.Business, Role.Staff)
+  @ApiOperation({ summary: 'Deactivate (soft delete) a reward' })
+  async deactivate(@CurrentUser() user: any, @Param('id') id: string) {
+      const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+      return this.stampService.deactivateReward(businessId, id);
+  }
+
+  @Get('active/:id/customers')
+  @Roles(Role.Business, Role.Staff)
+  @ApiOperation({ summary: 'List customers for a specific reward' })
+  @ApiOkResponse({ type: [StampCard] })
+  async getCustomers(@CurrentUser() user: any, @Param('id') id: string) {
+      const businessId = await this.stampService.resolveBusinessId(user.id, user.role);
+      return this.stampService.getRewardCustomers(businessId, id);
   }
 }

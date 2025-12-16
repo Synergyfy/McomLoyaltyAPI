@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { StampService } from '../services/stamp.service';
 import { CreateStampTemplateDto } from '../dto/create-stamp-template.dto';
@@ -53,5 +53,28 @@ export class AdminStampController {
   @ApiOkResponse({ type: StampRewardTemplate })
   publish(@Param('id') id: string) {
     return this.stampService.publishTemplate(id);
+  }
+
+  @Post('templates/:id/archive')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Archive a template' })
+  @ApiOkResponse({ type: StampRewardTemplate })
+  archive(@Param('id') id: string) {
+    return this.stampService.archiveTemplate(id);
+  }
+
+  @Post('templates/:id/duplicate')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Duplicate a template' })
+  @ApiOkResponse({ type: StampRewardTemplate })
+  duplicate(@Param('id') id: string) {
+    return this.stampService.duplicateTemplate(id);
+  }
+
+  @Delete('templates/:id')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Soft delete a template' })
+  remove(@Param('id') id: string) {
+    return this.stampService.deleteTemplate(id);
   }
 }
