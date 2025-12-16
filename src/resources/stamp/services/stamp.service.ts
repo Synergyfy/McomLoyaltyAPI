@@ -11,6 +11,7 @@ import { ActivateStampRewardDto } from '../dto/activate-stamp-reward.dto';
 import { Participant } from '../../participant/entities/participant.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Staff } from '../../staff/entities/staff.entity';
+import { Role } from '../../../common/role.enum';
 import { StampCardStatus } from '../enums/stamp-card-status.enum';
 import { StampTriggerMethod } from '../enums/stamp-trigger-method.enum';
 import { ScanParticipantQrDto } from '../dto/scan-participant-qr.dto';
@@ -291,9 +292,9 @@ export class StampService {
    * Resolves the Business ID for a given user (Business Owner or Staff).
    */
   async resolveBusinessId(userId: string, role: string): Promise<string> {
-      if (role === 'business') {
+      if (role === Role.Business) {
           return userId;
-      } else if (role === 'staff') {
+      } else if (role === Role.Staff) {
           const staff = await this.staffRepo.findOne({
               where: { id: userId },
               relations: ['business']
@@ -301,7 +302,7 @@ export class StampService {
           if (!staff || !staff.business) throw new ForbiddenException('Staff not associated with a business');
           return staff.business.id;
       }
-      throw new ForbiddenException('Invalid role for business operations');
+      throw new ForbiddenException(`Invalid role for business operations: ${role}`);
   }
 
   /**
