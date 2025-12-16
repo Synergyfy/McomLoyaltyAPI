@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsString } from 'class-validator';
+import { IsUUID, IsString, IsOptional } from 'class-validator';
 
 export class ScanParticipantQrDto {
   @ApiProperty({ example: 'participant-unique-code', required: false })
