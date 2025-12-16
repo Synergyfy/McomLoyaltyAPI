@@ -10,81 +10,199 @@ The Stamp System allows:
 - **Participants** (Customers) to collect stamps via `StampCards` and earn rewards.
 - **Hybrid Logic**: Optionally award points alongside stamps.
 
-## 2. Entities
+## 2. API Endpoints
 
-All entities are located in `src/resources/stamp/entities/`.
+### 2.1 Admin Endpoints
+Base URL: `/admin/stamps`
+**Auth**: Admin Role Required.
 
-### 2.1. StampRewardTemplate
-Defined by Admin.
-- `title`, `description`
-- `required_stamps`
-- `reward_benefit` (Enum: FREE_ITEM, DISCOUNT, etc.)
-- `trigger_method` (Enum: QR_SCAN, PURCHASE, CHECK_IN)
-- `is_hybrid`: If true, points are awarded per stamp.
+#### `POST /admin/stamps/templates`
+Creates a new Stamp Reward Template.
 
-### 2.2. BusinessStampReward
-Activated instance of a template for a specific Business.
-- Links to `StampRewardTemplate` and `Business`.
-- `total_enrolled`, `total_completions`, `total_redemptions`: Cached counters for analytics.
+**Request Body (`CreateStampTemplateDto`):**
+```typescript
+interface CreateStampTemplateDto {
+  title: string;                         // Required. Example: 'Buy 5 Get 1 Free'
+  description: string;                   // Required. Example: 'Collect 5 stamps...'
+  required_stamps: number;               // Required. Min: 1. Example: 5
+  reward_benefit: StampRewardType;       // Required. Enum: FREE_ITEM, DISCOUNT, etc.
+  reward_benefit_value?: string;         // Optional. Example: 'Coffee'
+  trigger_method: StampTriggerMethod;    // Required. Enum: QR_SCAN, PURCHASE, CHECK_IN
+  stamp_validity_days?: number;          // Optional.
+  reward_claim_deadline_days?: number;   // Optional.
+  is_hybrid?: boolean;                   // Optional. Default: false
+  hybrid_points_per_stamp?: number;      // Optional. Default: 0
+  hybrid_completion_bonus_points?: number; // Optional. Default: 0
+  default_image?: string;                // Optional.
+}
+```
 
-### 2.3. StampCard
-Tracks a participant's progress for a specific reward.
-- `current_stamps`
-- `status` (IN_PROGRESS, COMPLETED, REDEEMED)
+**Response (`StampRewardTemplate`):**
+```typescript
+interface StampRewardTemplate {
+  id: string;
+  title: string;
+  // ... other fields from DTO
+  is_published: boolean; // Default: false
+  created_at: Date;
+  updated_at: Date;
+}
+```
 
-### 2.4. StampEvent
-Log of every stamp addition.
-- `trigger_method`
-- `points_added` (if hybrid)
+#### `GET /admin/stamps/templates`
+List all Stamp Reward Templates (draft and published).
 
-## 3. API Endpoints
+**Request:** No payload.
 
-### 3.1. Admin Endpoints (`/admin/stamps`)
-- `POST /admin/stamps/templates`: Create a new template.
-- `GET /admin/stamps/templates`: List all templates.
-- `GET /admin/stamps/templates/:id`: Get template details.
-- `PATCH /admin/stamps/templates/:id`: Update template.
-- `POST /admin/stamps/templates/:id/publish`: Publish template.
+**Response:** `StampRewardTemplate[]`
 
-### 3.2. Business Endpoints (`/business/stamps`)
-- `GET /business/stamps/templates`: List published templates available for activation.
-- `POST /business/stamps/activate`: Activate a template.
-    - Payload: `{ templateId: string, custom_image?: string, operating_hours?: string }`
-- `GET /business/stamps/active`: List active rewards for the logged-in business.
-- `GET /business/stamps/stats`: Get simplified stats for rewards.
-- `POST /business/stamps/scan`: Add a stamp by scanning participant QR.
-    - Payload: `{ participantUniqueCode: string, businessStampRewardId: string }`
-- `POST /business/stamps/redeem`: Redeem a completed card.
-    - Payload: `{ participantUniqueCode: string }`
+#### `GET /admin/stamps/templates/:id`
+Get a specific template by ID.
 
-### 3.3. Participant Endpoints (`/participant/stamps`)
-- `GET /participant/stamps/my-cards`: List all stamp cards (active and past).
-- `GET /participant/stamps/card/:id`: Get detailed view of a card.
+**Response:** `StampRewardTemplate`
 
-## 4. Key Logic & Flows
+#### `PATCH /admin/stamps/templates/:id`
+Update a template.
 
-### 4.1. Adding a Stamp
-1. Business calls `/business/stamps/scan` with `participantUniqueCode`.
-2. System verifies:
-   - Business owns the reward.
-   - Reward is active.
-   - Trigger method is valid.
-3. System finds or creates a `StampCard` (IN_PROGRESS).
-4. Increments `current_stamps`.
-5. If `current_stamps >= required_stamps`, marks status as `COMPLETED`.
-6. If Hybrid Mode is enabled:
-   - Adds `hybrid_points_per_stamp` to `Participant.global_total_points`.
-   - If completed, adds `hybrid_completion_bonus_points`.
-7. Logs `StampEvent`.
+**Request Body (`UpdateStampTemplateDto`):**
+Same as `CreateStampTemplateDto` but all fields are optional.
 
-### 4.2. Redeeming a Reward
-1. Business calls `/business/stamps/redeem` with `participantUniqueCode`.
-2. System finds a `COMPLETED` card for that participant and business.
-3. Marks status as `REDEEMED`.
-4. Automatically creates a new empty `StampCard` for the user (repeatable flow).
-5. Updates analytics counters.
+**Response:** `StampRewardTemplate`
 
-## 5. Security & Validation
-- **RolesGuard**: Ensures only authorized roles access specific endpoints.
-- **Ownership Checks**: Participants can only view their own cards. Businesses can only modify their own rewards.
-- **Transactional Consistency**: Stamp addition and Point updates occur within a database transaction.
+#### `POST /admin/stamps/templates/:id/publish`
+Publish a template so businesses can see and activate it.
+
+**Response:** `StampRewardTemplate` (with `is_published: true`)
+
+---
+
+### 2.2 Business Endpoints
+Base URL: `/business/stamps`
+**Auth**: Business or Staff Role Required.
+
+#### `GET /business/stamps/templates`
+List published templates available for activation.
+
+**Response:** `StampRewardTemplate[]`
+
+#### `POST /business/stamps/activate`
+Activate a template for the business.
+
+**Request Body (`ActivateStampRewardDto`):**
+```typescript
+interface ActivateStampRewardDto {
+  templateId: string;        // Required. UUID of the template.
+  custom_image?: string;     // Optional. Overrides default image.
+  operating_hours?: string;  // Optional. e.g., "Mon-Fri 9-5"
+}
+```
+
+**Response (`BusinessStampReward`):**
+```typescript
+interface BusinessStampReward {
+  id: string;
+  template: StampRewardTemplate;
+  business: Business;
+  custom_image: string;
+  operating_hours: string;
+  is_active: boolean;
+  total_enrolled: number;
+  total_completions: number;
+  total_redemptions: number;
+}
+```
+
+#### `GET /business/stamps/active`
+List active stamp rewards for the logged-in business.
+
+**Response:** `BusinessStampReward[]`
+
+#### `GET /business/stamps/stats`
+Get simplified stats for active stamp rewards.
+
+**Response:**
+```typescript
+Array<{
+  id: string;
+  title: string;
+  total_enrolled: number;
+  total_completions: number;
+  total_redemptions: number;
+}>
+```
+
+#### `POST /business/stamps/scan`
+Scan a participant's QR code to add a stamp.
+
+**Request Body (`ScanParticipantQrDto`):**
+```typescript
+interface ScanParticipantQrDto {
+  participantUniqueCode: string;   // Required. User's 9-char code.
+  businessStampRewardId: string;   // Required. UUID of the reward program.
+}
+```
+
+**Response (`StampCard`):**
+```typescript
+interface StampCard {
+  id: string;
+  participant: Participant;
+  businessStampReward: BusinessStampReward;
+  current_stamps: number;
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'REDEEMED';
+  completed_at?: Date;
+  redeemed_at?: Date;
+}
+```
+
+#### `POST /business/stamps/redeem`
+Redeem a completed stamp card for a participant.
+
+**Request Body (`RedeemStampCardDto`):**
+```typescript
+interface RedeemStampCardDto {
+  participantUniqueCode: string; // Required.
+}
+```
+
+**Response (`StampCard`):**
+The updated card with `status: 'REDEEMED'`.
+
+---
+
+### 2.3 Participant Endpoints
+Base URL: `/participant/stamps`
+**Auth**: Participant Role Required.
+
+#### `GET /participant/stamps/my-cards`
+List all stamp cards (active and past) for the logged-in user.
+
+**Response:** `StampCard[]`
+
+#### `GET /participant/stamps/card/:id`
+Get detailed view of a specific stamp card.
+
+**Response:** `StampCard` (with full relations loaded)
+
+#### `GET /participant/stamps/business/:businessId`
+Get available stamp rewards for a specific business.
+
+**Response:** `BusinessStampReward[]`
+
+## 3. Enums
+
+### `StampTriggerMethod`
+- `QR_SCAN`: Business scans participant QR.
+- `PURCHASE`: Automatic after purchase (integration dependent).
+- `CHECK_IN`: Automatic after check-in (integration dependent).
+
+### `StampRewardType`
+- `FREE_ITEM`
+- `DISCOUNT`
+- `FREE_SERVICE`
+- `BONUS_POINTS`
+
+### `StampCardStatus`
+- `IN_PROGRESS`
+- `COMPLETED`
+- `REDEEMED`
