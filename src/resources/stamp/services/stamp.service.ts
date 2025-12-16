@@ -192,17 +192,30 @@ export class StampService {
   // --- Participant Methods ---
 
   async getMyStampCards(participantId: string): Promise<StampCard[]> {
-    return this.stampCardRepo.find({
-      where: { participant: { id: participantId } },
-      relations: ['businessStampReward', 'businessStampReward.template', 'businessStampReward.business'],
-    });
+    // Use QueryBuilder to include soft-deleted BusinessStampRewards (history)
+    // while ensuring the StampCard itself is not deleted.
+    return this.stampCardRepo.createQueryBuilder('card')
+        .leftJoinAndSelect('card.businessStampReward', 'reward')
+        .leftJoinAndSelect('reward.template', 'template')
+        .leftJoinAndSelect('reward.business', 'business')
+        .where('card.participantId = :participantId', { participantId })
+        .andWhere('card.deleted_at IS NULL')
+        .withDeleted() // Allows fetching relations that are soft-deleted
+        .getMany();
   }
 
   async getStampCardDetails(cardId: string, participantId: string): Promise<StampCard> {
-      const card = await this.stampCardRepo.findOne({
-          where: { id: cardId, participant: { id: participantId } },
-          relations: ['businessStampReward', 'businessStampReward.template', 'businessStampReward.business', 'events']
-      });
+      const card = await this.stampCardRepo.createQueryBuilder('card')
+          .leftJoinAndSelect('card.businessStampReward', 'reward')
+          .leftJoinAndSelect('reward.template', 'template')
+          .leftJoinAndSelect('reward.business', 'business')
+          .leftJoinAndSelect('card.events', 'events')
+          .where('card.id = :cardId', { cardId })
+          .andWhere('card.participantId = :participantId', { participantId })
+          .andWhere('card.deleted_at IS NULL')
+          .withDeleted()
+          .getOne();
+
       if (!card) throw new NotFoundException('Stamp card not found');
       return card;
   }
