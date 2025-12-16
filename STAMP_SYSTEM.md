@@ -37,42 +37,26 @@ interface CreateStampTemplateDto {
 }
 ```
 
-**Response (`StampRewardTemplate`):**
-```typescript
-interface StampRewardTemplate {
-  id: string;
-  title: string;
-  // ... other fields from DTO
-  is_published: boolean; // Default: false
-  created_at: Date;
-  updated_at: Date;
-}
-```
-
 #### `GET /admin/stamps/templates`
-List all Stamp Reward Templates (draft and published).
-
-**Request:** No payload.
-
-**Response:** `StampRewardTemplate[]`
+List all Stamp Reward Templates (draft, published, and archived).
 
 #### `GET /admin/stamps/templates/:id`
 Get a specific template by ID.
 
-**Response:** `StampRewardTemplate`
-
 #### `PATCH /admin/stamps/templates/:id`
 Update a template.
-
-**Request Body (`UpdateStampTemplateDto`):**
-Same as `CreateStampTemplateDto` but all fields are optional.
-
-**Response:** `StampRewardTemplate`
 
 #### `POST /admin/stamps/templates/:id/publish`
 Publish a template so businesses can see and activate it.
 
-**Response:** `StampRewardTemplate` (with `is_published: true`)
+#### `POST /admin/stamps/templates/:id/archive`
+Archive a template (hides it from active lists).
+
+#### `POST /admin/stamps/templates/:id/duplicate`
+Duplicate an existing template.
+
+#### `DELETE /admin/stamps/templates/:id`
+Soft delete a template.
 
 ---
 
@@ -82,8 +66,6 @@ Base URL: `/business/stamps`
 
 #### `GET /business/stamps/templates`
 List published templates available for activation.
-
-**Response:** `StampRewardTemplate[]`
 
 #### `POST /business/stamps/activate`
 Activate a template for the business.
@@ -97,61 +79,33 @@ interface ActivateStampRewardDto {
 }
 ```
 
-**Response (`BusinessStampReward`):**
-```typescript
-interface BusinessStampReward {
-  id: string;
-  template: StampRewardTemplate;
-  business: Business;
-  custom_image: string;
-  operating_hours: string;
-  is_active: boolean;
-  total_enrolled: number;
-  total_completions: number;
-  total_redemptions: number;
-}
-```
-
 #### `GET /business/stamps/active`
 List active stamp rewards for the logged-in business.
 
-**Response:** `BusinessStampReward[]`
+#### `GET /business/stamps/active/:id/customers`
+List customers (Stamp Cards) for a specific reward.
+
+#### `POST /business/stamps/active/:id/pause`
+Pause a reward program (prevents new earnings).
+
+#### `POST /business/stamps/active/:id/resume`
+Resume a paused reward program.
+
+#### `DELETE /business/stamps/active/:id`
+Deactivate (soft delete) a reward program.
 
 #### `GET /business/stamps/stats`
 Get simplified stats for active stamp rewards.
 
-**Response:**
-```typescript
-Array<{
-  id: string;
-  title: string;
-  total_enrolled: number;
-  total_completions: number;
-  total_redemptions: number;
-}>
-```
-
 #### `POST /business/stamps/scan`
-Scan a participant's QR code to add a stamp.
+Scan a participant's QR code to add a stamp. Also supports manual add by customer ID.
 
 **Request Body (`ScanParticipantQrDto`):**
 ```typescript
 interface ScanParticipantQrDto {
-  participantUniqueCode: string;   // Required. User's 9-char code.
-  businessStampRewardId: string;   // Required. UUID of the reward program.
-}
-```
-
-**Response (`StampCard`):**
-```typescript
-interface StampCard {
-  id: string;
-  participant: Participant;
-  businessStampReward: BusinessStampReward;
-  current_stamps: number;
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'REDEEMED';
-  completed_at?: Date;
-  redeemed_at?: Date;
+  participantUniqueCode?: string;   // Optional (One required). User's 9-char code.
+  customerId?: string;              // Optional (One required). User's UUID.
+  businessStampRewardId: string;    // Required. UUID of the reward program.
 }
 ```
 
@@ -161,12 +115,10 @@ Redeem a completed stamp card for a participant.
 **Request Body (`RedeemStampCardDto`):**
 ```typescript
 interface RedeemStampCardDto {
-  participantUniqueCode: string; // Required.
+  participantUniqueCode?: string; // Optional (One required).
+  stampCardId?: string;           // Optional (One required).
 }
 ```
-
-**Response (`StampCard`):**
-The updated card with `status: 'REDEEMED'`.
 
 ---
 
@@ -174,27 +126,37 @@ The updated card with `status: 'REDEEMED'`.
 Base URL: `/participant/stamps`
 **Auth**: Participant Role Required.
 
+#### `GET /participant/stamps/discover`
+Get all available active rewards from onboarded businesses.
+
+#### `POST /participant/stamps/start`
+Self-enroll in a stamp reward program (create initial card).
+
+**Request Body (`StartStampCardDto`):**
+```typescript
+interface StartStampCardDto {
+  businessStampRewardId: string; // Required.
+}
+```
+
+#### `GET /participant/stamps/stats`
+Get aggregated stats for the participant (Total cards, Completed, In Progress).
+
 #### `GET /participant/stamps/my-cards`
 List all stamp cards (active and past) for the logged-in user.
-
-**Response:** `StampCard[]`
 
 #### `GET /participant/stamps/card/:id`
 Get detailed view of a specific stamp card.
 
-**Response:** `StampCard` (with full relations loaded)
-
 #### `GET /participant/stamps/business/:businessId`
 Get available stamp rewards for a specific business.
-
-**Response:** `BusinessStampReward[]`
 
 ## 3. Enums
 
 ### `StampTriggerMethod`
-- `QR_SCAN`: Business scans participant QR.
-- `PURCHASE`: Automatic after purchase (integration dependent).
-- `CHECK_IN`: Automatic after check-in (integration dependent).
+- `QR_SCAN`
+- `PURCHASE`
+- `CHECK_IN`
 
 ### `StampRewardType`
 - `FREE_ITEM`

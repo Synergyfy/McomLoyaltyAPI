@@ -80,6 +80,12 @@ export class StampRewardTemplate extends AbstractBaseEntity {
   is_published: boolean;
 
   /**
+   * If true, this template is archived and not shown in active lists.
+   */
+  @Column({ default: false })
+  is_archived: boolean;
+
+  /**
    * Default image URL for the card, can be overridden by the business.
    */
   @Column({ nullable: true })

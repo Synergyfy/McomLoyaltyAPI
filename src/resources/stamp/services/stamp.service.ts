@@ -56,6 +56,12 @@ export class StampService {
     const query = this.templateRepo.createQueryBuilder('template');
     if (isPublishedOnly) {
       query.where('template.is_published = :isPublished', { isPublished: true });
+    } else {
+      // Admins should see everything, but maybe filter out archived?
+      // "Delete" usually implies soft-delete or hard-delete.
+      // "Archive" implies hiding.
+      // Let's assume list shows non-archived by default unless specified?
+      // Or admins see all. Let's return all for admins for now.
     }
     return query.getMany();
   }
@@ -74,6 +80,28 @@ export class StampService {
   async publishTemplate(id: string): Promise<StampRewardTemplate> {
     await this.templateRepo.update(id, { is_published: true });
     return this.findTemplateOne(id);
+  }
+
+  async deleteTemplate(id: string): Promise<void> {
+    // Soft delete
+    await this.templateRepo.softDelete(id);
+  }
+
+  async archiveTemplate(id: string): Promise<StampRewardTemplate> {
+    await this.templateRepo.update(id, { is_archived: true, is_published: false });
+    return this.findTemplateOne(id);
+  }
+
+  async duplicateTemplate(id: string): Promise<StampRewardTemplate> {
+    const original = await this.findTemplateOne(id);
+    const { id: _, created_at, updated_at, deleted_at, ...data } = original;
+    const duplicate = this.templateRepo.create({
+      ...data,
+      title: `${original.title} (Copy)`,
+      is_published: false,
+      is_archived: false,
+    });
+    return this.templateRepo.save(duplicate);
   }
 
   // --- Business Methods ---
@@ -128,22 +156,133 @@ export class StampService {
       }));
   }
 
+  async pauseReward(businessId: string, rewardId: string): Promise<BusinessStampReward> {
+    const reward = await this.businessRewardRepo.findOne({ where: { id: rewardId, business: { id: businessId } } });
+    if (!reward) throw new NotFoundException('Reward not found');
+    reward.is_active = false;
+    return this.businessRewardRepo.save(reward);
+  }
+
+  async resumeReward(businessId: string, rewardId: string): Promise<BusinessStampReward> {
+    const reward = await this.businessRewardRepo.findOne({ where: { id: rewardId, business: { id: businessId } } });
+    if (!reward) throw new NotFoundException('Reward not found');
+    reward.is_active = true;
+    return this.businessRewardRepo.save(reward);
+  }
+
+  async deactivateReward(businessId: string, rewardId: string): Promise<void> {
+    const reward = await this.businessRewardRepo.findOne({ where: { id: rewardId, business: { id: businessId } } });
+    if (!reward) throw new NotFoundException('Reward not found');
+    await this.businessRewardRepo.softDelete(rewardId);
+  }
+
+  async getRewardCustomers(businessId: string, rewardId: string): Promise<StampCard[]> {
+      // Return cards with participant details
+      return this.stampCardRepo.find({
+          where: {
+              businessStampReward: {
+                  id: rewardId,
+                  business: { id: businessId }
+              }
+          },
+          relations: ['participant']
+      });
+  }
+
   // --- Participant Methods ---
 
   async getMyStampCards(participantId: string): Promise<StampCard[]> {
-    return this.stampCardRepo.find({
-      where: { participant: { id: participantId } },
-      relations: ['businessStampReward', 'businessStampReward.template', 'businessStampReward.business'],
-    });
+    // Use QueryBuilder to include soft-deleted BusinessStampRewards (history)
+    // while ensuring the StampCard itself is not deleted.
+    return this.stampCardRepo.createQueryBuilder('card')
+        .leftJoinAndSelect('card.businessStampReward', 'reward')
+        .leftJoinAndSelect('reward.template', 'template')
+        .leftJoinAndSelect('reward.business', 'business')
+        .where('card.participantId = :participantId', { participantId })
+        .andWhere('card.deleted_at IS NULL')
+        .withDeleted() // Allows fetching relations that are soft-deleted
+        .getMany();
   }
 
   async getStampCardDetails(cardId: string, participantId: string): Promise<StampCard> {
-      const card = await this.stampCardRepo.findOne({
-          where: { id: cardId, participant: { id: participantId } },
-          relations: ['businessStampReward', 'businessStampReward.template', 'businessStampReward.business', 'events']
-      });
+      const card = await this.stampCardRepo.createQueryBuilder('card')
+          .leftJoinAndSelect('card.businessStampReward', 'reward')
+          .leftJoinAndSelect('reward.template', 'template')
+          .leftJoinAndSelect('reward.business', 'business')
+          .leftJoinAndSelect('card.events', 'events')
+          .where('card.id = :cardId', { cardId })
+          .andWhere('card.participantId = :participantId', { participantId })
+          .andWhere('card.deleted_at IS NULL')
+          .withDeleted()
+          .getOne();
+
       if (!card) throw new NotFoundException('Stamp card not found');
       return card;
+  }
+
+  async discoverRewards(): Promise<BusinessStampReward[]> {
+      // Business is considered onboarded if sector is not null.
+      // But we can't easily query "sector IS NOT NULL" in FindOptions where object without using IsNull().
+      // Using query builder for robustness.
+      return this.businessRewardRepo.createQueryBuilder('reward')
+          .leftJoinAndSelect('reward.template', 'template')
+          .leftJoinAndSelect('reward.business', 'business')
+          .where('reward.is_active = :isActive', { isActive: true })
+          .andWhere('business.sectorId IS NOT NULL')
+          .getMany();
+  }
+
+  async startCard(participantId: string, businessStampRewardId: string): Promise<StampCard> {
+      const participant = await this.participantRepo.findOne({ where: { id: participantId } });
+      if (!participant) throw new NotFoundException('Participant not found');
+
+      const reward = await this.businessRewardRepo.findOne({
+          where: { id: businessStampRewardId },
+          relations: ['template']
+      });
+      if (!reward || !reward.is_active) throw new NotFoundException('Reward not found or inactive');
+
+      // Check if already exists
+      const existing = await this.stampCardRepo.findOne({
+          where: {
+              participant: { id: participantId },
+              businessStampReward: { id: businessStampRewardId },
+              status: StampCardStatus.IN_PROGRESS
+          }
+      });
+
+      if (existing) return existing;
+
+      // Check if they have a completed one that needs redeeming?
+      const completed = await this.stampCardRepo.findOne({
+          where: {
+              participant: { id: participantId },
+              businessStampReward: { id: businessStampRewardId },
+              status: StampCardStatus.COMPLETED
+          }
+      });
+      if (completed) throw new BadRequestException('You have a completed card waiting to be redeemed');
+
+      const newCard = this.stampCardRepo.create({
+          participant,
+          businessStampReward: reward,
+          current_stamps: 0,
+          status: StampCardStatus.IN_PROGRESS
+      });
+
+      await this.businessRewardRepo.increment({ id: reward.id }, 'total_enrolled', 1);
+      return this.stampCardRepo.save(newCard);
+  }
+
+  async getParticipantStats(participantId: string) {
+      const cards = await this.stampCardRepo.find({ where: { participant: { id: participantId } } });
+      const completed = cards.filter(c => c.status === StampCardStatus.COMPLETED || c.status === StampCardStatus.REDEEMED).length;
+      const inProgress = cards.filter(c => c.status === StampCardStatus.IN_PROGRESS).length;
+      return {
+          total_cards: cards.length,
+          completed_cards: completed,
+          in_progress_cards: inProgress
+      };
   }
 
   // --- Core Logic (Scanning, Earning, Redeeming) ---
@@ -221,8 +360,16 @@ export class StampService {
 
   async addStampByScan(businessId: string, dto: ScanParticipantQrDto): Promise<StampCard> {
     // 1. Verify Business
-    // 2. Find Participant by uniqueCode
-    const participant = await this.participantRepo.findOne({ where: { uniqueCode: dto.participantUniqueCode } });
+    // 2. Find Participant (either by code or ID)
+    let participant: Participant;
+    if (dto.customerId) {
+        participant = await this.participantRepo.findOne({ where: { id: dto.customerId } });
+    } else if (dto.participantUniqueCode) {
+        participant = await this.participantRepo.findOne({ where: { uniqueCode: dto.participantUniqueCode } });
+    } else {
+        throw new BadRequestException('Either participantUniqueCode or customerId must be provided');
+    }
+
     if (!participant) throw new NotFoundException('Participant not found');
 
     // 3. Find Business Stamp Reward
@@ -347,34 +494,18 @@ export class StampService {
     });
   }
 
-  async redeemReward(businessId: string, participantUniqueCode: string, cardId?: string): Promise<StampCard> {
-     // Business scans participant QR to redeem
-     const participant = await this.participantRepo.findOne({ where: { uniqueCode: participantUniqueCode } });
-     if (!participant) throw new NotFoundException('Participant not found');
-
-     // Find the card.
-     // If cardId is provided, specific one.
-     // If not, find the one that is COMPLETED for this business.
-     // Since the business scans the USER QR, they might see a list of rewards?
-     // "Consumer goes to the business and shows their reward QR." -> This implies the QR is specific to the reward or the user shows their profile QR.
-     // "Business scans it to mark it as used."
-     // If the user shows a "Reward QR", that QR likely contains the Card ID.
-     // But the prompt says "Consumer shows their reward QR".
-     // If the backend has to handle "Scan Participant QR", and then find relevant rewards.
-     // Let's assume the request sends participantUniqueCode.
-     // We need to find the COMPLETED card for this business.
-
-     // Ideally, the "Reward QR" on the frontend encodes the `cardId`.
-     // If the input is just `participantUniqueCode`, we search for a completed card for this business.
-
+  async redeemReward(businessId: string, participantUniqueCode?: string, cardId?: string): Promise<StampCard> {
      let card: StampCard;
 
      if (cardId) {
          card = await this.stampCardRepo.findOne({
              where: { id: cardId },
-             relations: ['businessStampReward', 'businessStampReward.business']
+             relations: ['businessStampReward', 'businessStampReward.business', 'participant']
          });
-     } else {
+     } else if (participantUniqueCode) {
+         const participant = await this.participantRepo.findOne({ where: { uniqueCode: participantUniqueCode } });
+         if (!participant) throw new NotFoundException('Participant not found');
+
          // Find a completed card for this business
          card = await this.stampCardRepo.findOne({
              where: {
@@ -382,11 +513,13 @@ export class StampService {
                  businessStampReward: { business: { id: businessId } },
                  status: StampCardStatus.COMPLETED
              },
-             relations: ['businessStampReward', 'businessStampReward.business']
+             relations: ['businessStampReward', 'businessStampReward.business', 'participant']
          });
+     } else {
+         throw new BadRequestException('Either participantUniqueCode or stampCardId must be provided');
      }
 
-     if (!card) throw new NotFoundException('No completed stamp card found for this participant at this business');
+     if (!card) throw new NotFoundException('No completed stamp card found');
 
      if (card.businessStampReward.business.id !== businessId) {
          throw new ForbiddenException('This reward belongs to another business');
@@ -408,6 +541,9 @@ export class StampService {
         // Requirement 4.5: "After redemption: A new empty card starts automatically (if the reward is repeatable)"
         // I don't see a "repeatable" flag in the doc, but usually stamp cards are repeatable.
         // I will assume yes.
+
+        // Ensure participant relation is present
+        const participant = card.participant;
 
         const newCard = manager.create(StampCard, {
             participant,
