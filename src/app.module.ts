@@ -48,9 +48,11 @@ import { ReferralModule } from './resources/referral/referral.module';
 
 
 import { NetworkModule } from './resources/network/network.module';
+import { StampModule } from './resources/stamp/stamp.module';
 
 @Module({
   imports: [
+    StampModule,
     NetworkModule,
     SeederModule,
     MailModule,
