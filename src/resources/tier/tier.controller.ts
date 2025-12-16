@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { TierService } from './tier.service';
 import { CreateTierDto } from './dto/create-tier.dto';
 import { UpdateTierDto } from './dto/update-tier.dto';
@@ -7,12 +7,13 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { Tier } from './entities/tier.entity';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Admin } from '../admin/entities/admin.entity';
 import { Public } from 'src/common/decorators/public.decorator';
 import { TierBreakdownDto } from './dto/tier-breakdown.dto';
+import { TierType } from './entities/tier-type.enum';
 
 @ApiTags('Tier')
 @Controller('tier')
@@ -33,9 +34,10 @@ export class TierController {
   @Get()
   @Public()
   @ApiOperation({ summary: 'Get all tiers' })
+  @ApiQuery({ name: 'type', enum: [...Object.values(TierType), 'all'], required: false, description: 'Filter tiers by type (standard or seasonal). Default is all.' })
   @ApiResponse({ status: 200, description: 'Return all tiers.', type: [Tier] })
-  findAll() {
-    return this.tierService.findAll();
+  findAll(@Query('type') type?: string) {
+    return this.tierService.findAll(type);
   }
 
   @Get('breakdown')
