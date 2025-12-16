@@ -2,6 +2,7 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tier } from './entities/tier.entity';
+import { TierType } from './entities/tier-type.enum';
 import { CreateTierDto } from './dto/create-tier.dto';
 import { UpdateTierDto } from './dto/update-tier.dto';
 import { UpdateTierProgressionDto } from './dto/update-tier-progression.dto';
@@ -44,7 +45,12 @@ export class TierService {
     return savedTier;
   }
 
-  async findAll() {
+  async findAll(type?: string) {
+    if (type && type !== 'all') {
+      return await this.tierRepository.find({
+        where: { type: type as TierType },
+      });
+    }
     return await this.tierRepository.find();
   }
 
