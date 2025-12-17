@@ -564,13 +564,13 @@ export class PaymentService {
       });
       await this.paymentHistoryRepository.save(paymentHistory);
 
-      // Generate QR Plaques if applicable
-      if (tier.qrCodeCount > 0 && user.role === 'business') {
-        const business = await this.businessRepository.findOne({ where: { id: user.id } });
-        if (business) {
-          await this.qrPlaquesService.ensurePlaqueCountForBusiness(business, tier.qrCodeCount);
-        }
-      }
+      // Generate QR Plaques if applicable (Legacy - Removed in Plaque Refactor)
+      // if (tier.qrCodeCount > 0 && user.role === 'business') {
+      //   const business = await this.businessRepository.findOne({ where: { id: user.id } });
+      //   if (business) {
+      //     await this.qrPlaquesService.ensurePlaqueCountForBusiness(business, tier.qrCodeCount);
+      //   }
+      // }
 
       // Award Matching Points for Membership Payment
       if (user.role === 'business') {
