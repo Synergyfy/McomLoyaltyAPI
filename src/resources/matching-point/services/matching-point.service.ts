@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { MatchingPointConfig, MatchingPointActivityType } from '../entities/matching-point-config.entity';
 import { MatchingPointHistory } from '../entities/matching-point-history.entity';
 import { Business } from '../../business/entities/business.entity';
 import { MailService } from '../../../mail/mail.service';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { GetMatchingPointHistoryDto } from '../dto/get-history.dto';
 
 @Injectable()
 export class MatchingPointService {
@@ -77,6 +78,7 @@ export class MatchingPointService {
             points,
             activity_type: type,
             description,
+            balance_after: business.matching_points,
         });
         await this.historyRepository.save(history);
 
@@ -89,12 +91,22 @@ export class MatchingPointService {
         }
     }
 
-    async getHistory(businessId: string, paginationDto: PaginationDto) {
-        const { page, limit } = paginationDto;
+    async getHistory(businessId: string, paginationDto: GetMatchingPointHistoryDto) {
+        const { page, limit, activity_type, search } = paginationDto;
         const skip = (page - 1) * limit;
 
+        const where: any = { business: { id: businessId } };
+
+        if (activity_type) {
+            where.activity_type = activity_type;
+        }
+
+        if (search) {
+            where.description = Like(`%${search}%`);
+        }
+
         const [data, total] = await this.historyRepository.findAndCount({
-            where: { business: { id: businessId } },
+            where,
             order: { created_at: 'DESC' },
             skip,
             take: limit,
@@ -111,5 +123,13 @@ export class MatchingPointService {
             next: page < totalPages ? Number(page) + 1 : null,
             previous: page > 1 ? Number(page) - 1 : null,
         };
+    }
+
+    async getMatchingPointsBalance(businessId: string) {
+        const business = await this.businessRepository.findOne({ where: { id: businessId } });
+        if (!business) {
+            throw new NotFoundException(`Business with ID ${businessId} not found`);
+        }
+        return { matching_points: business.matching_points || 0 };
     }
 }
