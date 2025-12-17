@@ -1,15 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets, Like } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { QrPlaque, QrPlaqueStatus } from './entities/qr-plaque.entity';
-import { QrPlaqueScan } from './entities/qr-plaque-scan.entity';
 import { Business } from '../business/entities/business.entity';
 import { Partner } from '../partner/entities/partner.entity';
 import { Network, NetworkStatus } from '../network/entities/network.entity';
 import { CreateQrPlaqueDto } from './dto/create-qr-plaque.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
 import { QrPlaqueQueryDto, PlaqueSortOption } from './dto/qr-plaque-query.dto';
-import { GrowthActivityChartDto } from '../analytics/dto/growth-activity-chart.dto';
 import { MailService } from '../../mail/mail.service';
 import moment from 'moment';
 
@@ -18,8 +16,6 @@ export class QrPlaquesService {
     constructor(
         @InjectRepository(QrPlaque)
         private readonly qrPlaqueRepository: Repository<QrPlaque>,
-        @InjectRepository(QrPlaqueScan)
-        private readonly qrPlaqueScanRepository: Repository<QrPlaqueScan>,
         @InjectRepository(Partner)
         private readonly partnerRepository: Repository<Partner>,
         @InjectRepository(Business)
@@ -203,7 +199,7 @@ export class QrPlaquesService {
     async findOne(id: string) {
         const plaque = await this.qrPlaqueRepository.findOne({
             where: { id },
-            relations: ['assignedBusiness', 'assignedPartner', 'networkContact', 'scans']
+            relations: ['assignedBusiness', 'assignedPartner', 'networkContact']
         });
         if (!plaque) {
             throw new NotFoundException(`QR Plaque with ID ${id} not found`);
@@ -221,103 +217,6 @@ export class QrPlaquesService {
             where: { uniqueCode: code },
             relations: ['assignedPartner', 'assignedBusiness', 'networkContact'],
         });
-    }
-
-    async scanPlaque(code: string) {
-        // Fallback to searching by 'code' if 'uniqueCode' matches nothing, for legacy support?
-        // Or just search uniqueCode as primary.
-        let plaque = await this.qrPlaqueRepository.findOne({ where: { uniqueCode: code } });
-        if (!plaque) {
-            plaque = await this.qrPlaqueRepository.findOne({ where: { code } });
-        }
-
-        if (!plaque) {
-            throw new NotFoundException('QR Plaque not found');
-        }
-
-        // Record scan
-        const scan = this.qrPlaqueScanRepository.create({ qrPlaque: plaque });
-        await this.qrPlaqueScanRepository.save(scan);
-
-        return { contentUrl: plaque.contentUrl };
-    }
-
-    async getAdminStats() {
-        const totalPlaques = await this.qrPlaqueRepository.count();
-        const activePlaques = await this.qrPlaqueRepository.count({ where: { status: QrPlaqueStatus.ACTIVE } });
-        const totalScans = await this.qrPlaqueScanRepository.count();
-
-        const averageScansPerPlaque = totalPlaques > 0 ? totalScans / totalPlaques : 0;
-
-        return {
-            totalPlaques,
-            activePlaques,
-            totalScans,
-            averageScansPerPlaque: parseFloat(averageScansPerPlaque.toFixed(2))
-        };
-    }
-
-    async getChartData(startDate?: string, endDate?: string) {
-        const start = startDate ? moment(startDate).toDate() : moment().subtract(7, 'days').toDate();
-        const end = endDate ? moment(endDate).toDate() : moment().toDate();
-
-        const query = this.qrPlaqueScanRepository.createQueryBuilder('scan')
-            .select("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD') as date")
-            .addSelect("COUNT(scan.id) as count")
-            .where("scan.scanned_at BETWEEN :start AND :end", { start, end })
-            .groupBy("TO_CHAR(scan.scanned_at, 'YYYY-MM-DD')")
-            .orderBy("date", "ASC");
-
-        const result = await query.getRawMany();
-
-        const finalResult = [];
-        let current = moment(start);
-        const endMoment = moment(end);
-
-        while (current.isSameOrBefore(endMoment, 'day')) {
-            const dateStr = current.format('YYYY-MM-DD');
-            const found = result.find(r => r.date === dateStr);
-            finalResult.push({
-                date: dateStr,
-                count: found ? parseInt(found.count, 10) : 0
-            });
-            current.add(1, 'day');
-        }
-
-        return finalResult;
-    }
-
-    async getTopPerformingPlaques(query: GrowthActivityChartDto, limit: number = 10) {
-        const { startDate, endDate } = query;
-        const start = startDate ? moment(startDate).startOf('day').toDate() : moment().subtract(30, 'days').startOf('day').toDate();
-        const end = endDate ? moment(endDate).endOf('day').toDate() : moment().endOf('day').toDate();
-
-        const queryBuilder = this.qrPlaqueScanRepository.createQueryBuilder('scan')
-            .leftJoinAndSelect('scan.qrPlaque', 'plaque')
-            .leftJoinAndSelect('plaque.assignedPartner', 'partner')
-            .leftJoinAndSelect('plaque.assignedBusiness', 'business')
-            .select([
-                'partner.name AS partner_name',
-                'COUNT(scan.id) AS total_scans',
-                'plaque.status AS status',
-                'business.name AS business_name'
-            ])
-            .where('scan.scanned_at BETWEEN :start AND :end', { start, end })
-            .groupBy('plaque.id')
-            .addGroupBy('partner.name')
-            .addGroupBy('plaque.status')
-            .addGroupBy('business.name')
-            .orderBy('total_scans', 'DESC')
-            .limit(limit);
-
-        const results = await queryBuilder.getRawMany();
-
-        return results.map(row => ({
-            ownerName: row.partner_name || null,
-            totalScans: parseInt(row.total_scans, 10),
-            status: row.status,
-            fromBusiness: row.business_name || null
-        }));
     }
 
     async inviteUser(plaqueId: string, email: string) {

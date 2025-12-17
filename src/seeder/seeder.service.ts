@@ -32,7 +32,6 @@ import { SubCategory } from '../resources/subcategory/entities/subcategory.entit
 import { Gender } from '../common/gender.enum';
 import { Partner } from '../resources/partner/entities/partner.entity';
 import { QrPlaque, QrPlaqueStatus } from '../resources/qr-plaques/entities/qr-plaque.entity';
-import { QrPlaqueScan } from '../resources/qr-plaques/entities/qr-plaque-scan.entity';
 import { Membership } from '../resources/membership/entities/membership.entity';
 import { Tier } from '../resources/tier/entities/tier.entity';
 import { Coupon } from '../resources/coupon/entities/coupon.entity';
@@ -91,8 +90,6 @@ export class SeederService {
     private readonly partnerRepository: Repository<Partner>,
     @InjectRepository(QrPlaque)
     private readonly qrPlaqueRepository: Repository<QrPlaque>,
-    @InjectRepository(QrPlaqueScan)
-    private readonly qrPlaqueScanRepository: Repository<QrPlaqueScan>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
     @InjectRepository(Tier)
@@ -201,7 +198,7 @@ export class SeederService {
       });
     }
 
-    // Create QR Plaques and Scans
+    // Create QR Plaques (No Scans)
     const qrPlaques = await this.qrPlaqueRepository.save(
       Array.from({ length: 20 }, (_, i) => ({
         code: nanoid(9),
@@ -210,15 +207,6 @@ export class SeederService {
         assignedBusiness: businesses[i % businesses.length],
       })),
     );
-
-    for (const plaque of qrPlaques) {
-      await this.qrPlaqueScanRepository.save(
-        Array.from({ length: Math.floor(Math.random() * 20) + 5 }, () => ({
-          qrPlaque: plaque,
-          scannedAt: this.getDateDaysAgo(Math.floor(Math.random() * 90)),
-        })),
-      );
-    }
 
     // Create Referrals
     for (let i = 0; i < businesses.length; i++) {
@@ -552,7 +540,6 @@ export class SeederService {
       'subcategories',
       'partners',
       'qr_plaques',
-      'qr_plaque_scans',
       'membership',
       'tier',
       'payment_histories',

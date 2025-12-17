@@ -1,9 +1,8 @@
-import { Entity, Column, ManyToOne, JoinColumn, OneToMany, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { Partner } from '../../partner/entities/partner.entity';
 import { Network } from '../../network/entities/network.entity';
-import { QrPlaqueScan } from './qr-plaque-scan.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum QrPlaqueStatus {
@@ -92,9 +91,6 @@ export class QrPlaque extends AbstractBaseEntity {
     @ApiProperty({ description: 'Code for accepting the assignment (sent to network contact)' })
     @Column({ name: 'assignment_code', nullable: true, select: false })
     assignmentCode: string;
-
-    @OneToMany(() => QrPlaqueScan, (scan) => scan.qrPlaque)
-    scans: QrPlaqueScan[];
 
     // Removed link, pendingInviteEmail, pendingInviteCode as they are replaced by new logic/fields
 }
