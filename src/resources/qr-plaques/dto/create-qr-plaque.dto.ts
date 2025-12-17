@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength, IsEnum, IsNumber, Min, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { QrPlaqueStatus } from '../entities/qr-plaque.entity';
 
 export class CreateQrPlaqueDto {
     @ApiProperty({
@@ -45,4 +46,48 @@ export class CreateQrPlaqueDto {
     @IsNotEmpty()
     @IsUrl()
     contentUrl: string;
+
+    @ApiProperty({
+        description: 'Status of the plaque',
+        enum: QrPlaqueStatus,
+        required: false,
+        default: QrPlaqueStatus.PENDING
+    })
+    @IsOptional()
+    @IsEnum(QrPlaqueStatus)
+    status?: QrPlaqueStatus;
+
+    @ApiProperty({
+        description: 'Sale price in GBP (if putting up for sale)',
+        example: 99.99,
+        required: false,
+    })
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    price?: number;
+
+    @ApiProperty({
+        description: 'ID of the partner to assign as owner',
+        required: false,
+    })
+    @IsOptional()
+    @IsUUID()
+    assignedPartnerId?: string;
+
+    @ApiProperty({
+        description: 'ID of the business to assign',
+        required: false,
+    })
+    @IsOptional()
+    @IsUUID()
+    assignedBusinessId?: string;
+
+    @ApiProperty({
+        description: 'ID of the network contact to assign to',
+        required: false,
+    })
+    @IsOptional()
+    @IsUUID()
+    networkContactId?: string;
 }

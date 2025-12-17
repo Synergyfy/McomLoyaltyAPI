@@ -34,7 +34,7 @@ export class QrPlaquesService {
         return code;
     }
 
-    async create(createQrPlaqueDto: CreateQrPlaqueDto, businessId: string) {
+    async create(createQrPlaqueDto: CreateQrPlaqueDto, ownerBusinessId?: string) {
         let isUnique = false;
         let uniqueCode = '';
         while (!isUnique) {
@@ -45,18 +45,46 @@ export class QrPlaquesService {
             }
         }
 
-        const business = await this.businessRepository.findOne({ where: { id: businessId } });
-        if (!business) {
-            throw new NotFoundException('Business not found');
+        const { assignedBusinessId, assignedPartnerId, networkContactId, status, ...rest } = createQrPlaqueDto;
+        const plaque = this.qrPlaqueRepository.create({
+            ...rest,
+            uniqueCode,
+            code: uniqueCode, // Keeping 'code' synced
+            status: status || QrPlaqueStatus.PENDING,
+        });
+
+        // Determine Business Assignment
+        let targetBusinessId = ownerBusinessId || assignedBusinessId;
+        if (targetBusinessId) {
+            const business = await this.businessRepository.findOne({ where: { id: targetBusinessId } });
+            if (!business) {
+                throw new NotFoundException('Business not found');
+            }
+            plaque.assignedBusiness = business;
+            if (!status) {
+                plaque.status = QrPlaqueStatus.PENDING; // Default for business creation
+            }
         }
 
-        const plaque = this.qrPlaqueRepository.create({
-            ...createQrPlaqueDto,
-            uniqueCode,
-            code: uniqueCode, // Keeping 'code' synced for now as per entity decision
-            assignedBusiness: business,
-            status: QrPlaqueStatus.PENDING,
-        });
+        // Determine Partner Assignment
+        if (assignedPartnerId) {
+            const partner = await this.partnerRepository.findOne({ where: { id: assignedPartnerId } });
+            if (!partner) {
+                throw new NotFoundException('Partner not found');
+            }
+            plaque.assignedPartner = partner;
+        }
+
+        // Determine Network Assignment
+        if (networkContactId) {
+            const network = await this.networkRepository.findOne({ where: { id: networkContactId } });
+            if (!network) {
+                throw new NotFoundException('Network contact not found');
+            }
+            plaque.networkContact = network;
+            // If assigning to network, maybe set status if not provided? 
+            // We'll trust DTO or default.
+        }
 
         return this.qrPlaqueRepository.save(plaque);
     }
