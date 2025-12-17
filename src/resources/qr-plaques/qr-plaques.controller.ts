@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Req, Patch, Delete, Query, UnauthorizedException } from '@nestjs/common';
 import { QrPlaquesService } from './qr-plaques.service';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -9,7 +9,6 @@ import { CreateQrPlaqueDto } from './dto/create-qr-plaque.dto';
 import { UpdateQrPlaqueDto } from './dto/update-qr-plaque.dto';
 import { QrPlaqueQueryDto } from './dto/qr-plaque-query.dto';
 import { Public } from '../../common/decorators/public.decorator';
-import { GrowthActivityChartDto } from '../analytics/dto/growth-activity-chart.dto';
 import { QrPlaque } from './entities/qr-plaque.entity';
 
 @ApiTags('QR Plaques')
@@ -83,45 +82,7 @@ export class QrPlaquesController {
         return this.qrPlaquesService.remove(id);
     }
 
-    // Stats & Analytics
-
-    @Get('admin/stats')
-    @UseGuards(AuthGuard('jwt'), RolesGuard)
-    @Roles(Role.Admin)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get QR plaque statistics (Admin only)' })
-    async getAdminStats() {
-        return this.qrPlaquesService.getAdminStats();
-    }
-
-    @Get('admin/analytics/chart')
-    @UseGuards(AuthGuard('jwt'), RolesGuard)
-    @Roles(Role.Admin)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get QR plaque scan chart data (Admin only)' })
-    @ApiQuery({ name: 'startDate', required: false, type: String })
-    @ApiQuery({ name: 'endDate', required: false, type: String })
-    async getChartData(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
-        return this.qrPlaquesService.getChartData(startDate, endDate);
-    }
-
-    @Get('admin/analytics/top-performing')
-    @UseGuards(AuthGuard('jwt'), RolesGuard)
-    @Roles(Role.Admin)
-    @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get top 10 performing QR plaques (Admin only)' })
-    async getTopPerforming(@Query() query: GrowthActivityChartDto) {
-        return this.qrPlaquesService.getTopPerformingPlaques(query);
-    }
-
     // Public/Shared
-
-    @Public()
-    @Get('scan/:code')
-    @ApiOperation({ summary: 'Scan a QR plaque and get the content URL' })
-    async scanPlaque(@Param('code') code: string) {
-        return this.qrPlaquesService.scanPlaque(code);
-    }
 
     @Public()
     @Get(':code')
