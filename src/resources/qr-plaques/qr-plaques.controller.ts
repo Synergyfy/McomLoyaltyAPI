@@ -18,13 +18,17 @@ export class QrPlaquesController {
 
     @Post()
     @UseGuards(AuthGuard('jwt'), RolesGuard)
-    @Roles(Role.Business)
+    @Roles(Role.Business, Role.Admin)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Create a new QR Plaque (Business only)' })
+    @ApiOperation({ summary: 'Create a new QR Plaque (Business or Admin)' })
     @ApiBody({ type: CreateQrPlaqueDto })
     @ApiResponse({ status: 201, description: 'The plaque has been successfully created.', type: QrPlaque })
     async create(@Req() req, @Body() createQrPlaqueDto: CreateQrPlaqueDto) {
-        return this.qrPlaquesService.create(createQrPlaqueDto, req.user.id);
+        let businessId = null;
+        if (req.user.role === Role.Business) {
+            businessId = req.user.id;
+        }
+        return this.qrPlaquesService.create(createQrPlaqueDto, businessId);
     }
 
     @Get()
