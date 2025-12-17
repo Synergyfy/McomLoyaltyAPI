@@ -10,6 +10,7 @@ import { Role } from '../../../common/role.enum';
 import { UpdateMatchingPointConfigDto } from '../dto/update-config.dto';
 import { ManualAdjustmentDto } from '../dto/manual-adjustment.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { GetMatchingPointHistoryDto } from '../dto/get-history.dto';
 
 @ApiTags('Matching Points')
 @Controller('matching-points')
@@ -91,7 +92,24 @@ export class MatchingPointController {
         }
     })
     @ApiForbiddenResponse({ description: 'Forbidden - Business access required' })
-    async getHistory(@Request() req, @Query() paginationDto: PaginationDto) {
-        return this.matchingPointService.getHistory(req.user.id, paginationDto);
+    async getHistory(@Request() req, @Query() queryDto: GetMatchingPointHistoryDto) {
+        return this.matchingPointService.getHistory(req.user.id, queryDto);
+    }
+
+    @Get('balance')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Get current matching point balance for business' })
+    @ApiResponse({
+        status: 200,
+        description: 'Current matching point balance',
+        schema: {
+            type: 'object',
+            properties: {
+                matching_points: { type: 'number' },
+            },
+        },
+    })
+    async getBalance(@Request() req) {
+        return this.matchingPointService.getMatchingPointsBalance(req.user.id);
     }
 }
