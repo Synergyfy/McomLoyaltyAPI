@@ -190,11 +190,17 @@ export class BusinessService {
                 await this.businessRepository.save(referrer);
 
                 // Award matching points
-                await this.matchingPointService.addPoints(
+                const matchingPoints = await this.matchingPointService.addPoints(
                     referrer.id,
                     MatchingPointActivityType.REFERRAL,
                     `Referral Completed: ${business.name}`,
                 );
+
+                // Update referral with points earned
+                if (matchingPoints > 0) {
+                    referral.pointsEarned = matchingPoints;
+                    await this.referralRepository.save(referral);
+                }
             }
         }
     }

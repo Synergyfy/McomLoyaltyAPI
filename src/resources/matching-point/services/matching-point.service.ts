@@ -50,14 +50,15 @@ export class MatchingPointService {
         return this.configRepository.find();
     }
 
-    async addPoints(businessId: string, type: MatchingPointActivityType, description?: string) {
+    async addPoints(businessId: string, type: MatchingPointActivityType, description?: string): Promise<number> {
         const config = await this.configRepository.findOne({ where: { activity_type: type } });
 
         if (!config || !config.is_active || config.points <= 0) {
-            return; // Config disabled or zero points
+            return 0; // Config disabled or zero points
         }
 
         await this._processPointAddition(businessId, config.points, type, description || `Points for ${type}`);
+        return config.points;
     }
 
     async manualAdjustment(businessId: string, points: number, description: string) {

@@ -2,13 +2,11 @@ import { ApiProperty } from '@nestjs/swagger';
 
 class ReferredBusinessDto {
   @ApiProperty({ description: 'The name of the referred business.' })
-  name: string;
+  @ApiProperty({ description: 'The email of the referred business if not fully signed up.' })
+  email?: string;
 
-  @ApiProperty({ description: 'The date the business was referred.' })
-  referredAt: Date;
-
-  @ApiProperty({ description: 'The status of the referral.' })
-  status: string;
+  @ApiProperty({ description: 'The points earned from this referral.' })
+  pointsEarned: number;
 }
 
 export class ReferralAnalyticsDto {
@@ -23,4 +21,16 @@ export class ReferralAnalyticsDto {
 
   @ApiProperty({ description: 'A list of referred businesses.', type: [ReferredBusinessDto] })
   referredBusinesses: ReferredBusinessDto[];
+
+  @ApiProperty({ description: 'Current page number.' })
+  page: number;
+
+  @ApiProperty({ description: 'Items per page.' })
+  limit: number;
+
+  @ApiProperty({ description: 'Total number of items.' })
+  total: number;
+
+  @ApiProperty({ description: 'Total number of pages.' })
+  totalPages: number;
 }
