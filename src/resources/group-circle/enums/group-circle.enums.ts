@@ -43,3 +43,8 @@ export enum PaymentProvider {
     PAYPAL = 'PAYPAL',
     MANUAL = 'MANUAL',
 }
+
+export enum GroupMessageType {
+    GROUP = 'GROUP',
+    DIRECT = 'DIRECT',
+}
