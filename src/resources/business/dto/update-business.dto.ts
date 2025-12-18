@@ -22,6 +22,11 @@ export class UpdateBusinessDto {
   @IsOptional()
   address?: string;
 
+  @ApiProperty({ description: 'The postal code of the business', required: false })
+  @IsString()
+  @IsOptional()
+  postalCode?: string;
+
   @ApiProperty({ description: 'The website of the business', required: false })
   @IsString()
   @IsOptional()

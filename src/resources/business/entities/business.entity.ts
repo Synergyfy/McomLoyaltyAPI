@@ -36,6 +36,10 @@ export class Business extends AbstractBaseEntity {
   @Column({ nullable: true })
   address: string;
 
+  @ApiProperty({ description: 'The postal code of the business' })
+  @Column()
+  postalCode: string;
+
   @Index()
   @ApiProperty({ type: () => Sector, description: 'The sector the business belongs to' })
   @ManyToOne(() => Sector, (sector) => sector.businesses)

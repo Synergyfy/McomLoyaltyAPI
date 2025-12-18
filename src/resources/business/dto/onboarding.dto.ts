@@ -12,6 +12,11 @@ export class OnboardingDto {
   @IsNotEmpty()
   address: string;
 
+  @ApiProperty({ description: 'The postal code of the business.', example: '12345' })
+  @IsString()
+  @IsNotEmpty()
+  postalCode: string;
+
   @ApiProperty({ description: 'The UUID of the sector the business belongs to.', example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
   @IsUUID()
   @IsNotEmpty()
