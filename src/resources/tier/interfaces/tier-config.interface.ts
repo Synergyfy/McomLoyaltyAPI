@@ -32,6 +32,13 @@ export interface ProgressionConditions {
     minRevenue?: number;
 }
 
+export interface SmartMoneyConfig {
+    maxDurationDays: number;
+    maxContributionAmount: number;
+    minMembers: number;
+    maxMembers: number;
+}
+
 export interface ProgressionBenefits {
     quotas?: Partial<TierQuotas>;
     featureFlags?: Partial<TierFeatureFlags>;
@@ -86,6 +93,9 @@ export interface TierConfig {
 
     // Trial Configuration
     trial?: TrialTierConfig;
+
+    // Smart Money Configuration
+    smartMoney?: SmartMoneyConfig;
 
     // Pricing overrides for variants
     monthly_price?: number;

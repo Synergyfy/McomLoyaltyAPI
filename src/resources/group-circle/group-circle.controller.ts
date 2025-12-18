@@ -6,6 +6,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { AssignBankerDto } from './dto/assign-banker.dto';
 import { SwapDrawDatesDto } from './dto/swap-draw-dates.dto';
+import { RecordContributionDto } from './dto/record-contribution.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Role } from '../../common/role.enum';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -18,6 +19,7 @@ import { GroupCircle } from './entities/group-circle.entity';
 import { GroupCircleMember } from './entities/group-circle-member.entity';
 import { GroupMessage } from './entities/group-message.entity';
 import { GroupActivity } from './entities/group-activity.entity';
+import { GroupCircleContribution } from './entities/group-circle-contribution.entity';
 
 @ApiTags('Group Circles')
 @ApiBearerAuth()
@@ -72,6 +74,22 @@ export class GroupCircleController {
     @ApiResponse({ status: 200, description: 'Draw dates swapped.', schema: { example: { message: 'Draw dates swapped' } } })
     swapDrawDates(@Param('id') id: string, @Body() dto: SwapDrawDatesDto, @CurrentUser() business: Business) {
         return this.service.swapDrawDates(id, dto, business.id);
+    }
+
+    @Post(':id/contributions')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Record a contribution (Smart Money)' })
+    @ApiResponse({ status: 201, description: 'Contribution recorded.', type: GroupCircleContribution })
+    recordContribution(@Param('id') id: string, @Body() dto: RecordContributionDto, @CurrentUser() business: Business) {
+        return this.service.recordContribution(id, dto, business.id);
+    }
+
+    @Get(':id/contributions')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Get contributions list' })
+    @ApiResponse({ status: 200, description: 'List of contributions.', type: [GroupCircleContribution] })
+    getContributions(@Param('id') id: string, @CurrentUser() business: Business) {
+        return this.service.getContributions(id, business.id);
     }
 
     @Post(':id/members')

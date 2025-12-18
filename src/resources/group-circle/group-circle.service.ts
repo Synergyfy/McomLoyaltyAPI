@@ -5,12 +5,14 @@ import { GroupCircle } from './entities/group-circle.entity';
 import { GroupCircleMember } from './entities/group-circle-member.entity';
 import { GroupMessage } from './entities/group-message.entity';
 import { GroupActivity } from './entities/group-activity.entity';
+import { GroupCircleContribution, ContributionStatus } from './entities/group-circle-contribution.entity';
 import { CreateGroupCircleDto } from './dto/create-group-circle.dto';
 import { UpdateGroupCircleDto } from './dto/update-group-circle.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { AssignBankerDto } from './dto/assign-banker.dto';
 import { SwapDrawDatesDto } from './dto/swap-draw-dates.dto';
+import { RecordContributionDto } from './dto/record-contribution.dto';
 import { NetworkList } from '../network/entities/network-list.entity';
 import { Network } from '../network/entities/network.entity';
 import { Business } from '../business/entities/business.entity';
@@ -25,6 +27,7 @@ export class GroupCircleService {
         @InjectRepository(GroupCircleMember) private memberRepo: Repository<GroupCircleMember>,
         @InjectRepository(GroupMessage) private messageRepo: Repository<GroupMessage>,
         @InjectRepository(GroupActivity) private activityRepo: Repository<GroupActivity>,
+        @InjectRepository(GroupCircleContribution) private contributionRepo: Repository<GroupCircleContribution>,
         @InjectRepository(NetworkList) private listRepo: Repository<NetworkList>,
         @InjectRepository(Network) private networkRepo: Repository<Network>,
     ) { }
@@ -53,8 +56,13 @@ export class GroupCircleService {
         });
 
         if (createDto.type === GroupCircleType.SMART_MONEY) {
-            if (allNetworks.size < 6 || allNetworks.size > 12) {
-                 throw new BadRequestException('Smart Money Circles must have between 6 and 12 members.');
+            const membership = await this.circleRepo.manager.findOne(Membership, {
+                 where: { business: { id: business.id }, status: MembershipStatus.ACTIVE },
+                 relations: ['tier']
+            });
+            const limits = await this.getSmartMoneyLimits(membership);
+            if (allNetworks.size < limits.minMembers || allNetworks.size > limits.maxMembers) {
+                 throw new BadRequestException(`Smart Money Circles must have between ${limits.minMembers} and ${limits.maxMembers} members.`);
             }
         }
 
@@ -89,35 +97,39 @@ export class GroupCircleService {
         return this.findOne(savedCircle.id, business.id);
     }
 
+    private async getSmartMoneyLimits(membership: Membership) {
+        if (!membership) throw new BadRequestException('Active membership required for Smart Money Circle');
+
+        let limits = membership.tier.configuration?.smartMoney;
+
+        // Fallback for default tiers if not explicitly configured
+        if (!limits) {
+             const tierName = membership.tier.name.toUpperCase();
+             if (tierName.includes('BRONZE')) limits = { maxDurationDays: 90, maxContributionAmount: 25, minMembers: 6, maxMembers: 12 };
+             else if (tierName.includes('SILVER')) limits = { maxDurationDays: 180, maxContributionAmount: 50, minMembers: 6, maxMembers: 12 };
+             else if (tierName.includes('GOLD')) limits = { maxDurationDays: 270, maxContributionAmount: 75, minMembers: 6, maxMembers: 12 };
+             else if (tierName.includes('PLATINUM')) limits = { maxDurationDays: 360, maxContributionAmount: 100, minMembers: 6, maxMembers: 12 };
+        }
+
+        if (!limits) {
+             throw new BadRequestException('Smart Money not configured for this tier');
+        }
+        return limits;
+    }
+
     async validateSmartMoneyRules(dto: CreateGroupCircleDto, business: Business) {
         const membership = await this.circleRepo.manager.findOne(Membership, {
              where: { business: { id: business.id }, status: MembershipStatus.ACTIVE },
              relations: ['tier']
         });
+        const limits = await this.getSmartMoneyLimits(membership);
 
-        if (!membership) {
-            throw new BadRequestException('Active membership required for Smart Money Circle');
+        if (dto.duration > limits.maxDurationDays) {
+             throw new BadRequestException(`Duration ${dto.duration} exceeds limit for ${membership.tier.name} tier (${limits.maxDurationDays})`);
         }
 
-        const tierName = membership.tier.name.toUpperCase();
-        // Assuming tier names contain BRONZE, SILVER, GOLD, PLATINUM
-        let limit = null;
-        if (tierName.includes('BRONZE')) limit = { duration: 90, amount: 25 };
-        else if (tierName.includes('SILVER')) limit = { duration: 180, amount: 50 };
-        else if (tierName.includes('GOLD')) limit = { duration: 270, amount: 75 };
-        else if (tierName.includes('PLATINUM')) limit = { duration: 360, amount: 100 };
-
-        if (!limit) {
-             // If custom tier, we might allow or block. Blocking for safety as per requirements.
-             throw new BadRequestException('Invalid membership tier for Smart Money');
-        }
-
-        if (dto.duration > limit.duration) {
-             throw new BadRequestException(`Duration ${dto.duration} exceeds limit for ${tierName} tier (${limit.duration})`);
-        }
-
-        if (dto.contributionAmount && dto.contributionAmount > limit.amount) {
-             throw new BadRequestException(`Contribution ${dto.contributionAmount} exceeds limit for ${tierName} tier (£${limit.amount})`);
+        if (dto.contributionAmount && dto.contributionAmount > limits.maxContributionAmount) {
+             throw new BadRequestException(`Contribution ${dto.contributionAmount} exceeds limit for ${membership.tier.name} tier (£${limits.maxContributionAmount})`);
         }
     }
 
@@ -193,6 +205,36 @@ export class GroupCircleService {
 
         await this.memberRepo.save([m1, m2]);
         return { message: 'Draw dates swapped' };
+    }
+
+    async recordContribution(id: string, dto: RecordContributionDto, businessId: string) {
+        const circle = await this.findOne(id, businessId);
+        if (circle.type !== GroupCircleType.SMART_MONEY) throw new BadRequestException('Only Smart Money circles have contributions');
+
+        const member = await this.memberRepo.findOne({ where: { id: dto.memberId, groupCircle: { id } } });
+        if (!member) throw new NotFoundException('Member not found');
+
+        const contribution = this.contributionRepo.create({
+            groupCircle: circle,
+            member: member,
+            amount: dto.amount,
+            round: dto.round,
+            status: dto.status || ContributionStatus.PENDING,
+            paidAt: dto.status === ContributionStatus.PAID ? new Date() : null
+        });
+
+        await this.contributionRepo.save(contribution);
+        await this.logActivity(circle, 'CONTRIBUTION_RECORDED', { amount: dto.amount, memberId: member.id });
+        return contribution;
+    }
+
+    async getContributions(id: string, businessId: string) {
+        await this.findOne(id, businessId);
+        return await this.contributionRepo.find({
+            where: { groupCircle: { id } },
+            order: { created_at: 'DESC' },
+            relations: ['member', 'member.network']
+        });
     }
 
     async addMember(id: string, dto: AddMemberDto, businessId: string) {
