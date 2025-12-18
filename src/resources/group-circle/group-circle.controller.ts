@@ -14,6 +14,10 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Business } from '../business/entities/business.entity';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { GroupCircle } from './entities/group-circle.entity';
+import { GroupCircleMember } from './entities/group-circle-member.entity';
+import { GroupMessage } from './entities/group-message.entity';
+import { GroupActivity } from './entities/group-activity.entity';
 
 @ApiTags('Group Circles')
 @ApiBearerAuth()
@@ -25,6 +29,7 @@ export class GroupCircleController {
     @Post()
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Create a new Group Circle' })
+    @ApiResponse({ status: 201, description: 'Group Circle created.', type: GroupCircle })
     create(@Body() dto: CreateGroupCircleDto, @CurrentUser() business: Business) {
         return this.service.create(dto, business);
     }
@@ -32,6 +37,7 @@ export class GroupCircleController {
     @Get()
     @Roles(Role.Business)
     @ApiOperation({ summary: 'List all Group Circles' })
+    @ApiResponse({ status: 200, description: 'List of Group Circles.', type: [GroupCircle] })
     findAll(@Query(new ValidationPipe({ transform: true })) query: PaginationDto, @CurrentUser() business: Business) {
         return this.service.findAll(query, business.id);
     }
@@ -39,6 +45,7 @@ export class GroupCircleController {
     @Get(':id')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get details of a Group Circle' })
+    @ApiResponse({ status: 200, description: 'Group Circle details.', type: GroupCircle })
     findOne(@Param('id') id: string, @CurrentUser() business: Business) {
         return this.service.findOne(id, business.id);
     }
@@ -46,6 +53,7 @@ export class GroupCircleController {
     @Patch(':id')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Update Group Circle' })
+    @ApiResponse({ status: 200, description: 'Group Circle updated.', type: GroupCircle })
     update(@Param('id') id: string, @Body() dto: UpdateGroupCircleDto, @CurrentUser() business: Business) {
         return this.service.update(id, dto, business.id);
     }
@@ -53,6 +61,7 @@ export class GroupCircleController {
     @Post(':id/assign-banker')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Assign a member as Banker' })
+    @ApiResponse({ status: 200, description: 'Banker assigned.', type: GroupCircleMember })
     assignBanker(@Param('id') id: string, @Body() dto: AssignBankerDto, @CurrentUser() business: Business) {
         return this.service.assignBanker(id, dto, business.id);
     }
@@ -60,6 +69,7 @@ export class GroupCircleController {
     @Post(':id/swap-draw-dates')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Swap draw dates between two members' })
+    @ApiResponse({ status: 200, description: 'Draw dates swapped.', schema: { example: { message: 'Draw dates swapped' } } })
     swapDrawDates(@Param('id') id: string, @Body() dto: SwapDrawDatesDto, @CurrentUser() business: Business) {
         return this.service.swapDrawDates(id, dto, business.id);
     }
@@ -67,6 +77,7 @@ export class GroupCircleController {
     @Post(':id/members')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Add a member to the circle' })
+    @ApiResponse({ status: 201, description: 'Member added.', type: GroupCircleMember })
     addMember(@Param('id') id: string, @Body() dto: AddMemberDto, @CurrentUser() business: Business) {
         return this.service.addMember(id, dto, business.id);
     }
@@ -74,6 +85,7 @@ export class GroupCircleController {
     @Delete(':id/members/:memberId')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Remove a member from the circle' })
+    @ApiResponse({ status: 200, description: 'Member removed.' })
     removeMember(@Param('id') id: string, @Param('memberId') memberId: string, @CurrentUser() business: Business) {
         return this.service.removeMember(id, memberId, business.id);
     }
@@ -81,6 +93,7 @@ export class GroupCircleController {
     @Post(':id/messages')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Send a message to the circle' })
+    @ApiResponse({ status: 201, description: 'Message sent.', type: GroupMessage })
     sendMessage(@Param('id') id: string, @Body() dto: SendMessageDto, @CurrentUser() business: Business) {
         return this.service.sendMessage(id, dto, business);
     }
@@ -88,6 +101,7 @@ export class GroupCircleController {
     @Get(':id/messages')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get messages from the circle' })
+    @ApiResponse({ status: 200, description: 'List of messages.', type: [GroupMessage] })
     getMessages(@Param('id') id: string, @CurrentUser() business: Business) {
         return this.service.getMessages(id, business.id);
     }
@@ -95,6 +109,7 @@ export class GroupCircleController {
     @Get(':id/activities')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get activity log' })
+    @ApiResponse({ status: 200, description: 'Activity log.', type: [GroupActivity] })
     getActivities(@Param('id') id: string, @CurrentUser() business: Business) {
         return this.service.getActivities(id, business.id);
     }

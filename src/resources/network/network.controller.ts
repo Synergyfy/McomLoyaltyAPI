@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Business } from '../business/entities/business.entity';
+import { NetworkList } from './entities/network-list.entity';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Network')
@@ -96,7 +97,7 @@ export class NetworkController {
     @Post('lists')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Create a new network list' })
-    @ApiResponse({ status: 201, description: 'List created successfully.' })
+    @ApiResponse({ status: 201, description: 'List created successfully.', type: NetworkList })
     createList(
         @Body() createNetworkListDto: CreateNetworkListDto,
         @CurrentUser() business: Business,
@@ -107,7 +108,7 @@ export class NetworkController {
     @Get('lists')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get all network lists' })
-    @ApiResponse({ status: 200, description: 'Return all network lists.' })
+    @ApiResponse({ status: 200, description: 'Return all network lists.', type: [NetworkList] })
     findAllLists(
         @Query(new ValidationPipe({ transform: true })) query: PaginationDto,
         @CurrentUser() business: Business,
@@ -118,7 +119,7 @@ export class NetworkController {
     @Get('lists/:id')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get a network list by ID' })
-    @ApiResponse({ status: 200, description: 'Return network list.' })
+    @ApiResponse({ status: 200, description: 'Return network list.', type: NetworkList })
     @ApiResponse({ status: 404, description: 'List not found.' })
     findListOne(
         @Param('id') id: string,
@@ -130,7 +131,7 @@ export class NetworkController {
     @Patch('lists/:id')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Update a network list' })
-    @ApiResponse({ status: 200, description: 'List updated successfully.' })
+    @ApiResponse({ status: 200, description: 'List updated successfully.', type: NetworkList })
     updateList(
         @Param('id') id: string,
         @Body() updateNetworkListDto: UpdateNetworkListDto,
