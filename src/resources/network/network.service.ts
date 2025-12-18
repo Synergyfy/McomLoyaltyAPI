@@ -6,20 +6,111 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Network } from './entities/network.entity';
 import { CreateNetworkDto } from './dto/create-network.dto';
 import { Business } from '../business/entities/business.entity';
 import { BulkImportNetworkDto } from './dto/bulk-import-network.dto';
 import { GetNetworkDto } from './dto/get-network.dto';
 import { UpdateNetworkDto } from './dto/update-network.dto';
+import { NetworkList } from './entities/network-list.entity';
+import { CreateNetworkListDto } from './dto/create-network-list.dto';
+import { UpdateNetworkListDto } from './dto/update-network-list.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class NetworkService {
     constructor(
         @InjectRepository(Network)
         private readonly networkRepository: Repository<Network>,
+        @InjectRepository(NetworkList)
+        private readonly networkListRepository: Repository<NetworkList>,
     ) { }
+
+    async createList(createNetworkListDto: CreateNetworkListDto, business: Business) {
+        const { networkIds, ...data } = createNetworkListDto;
+
+        const list = this.networkListRepository.create({
+            ...data,
+            business,
+        });
+
+        if (networkIds && networkIds.length > 0) {
+            const networks = await this.networkRepository.find({
+                where: {
+                    id: In(networkIds),
+                    business: { id: business.id }
+                }
+            });
+            list.networks = networks;
+        }
+
+        return await this.networkListRepository.save(list);
+    }
+
+    async findAllLists(query: PaginationDto, businessId: string) {
+        const { page, limit } = query;
+        const skip = (page - 1) * limit;
+
+        const [data, total] = await this.networkListRepository.findAndCount({
+            where: { business: { id: businessId } },
+            take: limit,
+            skip,
+            order: { created_at: 'DESC' },
+            relations: ['networks'] // Load count or details? Details might be heavy.
+        });
+
+        const lastPage = Math.ceil(total / limit);
+        const nextPage = page < lastPage ? page + 1 : null;
+        const prevPage = page > 1 ? page - 1 : null;
+
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                lastPage,
+                nextPage,
+                prevPage,
+            }
+        };
+    }
+
+    async findListOne(id: string, businessId: string) {
+        const list = await this.networkListRepository.findOne({
+            where: { id, business: { id: businessId } },
+            relations: ['networks']
+        });
+
+        if (!list) {
+            throw new NotFoundException(`Network list with ID ${id} not found`);
+        }
+        return list;
+    }
+
+    async updateList(id: string, updateNetworkListDto: UpdateNetworkListDto, business: Business) {
+        const list = await this.findListOne(id, business.id);
+        const { networkIds, ...data } = updateNetworkListDto;
+
+        Object.assign(list, data);
+
+        if (networkIds) {
+            const networks = await this.networkRepository.find({
+                where: {
+                    id: In(networkIds),
+                    business: { id: business.id }
+                }
+            });
+            list.networks = networks;
+        }
+
+        return await this.networkListRepository.save(list);
+    }
+
+    async deleteList(id: string, business: Business) {
+        const list = await this.findListOne(id, business.id);
+        return await this.networkListRepository.remove(list);
+    }
 
     async addNetwork(createNetworkDto: CreateNetworkDto, business: Business) {
         const { email, phone } = createNetworkDto;

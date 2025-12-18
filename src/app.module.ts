@@ -49,9 +49,11 @@ import { ReferralModule } from './resources/referral/referral.module';
 
 import { NetworkModule } from './resources/network/network.module';
 import { StampModule } from './resources/stamp/stamp.module';
+import { GroupCircleModule } from './resources/group-circle/group-circle.module';
 
 @Module({
   imports: [
+    GroupCircleModule,
     StampModule,
     NetworkModule,
     SeederModule,
