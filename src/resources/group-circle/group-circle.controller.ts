@@ -7,6 +7,8 @@ import { SendMessageDto } from './dto/send-message.dto';
 import { AssignBankerDto } from './dto/assign-banker.dto';
 import { SwapDrawDatesDto } from './dto/swap-draw-dates.dto';
 import { RecordContributionDto } from './dto/record-contribution.dto';
+import { InitiateContributionDto } from './dto/initiate-contribution.dto';
+import { VerifyContributionDto } from './dto/verify-contribution.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { Role } from '../../common/role.enum';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -26,7 +28,7 @@ import { GroupCircleContribution } from './entities/group-circle-contribution.en
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('group-circles')
 export class GroupCircleController {
-    constructor(private readonly service: GroupCircleService) {}
+    constructor(private readonly service: GroupCircleService) { }
 
     @Post()
     @Roles(Role.Business)
@@ -84,12 +86,36 @@ export class GroupCircleController {
         return this.service.recordContribution(id, dto, business.id);
     }
 
+    @Get('contributions')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Get all contributions across all circles' })
+    @ApiResponse({ status: 200, description: 'List of all contributions.' })
+    getAllContributions(@Query(new ValidationPipe({ transform: true })) query: PaginationDto, @CurrentUser() business: Business) {
+        return this.service.getAllContributions(business.id, query.page, query.limit);
+    }
+
     @Get(':id/contributions')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get contributions list' })
     @ApiResponse({ status: 200, description: 'List of contributions.', type: [GroupCircleContribution] })
     getContributions(@Param('id') id: string, @CurrentUser() business: Business) {
         return this.service.getContributions(id, business.id);
+    }
+
+    @Post(':id/contributions/initiate')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Initiate a contribution payment' })
+    @ApiResponse({ status: 200, description: 'Payment initiated.', schema: { example: { clientSecret: '...', orderId: '...' } } })
+    initiateContribution(@Param('id') id: string, @Body() dto: InitiateContributionDto, @CurrentUser() business: Business) {
+        return this.service.initiateContribution(id, dto, business.id);
+    }
+
+    @Post(':id/contributions/verify')
+    @Roles(Role.Business)
+    @ApiOperation({ summary: 'Verify and record a contribution payment' })
+    @ApiResponse({ status: 201, description: 'Payment verified and recorded.', type: GroupCircleContribution })
+    verifyContribution(@Param('id') id: string, @Body() dto: VerifyContributionDto, @CurrentUser() business: Business) {
+        return this.service.verifyContribution(id, dto, business.id);
     }
 
     @Post(':id/members')

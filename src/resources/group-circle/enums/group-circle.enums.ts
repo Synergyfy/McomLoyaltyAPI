@@ -37,3 +37,9 @@ export enum GroupCircleStatus {
     ACTIVE = 'active',
     ARCHIVED = 'archived',
 }
+
+export enum PaymentProvider {
+    STRIPE = 'STRIPE',
+    PAYPAL = 'PAYPAL',
+    MANUAL = 'MANUAL',
+}

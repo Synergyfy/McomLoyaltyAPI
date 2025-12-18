@@ -28,6 +28,6 @@ import { BusinessPointPackage } from '../point-package/entities/business-point-p
   ],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService, PaypalService],
-  exports: [PaymentService],
+  exports: [PaymentService, StripeService, PaypalService],
 })
 export class PaymentModule { }

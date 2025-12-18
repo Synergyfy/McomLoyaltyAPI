@@ -1,6 +1,7 @@
-import { IsUUID, IsNumber, IsInt, IsEnum, IsOptional } from 'class-validator';
+import { IsUUID, IsNumber, IsInt, IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { ContributionStatus } from '../entities/group-circle-contribution.entity';
+import { PaymentProvider } from '../enums/group-circle.enums';
 
 export class RecordContributionDto {
     @ApiProperty()
@@ -19,4 +20,15 @@ export class RecordContributionDto {
     @IsEnum(ContributionStatus)
     @IsOptional()
     status?: ContributionStatus;
+
+    @ApiProperty({ enum: PaymentProvider, required: false })
+    @IsEnum(PaymentProvider)
+    @IsOptional()
+    provider?: PaymentProvider;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    transactionId?: string;
 }
+

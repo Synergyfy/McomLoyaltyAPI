@@ -9,6 +9,7 @@ import { GroupActivity } from './entities/group-activity.entity';
 import { GroupCircleContribution } from './entities/group-circle-contribution.entity';
 import { NetworkList } from '../network/entities/network-list.entity';
 import { Network } from '../network/entities/network.entity';
+import { PaymentModule } from '../payment/payment.module';
 
 @Module({
     imports: [
@@ -20,9 +21,10 @@ import { Network } from '../network/entities/network.entity';
             GroupCircleContribution,
             NetworkList,
             Network
-        ])
+        ]),
+        PaymentModule
     ],
     controllers: [GroupCircleController],
     providers: [GroupCircleService],
 })
-export class GroupCircleModule {}
+export class GroupCircleModule { }

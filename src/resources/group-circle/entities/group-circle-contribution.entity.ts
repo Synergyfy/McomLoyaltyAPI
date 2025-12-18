@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { GroupCircle } from './group-circle.entity';
 import { GroupCircleMember } from './group-circle-member.entity';
+import { PaymentProvider } from '../enums/group-circle.enums';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum ContributionStatus {
@@ -33,4 +34,12 @@ export class GroupCircleContribution extends AbstractBaseEntity {
     @ApiProperty()
     @Column({ type: 'timestamp', nullable: true })
     paidAt: Date;
+
+    @ApiProperty({ enum: PaymentProvider })
+    @Column({ type: 'enum', enum: PaymentProvider, default: PaymentProvider.MANUAL })
+    provider: PaymentProvider;
+
+    @ApiProperty()
+    @Column({ nullable: true })
+    transactionId: string;
 }
