@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { BusinessService } from '../services/business.service';
 import { ReferralService } from '../../referral/referral.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,7 +19,7 @@ export class AffiliateController {
   constructor(
     private readonly businessService: BusinessService,
     private readonly referralService: ReferralService,
-  ) {}
+  ) { }
 
   @Get('code')
   @ApiOperation({ summary: 'Get affiliate code' })
@@ -31,7 +31,11 @@ export class AffiliateController {
   @Get('analytics')
   @ApiOperation({ summary: 'Get referral analytics' })
   @ApiResponse({ status: 200, description: 'Referral analytics', type: ReferralAnalyticsDto })
-  async getReferralAnalytics(@CurrentUser() user: User): Promise<ReferralAnalyticsDto> {
-    return this.referralService.getReferralAnalytics(user.id);
+  async getReferralAnalytics(
+    @CurrentUser() user: User,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ): Promise<ReferralAnalyticsDto> {
+    return this.referralService.getBusinessReferralAnalytics(user.id, page, limit);
   }
 }
