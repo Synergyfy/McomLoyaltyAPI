@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { PointHistory, PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
 import { Staff } from '../staff/entities/staff.entity';
+import { StampEvent } from '../stamp/entities/stamp-event.entity';
 import moment from 'moment';
 
 export enum ActionType {
@@ -21,6 +22,7 @@ export enum ActionType {
     ADD_REWARD_TO_BUSINESS = 'ADD_REWARD_TO_BUSINESS',
     UPDATE_REWARD = 'UPDATE_REWARD',
     AWARD_POINTS = 'AWARD_POINTS',
+    AWARD_STAMPS = 'AWARD_STAMPS',
     CREATE_STAFF = 'CREATE_STAFF',
 }
 
@@ -35,6 +37,8 @@ export class CapabilityService {
         private readonly rewardsService: RewardsService,
         @InjectRepository(PointHistory)
         private readonly pointHistoryRepository: Repository<PointHistory>,
+        @InjectRepository(StampEvent)
+        private readonly stampEventRepository: Repository<StampEvent>,
         @InjectRepository(Staff)
         private readonly staffRepository: Repository<Staff>,
     ) { }
@@ -162,7 +166,9 @@ export class CapabilityService {
             case ActionType.AWARD_POINTS:
                 await this.checkMonthlyPointsAllowance(userId, effectiveConfig, context?.points);
                 break;
-
+            case ActionType.AWARD_STAMPS:
+                await this.checkMonthlyStampsAllowance(userId, effectiveConfig, context?.stamps || 1);
+                break;
             case ActionType.CREATE_STAFF:
                 await this.checkTeamMemberLimit(userId, effectiveConfig);
                 break;
@@ -280,6 +286,29 @@ export class CapabilityService {
             this.logger.warn(`User ${userId} reached monthly points allowance: ${totalAwarded + pointsToAward}/${allowance}`);
             throw new ForbiddenException(
                 `You have reached your monthly points allowance of ${allowance}. Upgrade to award more points.`
+            );
+        }
+    }
+
+    private async checkMonthlyStampsAllowance(userId: string, config: TierConfig, stampsToAward: number) {
+        const allowance = config.quotas.monthlyStampsAllowance;
+        if (allowance === -1) return; // Unlimited
+
+        const startOfMonth = moment().startOf('month').toDate();
+        const endOfMonth = moment().endOf('month').toDate();
+
+        const totalAwarded = await this.stampEventRepository
+            .createQueryBuilder('event')
+            .innerJoin('event.stampCard', 'card')
+            .innerJoin('card.businessStampReward', 'reward')
+            .where('reward.business_id = :userId', { userId })
+            .andWhere('event.created_at BETWEEN :start AND :end', { start: startOfMonth, end: endOfMonth })
+            .getCount();
+
+        if (totalAwarded + stampsToAward > allowance) {
+            this.logger.warn(`User ${userId} reached monthly stamps allowance: ${totalAwarded + stampsToAward}/${allowance}`);
+            throw new ForbiddenException(
+                `You have reached your monthly stamps allowance of ${allowance}. Upgrade to award more stamps.`
             );
         }
     }

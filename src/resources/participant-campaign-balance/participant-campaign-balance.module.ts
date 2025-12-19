@@ -20,6 +20,7 @@ import { CapabilityModule } from '../capability/capability.module';
 import { TierProgressionModule } from '../tier-progression/tier-progression.module';
 import { MembershipModule } from '../membership/membership.module';
 import { PointPackageModule } from '../point-package/point-package.module';
+import { StampModule } from '../stamp/stamp.module';
 
 @Module({
     imports: [
@@ -40,6 +41,7 @@ import { PointPackageModule } from '../point-package/point-package.module';
         MembershipModule,
         PointPackageModule,
         NotificationModule,
+        forwardRef(() => StampModule),
     ],
     providers: [
         RedemptionService,

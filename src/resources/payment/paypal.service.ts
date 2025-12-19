@@ -98,6 +98,25 @@ export class PaypalService {
     return response;
   }
 
+  async createPackagePurchaseOrder(amount: number, currency: string, businessId: string, packageId: string, packageType: string, packageName: string) {
+    const request: OrderRequest = {
+      intent: CheckoutPaymentIntent.Capture,
+      purchaseUnits: [
+        {
+          referenceId: businessId,
+          description: `${packageType} Package Purchase: ${packageName}`,
+          amount: {
+            currencyCode: currency,
+            value: amount.toString(),
+          },
+          customId: `${packageId}|${packageType}`, // Store package info in custom_id
+        } as any,
+      ],
+    };
+    const response = await this.orders.createOrder({ body: request });
+    return response;
+  }
+
   async capturePayment(orderId: string) {
     const response = await this.orders.captureOrder({ id: orderId });
     return response;

@@ -726,14 +726,16 @@ export class PaymentService {
     }
   }
 
-  async initiatePackagePurchase(user: any, packageId: string, amount: number, provider: string) {
+  async initiatePackagePurchase(user: any, packageId: string, amount: number, provider: string, packageType: string, packageName: string) {
     if (provider === 'paypal') {
-      throw new BadRequestException('PayPal for packages not fully implemented yet');
+      const order = await this.paypalService.createPackagePurchaseOrder(amount, 'GBP', user.id, packageId, packageType, packageName);
+      return { orderId: order.result.id };
     } else {
       // Stripe
       const paymentIntent = await this.stripeService.createPaymentIntent(Math.round(amount * 100), 'gbp', {
         businessId: user.id,
         packageId: packageId,
+        packageType: packageType,
         type: 'PACKAGE_PURCHASE',
       });
       return { clientSecret: paymentIntent.client_secret };
@@ -742,7 +744,39 @@ export class PaymentService {
 
   async verifyPackagePurchase(user: any, transactionId: string, provider: string) {
     if (provider === 'paypal') {
-      throw new BadRequestException('PayPal for packages not fully implemented yet');
+      const capture = await this.paypalService.capturePayment(transactionId);
+      const result = capture.result as any;
+
+      if (result.status !== 'COMPLETED') {
+        throw new BadRequestException(`PayPal payment not completed. Status: ${result.status}`);
+      }
+
+      const purchaseUnit = result.purchaseUnits?.[0] || result.purchase_units?.[0];
+      if (!purchaseUnit) {
+        throw new BadRequestException('Invalid PayPal response: missing purchase information');
+      }
+
+      // Verify Business ID
+      const referenceId = purchaseUnit.referenceId || purchaseUnit.reference_id;
+      if (referenceId !== user.id) {
+        throw new BadRequestException('Payment belongs to a different business');
+      }
+
+      // Extract package info from customId (e.g., "id|type")
+      const customId = purchaseUnit.customId || purchaseUnit.custom_id;
+      if (!customId) {
+        throw new BadRequestException('Could not determine package information from payment');
+      }
+      const [packageId, packageType] = customId.split('|');
+
+      return {
+        status: 'succeeded',
+        packageId: packageId,
+        packageType: packageType,
+        amount: parseFloat(purchaseUnit.amount?.value || '0'),
+        transactionId: result.id,
+      };
+
     } else {
       // Stripe
       const paymentIntent = await this.stripeService.verifyPayment(transactionId);
@@ -761,6 +795,7 @@ export class PaymentService {
       return {
         status: 'succeeded',
         packageId: paymentIntent.metadata.packageId,
+        packageType: paymentIntent.metadata.packageType,
         amount: paymentIntent.amount / 100,
         transactionId: paymentIntent.id,
       };

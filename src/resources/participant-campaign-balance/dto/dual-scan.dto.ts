@@ -20,11 +20,14 @@ export class DualScanDto {
   @IsNotEmpty()
   campaignId: string;
 
-  @ApiProperty({ description: 'The amount of points to award (required for EARN)', required: false })
+  @IsOptional()
+  points?: number;
+
+  @ApiProperty({ description: 'The amount of stamps to award (required for STAMP_EARN)', required: false })
   @IsInt()
   @Min(1)
   @IsOptional()
-  points?: number;
+  stamps?: number;
 
   @ApiProperty({ description: 'The ID of the reward (required for REDEEM)', required: false })
   @IsUUID()

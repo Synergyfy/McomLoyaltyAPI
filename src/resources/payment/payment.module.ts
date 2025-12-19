@@ -16,10 +16,21 @@ import { UserModule } from '../../user/user.module';
 
 import { PointPackage } from '../point-package/entities/point-package.entity';
 import { BusinessPointPackage } from '../point-package/entities/business-point-package.entity';
+import { StampPackage } from '../stamp/entities/stamp-package.entity';
+import { BusinessStampPackage } from '../stamp/entities/business-stamp-package.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tier, Membership, PaymentHistory, Business, PointPackage, BusinessPointPackage]),
+    TypeOrmModule.forFeature([
+      Tier,
+      Membership,
+      PaymentHistory,
+      Business,
+      PointPackage,
+      BusinessPointPackage,
+      StampPackage,
+      BusinessStampPackage,
+    ]),
     ConfigModule,
     CouponModule,
     QrPlaquesModule,

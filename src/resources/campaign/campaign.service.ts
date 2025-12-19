@@ -34,6 +34,7 @@ import { CampaignAnalyticsQueryDto } from './dto/campaign-analytics-query.dto';
 import { User } from 'src/common/interfaces/user.interface';
 import { CreateCampaignAdminDto } from './dto/create-campaign-admin.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { BusinessStampReward } from '../stamp/entities/business-stamp-reward.entity';
 import { nanoid } from 'nanoid';
 import { MatchingPointService } from '../matching-point/services/matching-point.service';
 import { MatchingPointActivityType } from '../matching-point/entities/matching-point-config.entity';
@@ -60,6 +61,8 @@ export class CampaignService {
     private readonly rewardRepository: Repository<Reward>,
     @InjectRepository(BusinessReward)
     private readonly businessRewardRepository: Repository<BusinessReward>,
+    @InjectRepository(BusinessStampReward)
+    private readonly businessStampRewardRepository: Repository<BusinessStampReward>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(PointHistory)
@@ -134,7 +137,21 @@ export class CampaignService {
       const businessCampaign = this.businessCampaignRepository.create(campaignData);
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
-      const { business_reward_ids } = createCampaignDto as CreateCampaignDto;
+      const { business_reward_ids, business_stamp_reward_id } = createCampaignDto as CreateCampaignDto;
+
+      if (business_stamp_reward_id) {
+        const stampReward = await this.businessStampRewardRepository.findOne({
+          where: { id: business_stamp_reward_id },
+          relations: ['business'],
+        });
+        if (!stampReward) {
+          throw new NotFoundException('Business stamp reward not found.');
+        }
+        if (stampReward.business.id !== currentUser.id) {
+          throw new UnauthorizedException('This stamp reward does not belong to your business.');
+        }
+        businessCampaign.businessStampReward = stampReward;
+      }
 
       if (!business_reward_ids || business_reward_ids.length === 0) {
         throw new BadRequestException('Business must add at least one reward to the campaign.');
@@ -467,7 +484,7 @@ export class CampaignService {
   async findOne(id: string, currentUser?: User): Promise<Campaign | BusinessCampaign> {
     const businessCampaign = await this.businessCampaignRepository.findOne({
       where: { id },
-      relations: ['business', 'rewards', 'campaign', 'businessRewards'],
+      relations: ['business', 'rewards', 'campaign', 'businessRewards', 'businessStampReward'],
     });
 
     if (businessCampaign) {
@@ -520,7 +537,7 @@ export class CampaignService {
     currentUser: Business | Admin,
   ): Promise<Campaign | BusinessCampaign> {
     const campaign = await this.findOne(id, currentUser);
-    const { reward_ids, business_reward_ids, ...campaignData } = updateCampaignDto;
+    const { reward_ids, business_reward_ids, business_stamp_reward_id, ...campaignData } = updateCampaignDto;
     let rewards: Reward[] = [];
 
     if (currentUser.role === Role.Admin) {
@@ -543,6 +560,9 @@ export class CampaignService {
           if (business_reward_ids && business_reward_ids.length > 0) {
             throw new BadRequestException('Cannot add business rewards to a claimed campaign template.');
           }
+          if (business_stamp_reward_id) {
+            throw new BadRequestException('Cannot add business stamp reward to a claimed campaign template.');
+          }
 
           if (reward_ids) {
             const newRewards = await this.rewardRepository.findBy({
@@ -563,12 +583,25 @@ export class CampaignService {
             });
             campaign.businessRewards = businessRewards;
           }
+
+          if (business_stamp_reward_id) {
+            const stampReward = await this.businessStampRewardRepository.findOne({
+              where: { id: business_stamp_reward_id },
+              relations: ['business'],
+            });
+            if (!stampReward) {
+              throw new NotFoundException('Business stamp reward not found.');
+            }
+            if (stampReward.business.id !== currentUser.id) {
+              throw new UnauthorizedException('This stamp reward does not belong to your business.');
+            }
+            campaign.businessStampReward = stampReward;
+          }
         }
 
         // Validation: Ensure at least one type of reward is present
         const hasRewards = campaign.rewards && campaign.rewards.length > 0;
         const hasBusinessRewards = campaign.businessRewards && campaign.businessRewards.length > 0;
-
         if (!hasRewards && !hasBusinessRewards) {
           // Only throw if we actually modified something that resulted in empty rewards?
           // Or always enforce?

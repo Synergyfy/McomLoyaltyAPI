@@ -10,6 +10,7 @@ import { Participant } from '../../participant/entities/participant.entity';
 export enum TransactionType {
   EARN = 'EARN',
   REDEEM = 'REDEEM',
+  STAMP_EARN = 'STAMP_EARN',
 }
 
 export enum TransactionCodeStatus {
@@ -31,6 +32,9 @@ export class TransactionCode extends AbstractBaseEntity {
 
   @Column({ nullable: true, type: 'int' })
   points: number;
+
+  @Column({ nullable: true, type: 'int' })
+  stamps: number;
 
   @ManyToOne(() => Campaign, { nullable: true })
   @JoinColumn({ name: 'campaign_id' })

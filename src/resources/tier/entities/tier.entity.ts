@@ -96,6 +96,7 @@ export class Tier extends AbstractBaseEntity {
         maxActiveRewards: 10,
         maxRewardsPerCampaign: 3,
         monthlyPointsAllowance: 1000,
+        monthlyStampsAllowance: 100,
         maxTeamMembers: 2,
       },
       featureFlags: {

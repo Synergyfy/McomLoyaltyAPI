@@ -3,6 +3,7 @@ export enum NotificationType {
     REWARD_REDEEMED = 'REWARD_REDEEMED',
     ALLOWANCE_WARNING = 'ALLOWANCE_WARNING',
     CAMPAIGN_JOINED = 'CAMPAIGN_JOINED',
+    STAMP_AWARDED = 'STAMP_AWARDED',
 }
 
 export enum NotificationRecipientType {

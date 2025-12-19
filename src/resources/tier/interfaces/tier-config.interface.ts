@@ -3,6 +3,7 @@ export interface TierQuotas {
     maxActiveRewards: number; // -1 for unlimited
     maxRewardsPerCampaign: number;
     monthlyPointsAllowance: number;
+    monthlyStampsAllowance: number;
     maxTeamMembers: number; // -1 for unlimited
 }
 

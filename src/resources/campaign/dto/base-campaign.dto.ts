@@ -9,12 +9,14 @@ import {
   IsEnum,
   IsInt,
   IsEmail,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   CampaignType,
   AudienceType,
   RewardType,
+  CampaignRewardMode,
 } from '../entities/campaign-enums';
 
 export class BaseCampaignDto {
@@ -108,6 +110,15 @@ export class BaseCampaignDto {
   reward_type: RewardType;
 
   @ApiProperty({
+    description: 'The mode of reward for the campaign.',
+    enum: CampaignRewardMode,
+    default: CampaignRewardMode.POINTS,
+  })
+  @IsEnum(CampaignRewardMode)
+  @IsOptional()
+  reward_mode: CampaignRewardMode;
+
+  @ApiProperty({
     description: 'The threshold for regular points.',
     required: false,
   })
@@ -194,4 +205,12 @@ export class BaseCampaignDto {
   @IsOptional()
   @IsString()
   footer_text?: string;
+
+  @ApiProperty({
+    description: 'The ID of the business stamp reward to award stamps to.',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  business_stamp_reward_id?: string;
 }

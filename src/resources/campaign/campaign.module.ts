@@ -10,6 +10,7 @@ import { PointHistory } from '../participant-campaign-balance/entities/point-his
 import { Participant } from '../participant/entities/participant.entity';
 import { BusinessCampaign } from './entities/business-campaign.entity';
 import { BusinessReward } from '../rewards/entities/business-reward.entity';
+import { BusinessStampReward } from '../stamp/entities/business-stamp-reward.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { WishlistAggregate } from '../wishlist/entities/wishlist-aggregate.entity';
 import { WishlistItem } from '../wishlist/entities/wishlist-item.entity';
@@ -29,8 +30,8 @@ import { TierProgressionModule } from '../tier-progression/tier-progression.modu
       Participant,
       BusinessCampaign,
       BusinessReward,
+      BusinessStampReward,
       Staff,
-      WishlistAggregate,
       WishlistAggregate,
       WishlistItem,
       Tier,

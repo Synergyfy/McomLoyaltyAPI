@@ -8,6 +8,7 @@ import { ScanParticipantDto } from './dto/scan-participant.dto';
 import { DualScanDto } from './dto/dual-scan.dto';
 import { IsJoinedDto } from './dto/is-joined.dto';
 import { AwardPointsDto } from './dto/award-points.dto';
+import { AwardStampsDto } from './dto/award-stamps.dto';
 import { RedeemRewardDto } from './dto/redeem-reward.dto';
 import {
   ApiTags,
@@ -169,6 +170,30 @@ export class ParticipantCampaignBalanceController {
     );
   }
 
+  @Post('award-stamps')
+  @ApiOperation({
+    summary: 'Award stamps to a participant',
+    description:
+      'Allows a staff member to award stamps to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.',
+  })
+  @ApiBody({ type: AwardStampsDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The stamps have been successfully awarded.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @Roles(Role.Admin, Role.Business, Role.Staff)
+  awardStamps(@Body() awardStampsDto: AwardStampsDto) {
+    return this.pointEarningService.awardStamps(
+      awardStampsDto.staffId,
+      'Staff',
+      awardStampsDto.participantId,
+      awardStampsDto.campaignId,
+      awardStampsDto.stamps || 1,
+    );
+  }
+
   @Post('redeem-reward')
   @ApiOperation({
     summary: 'Redeem a reward for a participant',
@@ -211,6 +236,8 @@ export class ParticipantCampaignBalanceController {
     if (dto.type === TransactionType.EARN) {
       if (!dto.points) throw new BadRequestException('Points are required for EARN type');
       return this.pointEarningService.awardPointsByScan(user.id, performerType, dto.participantCode, dto.campaignId, dto.points);
+    } else if (dto.type === TransactionType.STAMP_EARN) {
+      return this.pointEarningService.awardStampsByScan(user.id, performerType, dto.participantCode, dto.campaignId);
     } else {
       if (!dto.rewardId) throw new BadRequestException('Reward ID is required for REDEEM type');
       return this.redemptionService.redeemRewardByScan(user.id, performerType, dto.participantCode, dto.rewardId, dto.campaignId, null);
@@ -254,6 +281,8 @@ export class ParticipantCampaignBalanceController {
     if (dto.type === TransactionType.EARN) {
       if (!dto.points) throw new BadRequestException('Points are required for EARN type');
       return this.pointEarningService.awardPointsDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.campaignId, dto.points);
+    } else if (dto.type === TransactionType.STAMP_EARN) {
+      return this.pointEarningService.awardStampsDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.campaignId);
     } else {
       if (!dto.rewardId) throw new BadRequestException('Reward ID is required for REDEEM type');
       return this.redemptionService.redeemRewardDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.rewardId, dto.campaignId, null);
