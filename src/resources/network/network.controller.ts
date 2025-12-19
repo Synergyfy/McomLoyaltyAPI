@@ -26,6 +26,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Business } from '../business/entities/business.entity';
 import { NetworkList } from './entities/network-list.entity';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Public } from '../../common/decorators/public.decorator';
+import { NetworkOnboardingDto } from './dto/network-onboarding.dto';
 
 @ApiTags('Network')
 @ApiBearerAuth()
@@ -33,6 +35,24 @@ import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagg
 @Controller('network')
 export class NetworkController {
     constructor(private readonly networkService: NetworkService) { }
+
+    @Public()
+    @Get('onboarding-details/:id')
+    @ApiOperation({ summary: 'Get pre-filled details for contact onboarding' })
+    @ApiResponse({ status: 200, description: 'Details returned successfully.' })
+    @ApiResponse({ status: 404, description: 'Contact not found.' })
+    getOnboardingDetails(@Param('id') id: string) {
+        return this.networkService.getOnboardingDetails(id);
+    }
+
+    @Public()
+    @Post('onboard/:id')
+    @ApiOperation({ summary: 'Onboard a network contact as a partner or business' })
+    @ApiResponse({ status: 201, description: 'Onboarded successfully.' })
+    @ApiResponse({ status: 400, description: 'Invalid data or already onboarded.' })
+    onboard(@Param('id') id: string, @Body(new ValidationPipe()) dto: NetworkOnboardingDto) {
+        return this.networkService.onboard(id, dto);
+    }
 
     @Post()
     @Roles(Role.Business)

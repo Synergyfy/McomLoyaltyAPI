@@ -17,6 +17,16 @@ import { NetworkList } from './entities/network-list.entity';
 import { CreateNetworkListDto } from './dto/create-network-list.dto';
 import { UpdateNetworkListDto } from './dto/update-network-list.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { NetworkOnboardingDto, OnboardingType } from './dto/network-onboarding.dto';
+import { HashService } from '../../common/hash/hash.service';
+import { Partner } from '../partner/entities/partner.entity';
+import { Sector } from '../sector/entities/sector.entity';
+import { Category } from '../category/entities/category.entity';
+import { SubCategory } from '../subcategory/entities/subcategory.entity';
+import { Tier } from '../tier/entities/tier.entity';
+import { Membership, MembershipStatus, PlanType } from '../membership/entities/membership.entity';
+import { Role } from '../../common/role.enum';
+import { nanoid } from 'nanoid';
 
 @Injectable()
 export class NetworkService {
@@ -25,7 +35,129 @@ export class NetworkService {
         private readonly networkRepository: Repository<Network>,
         @InjectRepository(NetworkList)
         private readonly networkListRepository: Repository<NetworkList>,
+        @InjectRepository(Business)
+        private readonly businessRepository: Repository<Business>,
+        @InjectRepository(Partner)
+        private readonly partnerRepository: Repository<Partner>,
+        @InjectRepository(Sector)
+        private readonly sectorRepository: Repository<Sector>,
+        @InjectRepository(Category)
+        private readonly categoryRepository: Repository<Category>,
+        @InjectRepository(SubCategory)
+        private readonly subCategoryRepository: Repository<SubCategory>,
+        @InjectRepository(Tier)
+        private readonly tierRepository: Repository<Tier>,
+        @InjectRepository(Membership)
+        private readonly membershipRepository: Repository<Membership>,
+        private readonly hashService: HashService,
     ) { }
+
+    async getOnboardingDetails(id: string) {
+        const network = await this.networkRepository.findOne({ where: { id } });
+        if (!network) {
+            throw new NotFoundException(`Network contact with ID ${id} not found`);
+        }
+        if (network.isOnboarded) {
+            throw new BadRequestException('This contact has already onboarded');
+        }
+
+        return {
+            fullName: network.fullName,
+            email: network.email,
+            phone: network.phone,
+            businessName: network.businessName,
+        };
+    }
+
+    async onboard(id: string, dto: NetworkOnboardingDto) {
+        const network = await this.networkRepository.findOne({
+            where: { id },
+            relations: ['business'], // The business that owns this contact
+        });
+
+        if (!network) {
+            throw new NotFoundException(`Network contact with ID ${id} not found`);
+        }
+
+        if (network.isOnboarded) {
+            throw new BadRequestException('This contact has already onboarded');
+        }
+
+        const hashedPassword = await this.hashService.hashPassword(dto.password);
+
+        const sector = await this.sectorRepository.findOne({ where: { id: dto.sectorId } });
+        if (!sector) throw new NotFoundException('Sector not found');
+
+        const category = await this.categoryRepository.findOne({ where: { id: dto.categoryId } });
+        if (!category) throw new NotFoundException('Category not found');
+
+        const subCategory = await this.subCategoryRepository.findOne({ where: { id: dto.subCategoryId } });
+        if (!subCategory) throw new NotFoundException('Sub-category not found');
+
+        let createdEntityId: string;
+
+        if (dto.type === OnboardingType.BUSINESS) {
+            // Check if email already exists in businesses
+            const existingBusiness = await this.businessRepository.findOne({ where: { email: network.email } });
+            if (existingBusiness) {
+                throw new ConflictException('A business with this email already exists');
+            }
+
+            const uniqueCode = nanoid(9);
+            const affiliateCode = Math.random().toString(36).substring(2, 11);
+
+            const business = this.businessRepository.create({
+                name: network.businessName || network.fullName,
+                email: network.email,
+                password: hashedPassword,
+                phone: dto.phone || network.phone,
+                address: dto.address,
+                postalCode: dto.postalCode,
+                sector,
+                category,
+                subCategory,
+                uniqueCode,
+                affiliateCode,
+                role: Role.Business,
+            });
+
+            const savedBusiness = await this.businessRepository.save(business);
+            createdEntityId = savedBusiness.id;
+
+            network.onboardedBusinessId = savedBusiness.id;
+        } else {
+            // Check if email already exists in partners
+            const existingPartner = await this.partnerRepository.findOne({ where: { email: network.email } });
+            if (existingPartner) {
+                throw new ConflictException('A partner with this email already exists');
+            }
+
+            const partner = this.partnerRepository.create({
+                name: network.fullName,
+                businessName: network.businessName || network.fullName,
+                email: network.email,
+                phoneNumber: dto.phone || network.phone,
+                password: hashedPassword,
+                sector,
+                category,
+                subCategory,
+            });
+
+            const savedPartner = await this.partnerRepository.save(partner);
+            createdEntityId = savedPartner.id;
+            network.onboardedPartnerId = savedPartner.id;
+        }
+
+        network.isOnboarded = true;
+        network.onboardedType = dto.type;
+        await this.networkRepository.save(network);
+
+        return {
+            success: true,
+            message: `Successfully onboarded as ${dto.type}`,
+            id: createdEntityId,
+        };
+    }
 
     async createList(createNetworkListDto: CreateNetworkListDto, business: Business) {
         const { networkIds, ...data } = createNetworkListDto;

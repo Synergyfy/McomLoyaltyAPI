@@ -67,4 +67,20 @@ export class Network extends AbstractBaseEntity {
 
     @ManyToMany(() => NetworkList, (networkList) => networkList.networks)
     networkLists: NetworkList[];
+
+    @ApiProperty({ description: 'Whether the contact has onboarded as a partner or business', default: false })
+    @Column({ default: false })
+    isOnboarded: boolean;
+
+    @ApiProperty({ description: 'The type of entity the contact onboarded as', enum: ['partner', 'business'], required: false })
+    @Column({ type: 'enum', enum: ['partner', 'business'], nullable: true })
+    onboardedType: 'partner' | 'business';
+
+    @ApiProperty({ description: 'The ID of the created business (if applicable)', required: false })
+    @Column({ nullable: true })
+    onboardedBusinessId: string;
+
+    @ApiProperty({ description: 'The ID of the created partner (if applicable)', required: false })
+    @Column({ nullable: true })
+    onboardedPartnerId: string;
 }
