@@ -2,7 +2,6 @@ import { Entity, Column, ManyToOne, Index, ManyToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { NetworkList } from './network-list.entity';
 
 export enum NetworkLocationTag {
     NEARBY = 'nearby',
@@ -64,9 +63,6 @@ export class Network extends AbstractBaseEntity {
 
     @ManyToOne(() => Business, (business) => business.network)
     business: Business;
-
-    @ManyToMany(() => NetworkList, (networkList) => networkList.networks)
-    networkLists: NetworkList[];
 
     @ApiProperty({ description: 'Whether the contact has onboarded as a partner or business', default: false })
     @Column({ default: false })

@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NetworkService } from './network.service';
 import { NetworkController } from './network.controller';
 import { Network } from './entities/network.entity';
-import { NetworkList } from './entities/network-list.entity';
 import { Business } from '../business/entities/business.entity';
 import { Partner } from '../partner/entities/partner.entity';
 import { Sector } from '../sector/entities/sector.entity';
@@ -17,7 +16,6 @@ import { HashModule } from '../../common/hash/hash.module';
     imports: [
         TypeOrmModule.forFeature([
             Network,
-            NetworkList,
             Business,
             Partner,
             Sector,

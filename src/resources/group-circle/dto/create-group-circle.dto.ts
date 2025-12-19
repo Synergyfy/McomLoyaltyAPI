@@ -29,16 +29,11 @@ export class CreateGroupCircleDto {
     @IsEnum(InteractionLevel)
     interactionLevel: InteractionLevel;
 
-    @ApiProperty({ description: 'List of NetworkList IDs to source members from' })
+    @ApiProperty({ description: 'List of Network IDs to add to the circle' })
     @IsArray()
     @IsUUID('4', { each: true })
-    networkListIds: string[];
-
-    @ApiProperty({ description: 'Optional list of Network IDs to shortlist from the lists', required: false })
-    @IsArray()
-    @IsUUID('4', { each: true })
-    @IsOptional()
-    initialMemberIds?: string[];
+    @IsNotEmpty()
+    networkIds: string[];
 
     @ApiProperty({ required: false })
     @IsNumber()

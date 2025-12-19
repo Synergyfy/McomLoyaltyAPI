@@ -1,7 +1,6 @@
 import { Entity, Column, ManyToOne, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../business/entities/business.entity';
-import { NetworkList } from '../../network/entities/network-list.entity';
 import { GroupCircleMember } from './group-circle-member.entity';
 import { GroupCircleType, GroupCircleVisibility, InteractionLevel, GroupCircleDuration, GroupCircleStatus } from '../enums/group-circle.enums';
 import { ApiProperty } from '@nestjs/swagger';
@@ -38,10 +37,6 @@ export class GroupCircle extends AbstractBaseEntity {
 
     @ManyToOne(() => Business, { onDelete: 'CASCADE' })
     business: Business;
-
-    @ManyToMany(() => NetworkList)
-    @JoinTable({ name: 'group_circle_source_lists' })
-    sourceLists: NetworkList[];
 
     @OneToMany(() => GroupCircleMember, (member) => member.groupCircle, { cascade: true })
     members: GroupCircleMember[];
