@@ -7,7 +7,6 @@ import { GroupCircleMember } from './entities/group-circle-member.entity';
 import { GroupMessage } from './entities/group-message.entity';
 import { GroupActivity } from './entities/group-activity.entity';
 import { GroupCircleContribution } from './entities/group-circle-contribution.entity';
-import { NetworkList } from '../network/entities/network-list.entity';
 import { Network } from '../network/entities/network.entity';
 import { PaymentModule } from '../payment/payment.module';
 
@@ -19,7 +18,6 @@ import { PaymentModule } from '../payment/payment.module';
             GroupMessage,
             GroupActivity,
             GroupCircleContribution,
-            NetworkList,
             Network
         ]),
         PaymentModule

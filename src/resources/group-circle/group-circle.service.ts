@@ -15,7 +15,6 @@ import { SwapDrawDatesDto } from './dto/swap-draw-dates.dto';
 import { RecordContributionDto } from './dto/record-contribution.dto';
 import { InitiateContributionDto } from './dto/initiate-contribution.dto';
 import { VerifyContributionDto } from './dto/verify-contribution.dto';
-import { NetworkList } from '../network/entities/network-list.entity';
 import { Network } from '../network/entities/network.entity';
 import { Business } from '../business/entities/business.entity';
 import { GroupCircleType, GroupCircleRole, PaymentProvider, GroupMessageType } from './enums/group-circle.enums';
@@ -32,34 +31,26 @@ export class GroupCircleService {
         @InjectRepository(GroupMessage) private messageRepo: Repository<GroupMessage>,
         @InjectRepository(GroupActivity) private activityRepo: Repository<GroupActivity>,
         @InjectRepository(GroupCircleContribution) private contributionRepo: Repository<GroupCircleContribution>,
-        @InjectRepository(NetworkList) private listRepo: Repository<NetworkList>,
         @InjectRepository(Network) private networkRepo: Repository<Network>,
         private stripeService: StripeService,
         private paypalService: PaypalService,
     ) { }
 
     async create(createDto: CreateGroupCircleDto, business: Business) {
-        const lists = await this.listRepo.find({
-            where: { id: In(createDto.networkListIds), business: { id: business.id } },
-            relations: ['networks']
+        const networks = await this.networkRepo.find({
+            where: {
+                id: In(createDto.networkIds),
+                business: { id: business.id }
+            }
         });
 
-        if (lists.length !== createDto.networkListIds.length) {
-            throw new NotFoundException('Some network lists were not found');
+        if (networks.length !== createDto.networkIds.length) {
+            throw new NotFoundException('Some network contacts were not found or do not belong to your business');
         }
 
         if (createDto.type === GroupCircleType.SMART_MONEY) {
             await this.validateSmartMoneyRules(createDto, business);
         }
-
-        const allNetworks = new Map<string, Network>();
-        lists.forEach(list => {
-            list.networks.forEach(net => {
-                if (!createDto.initialMemberIds || createDto.initialMemberIds.includes(net.id)) {
-                    allNetworks.set(net.id, net);
-                }
-            });
-        });
 
         if (createDto.type === GroupCircleType.SMART_MONEY) {
             const membership = await this.circleRepo.manager.findOne(Membership, {
@@ -67,22 +58,23 @@ export class GroupCircleService {
                 relations: ['tier']
             });
             const limits = await this.getSmartMoneyLimits(membership);
-            if (allNetworks.size < limits.minMembers || allNetworks.size > limits.maxMembers) {
+            if (networks.length < limits.minMembers || networks.length > limits.maxMembers) {
                 throw new BadRequestException(`Smart Money Circles must have between ${limits.minMembers} and ${limits.maxMembers} members.`);
             }
         }
 
+        const { networkIds, ...dtoData } = createDto;
+
         const circle = this.circleRepo.create({
-            ...createDto,
+            ...dtoData,
             business,
-            sourceLists: lists,
             startDate: new Date(),
             payoutFrequency: createDto.type === GroupCircleType.SMART_MONEY ? 'WEEKLY' : undefined
         });
 
         const savedCircle = await this.circleRepo.save(circle);
 
-        const members = Array.from(allNetworks.values()).map((net, index) => {
+        const members = networks.map((net, index) => {
             const member = this.memberRepo.create({
                 groupCircle: savedCircle,
                 network: net,
@@ -151,16 +143,26 @@ export class GroupCircleService {
             relations: ['members', 'members.network']
         });
 
+        const lastPage = Math.ceil(total / limit);
+        const nextPage = page < lastPage ? page + 1 : null;
+        const prevPage = page > 1 ? page - 1 : null;
+
         return {
             data,
-            meta: { total, page, limit }
+            meta: {
+                total,
+                page,
+                lastPage,
+                nextPage,
+                prevPage,
+            }
         };
     }
 
     async findOne(id: string, businessId: string) {
         const circle = await this.circleRepo.findOne({
             where: { id, business: { id: businessId } },
-            relations: ['members', 'members.network', 'sourceLists']
+            relations: ['members', 'members.network']
         });
         if (!circle) throw new NotFoundException('Group Circle not found');
         return circle;
@@ -168,15 +170,20 @@ export class GroupCircleService {
 
     async update(id: string, dto: UpdateGroupCircleDto, businessId: string) {
         const circle = await this.findOne(id, businessId);
-        const { networkListIds, ...data } = dto;
+        const { networkIds, ...data } = dto;
 
         Object.assign(circle, data);
 
-        if (networkListIds) {
-            const lists = await this.listRepo.find({
-                where: { id: In(networkListIds), business: { id: businessId } }
-            });
-            circle.sourceLists = lists;
+        if (circle.type === GroupCircleType.SMART_MONEY && (data.duration || data.contributionAmount)) {
+            // Map circle to a pseudo-DTO for validation
+            const validateDto: any = {
+                type: circle.type,
+                duration: data.duration ?? circle.duration,
+                contributionAmount: data.contributionAmount ?? circle.contributionAmount,
+                networkIds: [] // Not needed for rule validation but DTO has it
+            };
+            const business = await this.circleRepo.manager.findOne(Business, { where: { id: businessId } });
+            await this.validateSmartMoneyRules(validateDto, business);
         }
 
         return await this.circleRepo.save(circle);
@@ -282,10 +289,12 @@ export class GroupCircleService {
                 throw new BadRequestException('Transaction ID is required for online payments');
             }
 
-            // Check if transaction ID already exists to prevent double recording
-            const existing = await this.contributionRepo.findOne({ where: { transactionId: dto.transactionId } });
-            if (existing) {
-                throw new BadRequestException('Transaction already recorded');
+            if (dto.transactionId) {
+                // Check if transaction ID already exists to prevent double recording
+                const existing = await this.contributionRepo.findOne({ where: { transactionId: dto.transactionId } });
+                if (existing) {
+                    throw new BadRequestException('Transaction already recorded');
+                }
             }
 
             try {
@@ -346,19 +355,30 @@ export class GroupCircleService {
             skip: (page - 1) * limit
         });
 
+        const lastPage = Math.ceil(total / limit);
+        const nextPage = page < lastPage ? page + 1 : null;
+        const prevPage = page > 1 ? page - 1 : null;
+
         return {
             data,
-            meta: { total, page, limit }
+            meta: {
+                total,
+                page,
+                lastPage,
+                nextPage,
+                prevPage,
+            }
         };
     }
 
     async getContributions(id: string, businessId: string) {
         await this.findOne(id, businessId);
-        return await this.contributionRepo.find({
+        const data = await this.contributionRepo.find({
             where: { groupCircle: { id } },
             order: { created_at: 'DESC' },
             relations: ['member', 'member.network']
         });
+        return { data };
     }
 
 
@@ -422,7 +442,7 @@ export class GroupCircleService {
             if (!senderMember) {
                 // Try checking if it's a GroupCircleMember ID or Network ID
                 // Let's assume Network ID for senderId as it's more universal
-                 throw new BadRequestException('Sender not found in this group');
+                throw new BadRequestException('Sender not found in this group');
             }
             senderName = senderMember.network.fullName;
         }
@@ -439,7 +459,7 @@ export class GroupCircleService {
             });
 
             if (!recipientMember) {
-                 throw new NotFoundException('Recipient not found in this group circle');
+                throw new NotFoundException('Recipient not found in this group circle');
             }
 
             type = GroupMessageType.DIRECT;
@@ -477,7 +497,7 @@ export class GroupCircleService {
 
             const baseWhere = { groupCircle: { id }, ...(type && { type }) };
 
-            return await this.messageRepo.find({
+            const [data, total] = await this.messageRepo.findAndCount({
                 where: [
                     { ...baseWhere, senderId: memberId },
                     { ...baseWhere, recipientId: memberId }
@@ -486,23 +506,50 @@ export class GroupCircleService {
                 take: limit,
                 skip: (page - 1) * limit
             });
+
+            const lastPage = Math.ceil(total / limit);
+            return {
+                data,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    lastPage,
+                    nextPage: page < lastPage ? page + 1 : null,
+                    prevPage: page > 1 ? page - 1 : null,
+                }
+            };
         }
 
-        return await this.messageRepo.find({
+        const [data, total] = await this.messageRepo.findAndCount({
             where,
             order: { created_at: 'DESC' },
             take: limit,
             skip: (page - 1) * limit
         });
+
+        const lastPage = Math.ceil(total / limit);
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                lastPage,
+                nextPage: page < lastPage ? page + 1 : null,
+                prevPage: page > 1 ? page - 1 : null,
+            }
+        };
     }
 
     async getActivities(id: string, businessId: string) {
         await this.findOne(id, businessId);
-        return await this.activityRepo.find({
+        const data = await this.activityRepo.find({
             where: { groupCircle: { id } },
             order: { created_at: 'DESC' },
             take: 50
         });
+        return { data };
     }
 
     private async logActivity(circle: GroupCircle, action: string, details: any) {

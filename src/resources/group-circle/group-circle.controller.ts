@@ -148,22 +148,21 @@ export class GroupCircleController {
     @ApiOperation({ summary: 'Get messages from the circle' })
     @ApiQuery({ name: 'type', enum: GroupMessageType, required: false, description: 'Filter by message type (GROUP or DIRECT)' })
     @ApiQuery({ name: 'memberId', type: String, required: false, description: 'Filter messages involving a specific member (sender or recipient)' })
-    @ApiResponse({ status: 200, description: 'List of messages.', type: [GroupMessage] })
+    @ApiResponse({ status: 200, description: 'List of messages.' })
     getMessages(
         @Param('id') id: string,
         @CurrentUser() business: Business,
-        @Query('page') page: number = 1,
-        @Query('limit') limit: number = 20,
+        @Query(new ValidationPipe({ transform: true })) query: PaginationDto,
         @Query('type') type?: GroupMessageType,
         @Query('memberId') memberId?: string
     ) {
-        return this.service.getMessages(id, business.id, page, limit, type, memberId);
+        return this.service.getMessages(id, business.id, query.page, query.limit, type, memberId);
     }
 
     @Get(':id/activities')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get activity log' })
-    @ApiResponse({ status: 200, description: 'Activity log.', type: [GroupActivity] })
+    @ApiResponse({ status: 200, description: 'Activity log.' })
     getActivities(@Param('id') id: string, @CurrentUser() business: Business) {
         return this.service.getActivities(id, business.id);
     }
