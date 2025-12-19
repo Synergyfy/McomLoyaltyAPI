@@ -18,7 +18,7 @@ import { VerifyContributionDto } from './dto/verify-contribution.dto';
 import { NetworkList } from '../network/entities/network-list.entity';
 import { Network } from '../network/entities/network.entity';
 import { Business } from '../business/entities/business.entity';
-import { GroupCircleType, GroupCircleRole, PaymentProvider } from './enums/group-circle.enums';
+import { GroupCircleType, GroupCircleRole, PaymentProvider, GroupMessageType } from './enums/group-circle.enums';
 import { Membership, MembershipStatus } from '../membership/entities/membership.entity';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { StripeService } from '../payment/stripe.service';
@@ -406,19 +406,90 @@ export class GroupCircleService {
 
     async sendMessage(id: string, dto: SendMessageDto, business: Business) {
         const circle = await this.findOne(id, business.id);
+
+        let type = GroupMessageType.GROUP;
+        let recipientName = null;
+        let senderName = business.name;
+        let senderId = dto.senderId || business.id;
+
+        // If trying to send as a member (e.g. proxying), validate the member exists
+        if (dto.senderId && dto.senderId !== business.id) {
+            // Check if sender is a member of the group
+            const senderMember = await this.memberRepo.findOne({
+                where: { groupCircle: { id }, network: { id: dto.senderId } },
+                relations: ['network']
+            });
+            if (!senderMember) {
+                // Try checking if it's a GroupCircleMember ID or Network ID
+                // Let's assume Network ID for senderId as it's more universal
+                 throw new BadRequestException('Sender not found in this group');
+            }
+            senderName = senderMember.network.fullName;
+        }
+
+        if (dto.recipientId) {
+            // Validating recipient
+            // recipientId could be the Network ID or the GroupCircleMember ID?
+            // The prompt says "particular member of the group".
+            // Ideally we use the stable Network ID, but let's check.
+            // I'll search for Network ID first.
+            const recipientMember = await this.memberRepo.findOne({
+                where: { groupCircle: { id }, network: { id: dto.recipientId } },
+                relations: ['network']
+            });
+
+            if (!recipientMember) {
+                 throw new NotFoundException('Recipient not found in this group circle');
+            }
+
+            type = GroupMessageType.DIRECT;
+            recipientName = recipientMember.network.fullName;
+        }
+
         const message = this.messageRepo.create({
             groupCircle: circle,
             content: dto.content,
-            senderName: business.name,
-            senderId: business.id
+            senderName: senderName,
+            senderId: senderId,
+            type: type,
+            recipientId: dto.recipientId || null,
+            recipientName: recipientName
         });
+
         return await this.messageRepo.save(message);
     }
 
-    async getMessages(id: string, businessId: string, page: number = 1, limit: number = 20) {
+    async getMessages(id: string, businessId: string, page: number = 1, limit: number = 20, type?: GroupMessageType, memberId?: string) {
         await this.findOne(id, businessId); // Check access
+
+        const where: any = { groupCircle: { id } };
+
+        if (type) {
+            where.type = type;
+        }
+
+        if (memberId) {
+            // If filtering by memberId, we want messages where they are sender OR recipient
+            // TypeORM "OR" logic requires an array of where conditions or Brackets.
+            // Simple array approach:
+            // [ { groupCircle: { id }, senderId: memberId }, { groupCircle: { id }, recipientId: memberId } ]
+            // But we must also respect `type` if provided.
+
+            const baseWhere = { groupCircle: { id }, ...(type && { type }) };
+
+            return await this.messageRepo.find({
+                where: [
+                    { ...baseWhere, senderId: memberId },
+                    { ...baseWhere, recipientId: memberId }
+                ],
+                order: { created_at: 'DESC' },
+                take: limit,
+                skip: (page - 1) * limit
+            });
+        }
+
         return await this.messageRepo.find({
-            where: { groupCircle: { id } },
+            where,
             order: { created_at: 'DESC' },
             take: limit,
             skip: (page - 1) * limit

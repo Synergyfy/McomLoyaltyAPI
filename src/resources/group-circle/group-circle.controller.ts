@@ -16,12 +16,13 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Business } from '../business/entities/business.entity';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { GroupCircle } from './entities/group-circle.entity';
 import { GroupCircleMember } from './entities/group-circle-member.entity';
 import { GroupMessage } from './entities/group-message.entity';
 import { GroupActivity } from './entities/group-activity.entity';
 import { GroupCircleContribution } from './entities/group-circle-contribution.entity';
+import { GroupMessageType } from './enums/group-circle.enums';
 
 @ApiTags('Group Circles')
 @ApiBearerAuth()
@@ -136,7 +137,7 @@ export class GroupCircleController {
 
     @Post(':id/messages')
     @Roles(Role.Business)
-    @ApiOperation({ summary: 'Send a message to the circle' })
+    @ApiOperation({ summary: 'Send a message to the circle or a direct message' })
     @ApiResponse({ status: 201, description: 'Message sent.', type: GroupMessage })
     sendMessage(@Param('id') id: string, @Body() dto: SendMessageDto, @CurrentUser() business: Business) {
         return this.service.sendMessage(id, dto, business);
@@ -145,9 +146,18 @@ export class GroupCircleController {
     @Get(':id/messages')
     @Roles(Role.Business)
     @ApiOperation({ summary: 'Get messages from the circle' })
+    @ApiQuery({ name: 'type', enum: GroupMessageType, required: false, description: 'Filter by message type (GROUP or DIRECT)' })
+    @ApiQuery({ name: 'memberId', type: String, required: false, description: 'Filter messages involving a specific member (sender or recipient)' })
     @ApiResponse({ status: 200, description: 'List of messages.', type: [GroupMessage] })
-    getMessages(@Param('id') id: string, @CurrentUser() business: Business) {
-        return this.service.getMessages(id, business.id);
+    getMessages(
+        @Param('id') id: string,
+        @CurrentUser() business: Business,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 20,
+        @Query('type') type?: GroupMessageType,
+        @Query('memberId') memberId?: string
+    ) {
+        return this.service.getMessages(id, business.id, page, limit, type, memberId);
     }
 
     @Get(':id/activities')
