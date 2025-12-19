@@ -16,3 +16,9 @@ export enum RewardType {
   MATCHING = 'matching',
   BOTH = 'both',
 }
+
+export enum CampaignRewardMode {
+  POINTS = 'points',
+  STAMPS = 'stamps',
+  BOTH = 'both',
+}

@@ -9,6 +9,7 @@ import { PaginationResult } from '../../common/interfaces/pagination-result.inte
 
 import { BusinessPointPackage, BusinessPointPackageStatus } from './entities/business-point-package.entity';
 import { PaymentService } from '../payment/payment.service';
+import { PackageType } from '../payment/dto/package-purchase.dto';
 import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
@@ -135,6 +136,8 @@ export class PointPackageService {
             packageId,
             pointPackage.price,
             provider,
+            PackageType.POINT,
+            pointPackage.name,
         );
     }
 

@@ -14,7 +14,7 @@ import { Reward } from '../../rewards/entities/reward.entity';
 import { Participant } from '../../participant/entities/participant.entity';
 import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
 import { BusinessCampaign } from './business-campaign.entity';
-import { CampaignType, AudienceType, RewardType } from './campaign-enums';
+import { CampaignType, AudienceType, RewardType, CampaignRewardMode } from './campaign-enums';
 import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
 import { Tier } from '../../tier/entities/tier.entity';
 import { Deal } from '../../deal/entities/deal.entity';
@@ -111,6 +111,13 @@ export class Campaign extends AbstractBaseEntity {
     default: RewardType.REGULAR,
   })
   reward_type: RewardType;
+
+  @Column({
+    type: 'enum',
+    enum: CampaignRewardMode,
+    default: CampaignRewardMode.POINTS,
+  })
+  reward_mode: CampaignRewardMode;
 
   @Column({ type: 'int', nullable: true })
   regular_points_threshold: number;

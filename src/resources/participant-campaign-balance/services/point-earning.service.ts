@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -17,10 +19,14 @@ import {
 } from '../entities/point-history.entity';
 import { DataSource } from 'typeorm';
 import { MailService } from '../../../mail/mail.service';
-import { CapabilityService, ActionType } from '../../capability/capability.service';
+import { ActionType, CapabilityService } from '../../capability/capability.service';
+import { CampaignRewardMode } from '../../campaign/entities/campaign-enums';
 import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 import { MembershipService } from '../../membership/membership.service';
 import { PointPackageService } from '../../point-package/point-package.service';
+import { StampPackageService } from '../../stamp/services/stamp-package.service';
+import { StampService } from '../../stamp/services/stamp.service';
+import { StampTriggerMethod } from '../../stamp/enums/stamp-trigger-method.enum';
 import { NotificationService } from '../../notification/notification.service';
 import { NotificationType, NotificationRecipientType } from '../../notification/enums/notification-type.enum';
 
@@ -47,6 +53,8 @@ export class PointEarningService {
     private readonly tierProgressionService: TierProgressionService,
     private readonly membershipService: MembershipService,
     private readonly pointPackageService: PointPackageService,
+    private readonly stampPackageService: StampPackageService,
+    private readonly stampService: StampService,
     private readonly notificationService: NotificationService,
   ) { }
 
@@ -109,6 +117,11 @@ export class PointEarningService {
         throw new BadRequestException('This campaign does not belong to the performing business');
       }
 
+      // Check Reward Mode
+      if (businessCampaign.reward_mode === CampaignRewardMode.STAMPS) {
+        throw new BadRequestException('This campaign only allows awarding stamps.');
+      }
+
       // Check Monthly Points Allowance
       await this.capabilityService.checkPermission(business.id, ActionType.AWARD_POINTS, { points });
 
@@ -140,7 +153,7 @@ export class PointEarningService {
           try {
             await this.notificationService.create(
               'Point Allowance Warning',
-              `You have used over 80% of your monthly point allowance (${Math.round(usageRatioAfter * 100)}%).`,
+              `You have used over 80 % of your monthly point allowance(${Math.round(usageRatioAfter * 100)} %).`,
               NotificationType.ALLOWANCE_WARNING,
               NotificationRecipientType.BUSINESS,
               business.id
@@ -153,7 +166,7 @@ export class PointEarningService {
               'System',
               'System',
               'N/A',
-              `You have used over 80% of your monthly point allowance.`
+              `You have used over 80 % of your monthly point allowance.`
             );
           } catch (e) {
             console.error('Failed to send allowance warning:', e);
@@ -431,7 +444,7 @@ export class PointEarningService {
           participant,
           initiated_by_staff: staff,
           business: business,
-          description: sourceDescription || `Matching points for campaign: ${activeCampaign.name}`,
+          description: sourceDescription || `Matching points for campaign: ${activeCampaign.name} `,
         });
 
         if (businessCampaign) {
@@ -483,6 +496,94 @@ export class PointEarningService {
     }
   }
 
+  async awardStamps(
+    performerId: string,
+    performerType: 'Staff' | 'Business',
+    participantId: string,
+    campaignId: string,
+    stamps: number = 1,
+    sourceDescription?: string,
+    triggerMethod: StampTriggerMethod = StampTriggerMethod.MANUAL,
+    transactionManager?: any,
+  ): Promise<any> {
+    const execute = async (manager: any) => {
+      const { staff, business } = await this.findPerformer(performerId, performerType);
+
+      const participant = await manager.findOne(Participant, {
+        where: { id: participantId },
+      });
+      if (!participant) throw new NotFoundException('Participant not found');
+
+      const businessCampaign = await manager.findOne(BusinessCampaign, {
+        where: { id: campaignId },
+        relations: ['business', 'businessStampReward', 'businessStampReward.template'],
+      });
+
+      if (!businessCampaign) throw new NotFoundException('Business campaign not found');
+
+      if (businessCampaign.business.id !== business.id) {
+        throw new BadRequestException('This campaign does not belong to the performing business');
+      }
+
+      if (businessCampaign.reward_mode === CampaignRewardMode.POINTS) {
+        throw new BadRequestException('This campaign only allows awarding points.');
+      }
+
+      if (!businessCampaign.businessStampReward) {
+        throw new BadRequestException('This campaign does not have a linked stamp reward.');
+      }
+
+      // Check Quota and Packages
+      try {
+        await this.capabilityService.checkPermission(business.id, ActionType.AWARD_STAMPS, { stamps });
+      } catch (e) {
+        if (e instanceof ForbiddenException) {
+          // Monthly quota exceeded, deduct from packages
+          await this.stampPackageService.deductStamps(business.id, stamps, manager);
+        } else {
+          throw e;
+        }
+      }
+
+      // Award Stamps via StampService
+      const card = await this.stampService.processAddStamp(
+        participant,
+        businessCampaign.businessStampReward,
+        triggerMethod,
+        sourceDescription || 'Awarded manually',
+      );
+
+      // Notifications
+      try {
+        await this.notificationService.create(
+          'Stamps Awarded',
+          `You earned a stamp from ${business.name} !`,
+          NotificationType.STAMP_AWARDED,
+          NotificationRecipientType.USER,
+          participant.id,
+        );
+
+        await this.mailService.sendStampEarnedEmail(
+          participant.email,
+          stamps,
+          business.name,
+          businessCampaign.name,
+          card.current_stamps,
+        );
+      } catch (error) {
+        console.error('Failed to send stamp notifications:', error);
+      }
+
+      return card;
+    };
+
+    if (transactionManager) {
+      return execute(transactionManager);
+    } else {
+      return this.dataSource.transaction(execute);
+    }
+  }
+
   // Method A: Staff/Business scans Participant
   async awardPointsByScan(
     performerId: string,
@@ -512,5 +613,32 @@ export class PointEarningService {
     const performerType = staff ? 'Staff' : 'Business';
 
     return this.awardPoints(performerId, performerType, participant.id, campaignId, points, 'Awarded by dual scan');
+  }
+
+  async awardStampsByScan(
+    performerId: string,
+    performerType: 'Staff' | 'Business',
+    participantCode: string,
+    campaignId: string,
+  ) {
+    const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
+    if (!participant) throw new NotFoundException('Participant not found');
+
+    return this.awardStamps(performerId, performerType, participant.id, campaignId, 1, 'Awarded by stamp scan');
+  }
+
+  async awardStampsDualScan(
+    staffOrBusinessCode: string,
+    participantCode: string,
+    campaignId: string,
+  ) {
+    const { staff, business } = await this.findPerformerByCode(staffOrBusinessCode);
+    const participant = await this.participantRepository.findOne({ where: { uniqueCode: participantCode } });
+    if (!participant) throw new NotFoundException('Participant not found');
+
+    const performerId = staff ? staff.id : business.id;
+    const performerType = staff ? 'Staff' : 'Business';
+
+    return this.awardStamps(performerId, performerType, participant.id, campaignId, 1, 'Awarded by stamp dual scan');
   }
 }
