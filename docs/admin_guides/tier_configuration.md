@@ -27,6 +27,7 @@ The `configuration` JSON object must adhere to the following structure:
     "maxActiveRewards": number,         // -1 for unlimited
     "maxRewardsPerCampaign": number,
     "monthlyPointsAllowance": number,
+    "monthlyStampsAllowance": number,
     "maxTeamMembers": number            // -1 for unlimited
   },
   "featureFlags": {
@@ -79,6 +80,7 @@ The `configuration` JSON object must adhere to the following structure:
 | `maxActiveRewards` | `number` | The maximum number of active rewards a business can have. Set to `-1` for unlimited. |
 | `maxRewardsPerCampaign` | `number` | The maximum number of rewards that can be attached to a single campaign. |
 | `monthlyPointsAllowance` | `number` | The amount of system points credited to the business each month (if applicable). |
+| `monthlyStampsAllowance` | `number` | The number of stamps a business can award for free each month. Once exhausted, stamps are deducted from purchased **Stamp Packages**. |
 | `maxTeamMembers` | `number` | The maximum number of team members (staff) a business can have. Set to `-1` for unlimited. |
 
 #### 2. Feature Flags
@@ -173,6 +175,7 @@ This tier starts restricted but unlocks features as the business grows.
       "maxActiveRewards": 10,
       "maxRewardsPerCampaign": 1,
       "monthlyPointsAllowance": 500,
+      "monthlyStampsAllowance": 10,
       "maxTeamMembers": 1
     },
     "featureFlags": {
@@ -269,7 +272,19 @@ This tier offers high limits, seasonal pricing, and progression rewards.
 
 ---
 
-## How Enforcement Works
+## Stamp Reward Mechanics
+ 
+ When a business awards a stamp to a participant, the system follows this logic:
+ 1.  **Check Monthly Allowance**: It checks if the business has remaining `monthlyStampsAllowance` for the current month.
+ 2.  **Deduct from Package**: If the monthly allowance is exhausted, the system looks for an active **Stamp Package** purchased by the business. 
+ 3.  **FIFO Deduction**: Stamps are deducted from packages in the order they were purchased (First-In, First-Out).
+ 4.  **Insufficient Balance**: If both the monthly allowance and all stamp packages are exhausted, the business will be unable to award further stamps until they purchase a new package or the next month begins.
+ 
+ Businesses can configure their campaigns to use **Stamps**, **Points**, or **Both** as reward modes, but the stamp allowance logic applies regardless of the specific campaign reward mode.
+ 
+ ---
+ 
+ ## How Enforcement Works
 
 The system calculates the **Effective Limit** dynamically whenever a user attempts an action (like creating a campaign).
 

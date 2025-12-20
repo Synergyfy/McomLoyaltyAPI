@@ -9,13 +9,15 @@ import { Business } from '../../business/entities/business.entity';
 import { Membership } from '../../membership/entities/membership.entity';
 import { Sector } from '../../sector/entities/sector.entity';
 import { Tier } from '../../tier/entities/tier.entity';
+import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { TierProgressionService } from '../../tier-progression/tier-progression.service';
 import { CreateRewardDto } from '../dto/create-reward.dto';
 import { RewardType } from '../enums/reward-type.enum';
 import { BadgeLevel } from '../enums/badge-level.enum';
 import { RewardSource } from '../enums/reward-source.enum';
 import { RewardAudience } from '../enums/reward-audience.enum';
 import { RewardStatus } from '../enums/reward-status.enum';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('RewardsService', () => {
   let service: RewardsService;
@@ -47,6 +49,15 @@ describe('RewardsService', () => {
     findBy: jest.fn(),
   };
 
+  const mockBusinessCampaignRepository = {
+    createQueryBuilder: jest.fn(),
+    count: jest.fn(),
+  };
+
+  const mockTierProgressionService = {
+    checkAndPromote: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -57,6 +68,8 @@ describe('RewardsService', () => {
         { provide: getRepositoryToken(Membership), useValue: mockMembershipRepository },
         { provide: getRepositoryToken(Sector), useValue: mockSectorRepository },
         { provide: getRepositoryToken(Tier), useValue: mockTierRepository },
+        { provide: getRepositoryToken(BusinessCampaign), useValue: mockBusinessCampaignRepository },
+        { provide: TierProgressionService, useValue: mockTierProgressionService },
       ],
     }).compile();
 
@@ -78,7 +91,6 @@ describe('RewardsService', () => {
       description: 'Test Description',
       image: 'image-url',
       reward_type: RewardType.VOUCHER,
-      reward_source: RewardSource.MCOM_VAULT,
       audience: RewardAudience.ALL_BUSINESS,
       status: RewardStatus.ACTIVE,
     };
@@ -141,6 +153,10 @@ describe('RewardsService', () => {
 
       await expect(service.createReward(dto)).rejects.toThrow(NotFoundException);
     });
+    it('should throw ForbiddenException if neither points nor stamps are provided', async () => {
+      const dto = { ...createRewardDto, max_points: undefined, max_stamp_required: undefined };
+      await expect(service.createReward(dto)).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('updateBusinessReward', () => {
@@ -157,6 +173,7 @@ describe('RewardsService', () => {
 
       expect(mockBusinessRewardRepository.findOne).toHaveBeenCalledWith({
         where: { id: rewardId, business: { id: businessId } },
+        relations: ['reward'],
       });
       expect(mockBusinessRewardRepository.save).toHaveBeenCalledWith(expect.objectContaining({
         ...businessReward,
@@ -165,10 +182,19 @@ describe('RewardsService', () => {
       expect(result).toEqual(expect.objectContaining(updateDto));
     });
 
-    it('should throw NotFoundException if reward not found', async () => {
+    it('should throw ForbiddenException if reward not found', async () => {
       mockBusinessRewardRepository.findOne.mockResolvedValue(null);
 
       await expect(service.updateBusinessReward(businessId, rewardId, updateDto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if stamps requested exceed admin max', async () => {
+      const reward = { max_stamp_required: 10 } as Reward;
+      const br = { id: rewardId, business: { id: businessId }, reward } as BusinessReward;
+      mockBusinessRewardRepository.findOne.mockResolvedValue(br);
+
+      await expect(service.updateBusinessReward(businessId, rewardId, { stamp_required: 11 }))
+        .rejects.toThrow(ForbiddenException);
     });
   });
 });

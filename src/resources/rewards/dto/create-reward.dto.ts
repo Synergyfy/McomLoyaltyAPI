@@ -15,9 +15,20 @@ export class CreateRewardDto {
   @ApiProperty({
     description: 'The maximum points allowed for this reward',
     example: 1000,
+    required: false,
   })
   @IsNumber()
-  max_points: number;
+  @IsOptional()
+  max_points?: number;
+
+  @ApiProperty({
+    description: 'The maximum stamps required for this reward',
+    example: 10,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  max_stamp_required?: number;
 
   @ApiProperty({
     description: 'The monetary value of the reward',

@@ -17,4 +17,13 @@ export class AddRewardToBusinessDto {
   @IsNumber()
   @IsOptional()
   point_required?: number;
+
+  @ApiProperty({
+    description: 'The stamps required to redeem the reward',
+    example: 10,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  stamp_required?: number;
 }

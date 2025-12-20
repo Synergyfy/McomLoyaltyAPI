@@ -52,7 +52,11 @@ export class RewardsService {
 
   // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
-    const { sector_ids, tier_ids, ...rewardData } = createRewardDto;
+    const { sector_ids, tier_ids, max_points, max_stamp_required, ...rewardData } = createRewardDto;
+
+    if (!max_points && !max_stamp_required) {
+      throw new ForbiddenException('Either max points or max stamp required must be provided');
+    }
 
     let sectors: Sector[] = [];
     if (sector_ids && sector_ids.length > 0) {
@@ -72,6 +76,8 @@ export class RewardsService {
 
     const reward = this.rewardRepository.create({
       ...rewardData,
+      max_points,
+      max_stamp_required,
       sectors: sectors,
       tiers: tiers,
     });
@@ -213,11 +219,22 @@ export class RewardsService {
     }
 
     const pointRequired = addRewardToBusinessDto.point_required ?? reward.max_points;
+    const stampRequired = addRewardToBusinessDto.stamp_required ?? reward.max_stamp_required;
     const quantity = addRewardToBusinessDto.quantity ?? reward.quantity;
 
-    if (pointRequired > reward.max_points) {
+    if (!pointRequired && !stampRequired) {
+      throw new ForbiddenException('At least one of point required or stamp required must be set');
+    }
+
+    if (pointRequired && reward.max_points && pointRequired > reward.max_points) {
       throw new ForbiddenException(
         `Points required cannot exceed the maximum points set by admin (${reward.max_points})`,
+      );
+    }
+
+    if (stampRequired && reward.max_stamp_required && stampRequired > reward.max_stamp_required) {
+      throw new ForbiddenException(
+        `Stamps required cannot exceed the maximum stamps set by admin (${reward.max_stamp_required})`,
       );
     }
 
@@ -234,6 +251,7 @@ export class RewardsService {
       image: reward.image,
       disabled: reward.disabled,
       point_required: pointRequired,
+      stamp_required: stampRequired,
       quantity: quantity,
       remaining_quantity: quantity,
     });
@@ -257,6 +275,10 @@ export class RewardsService {
     // Check if the tier allows creating rewards from scratch
     if (!membership.tier.configuration?.featureFlags?.canCreateRewardFromScratch) {
       throw new ForbiddenException('Your current tier does not allow creating rewards from scratch');
+    }
+
+    if (!createBusinessRewardDto.point_required && !createBusinessRewardDto.stamp_required) {
+      throw new ForbiddenException('At least one of point required or stamp required must be set');
     }
 
     const businessReward = this.businessRewardRepository.create({
@@ -479,9 +501,27 @@ export class RewardsService {
       updateBusinessRewardDto.point_required !== undefined &&
       businessReward.reward
     ) {
-      if (updateBusinessRewardDto.point_required > businessReward.reward.max_points) {
+      if (
+        businessReward.reward.max_points !== null &&
+        updateBusinessRewardDto.point_required > businessReward.reward.max_points
+      ) {
         throw new ForbiddenException(
           `Points required cannot exceed the maximum points set by admin (${businessReward.reward.max_points})`,
+        );
+      }
+    }
+
+    if (
+      updateBusinessRewardDto.stamp_required !== undefined &&
+      businessReward.reward
+    ) {
+      if (
+        businessReward.reward.max_stamp_required !== null &&
+        updateBusinessRewardDto.stamp_required >
+        businessReward.reward.max_stamp_required
+      ) {
+        throw new ForbiddenException(
+          `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamp_required})`,
         );
       }
     }

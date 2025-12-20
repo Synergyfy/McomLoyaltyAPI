@@ -16,8 +16,11 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column({ nullable: true })
   remaining_quantity: number;
 
-  @Column()
+  @Column({ nullable: true })
   point_required: number;
+
+  @Column({ nullable: true })
+  stamp_required: number;
 
   @Column()
   title: string;

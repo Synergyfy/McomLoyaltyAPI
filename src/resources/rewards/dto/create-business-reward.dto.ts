@@ -15,9 +15,20 @@ export class CreateBusinessRewardDto {
   @ApiProperty({
     description: 'The points required to redeem the reward',
     example: 1000,
+    required: false,
   })
   @IsNumber()
-  point_required: number;
+  @IsOptional()
+  point_required?: number;
+
+  @ApiProperty({
+    description: 'The stamps required to redeem the reward',
+    example: 10,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  stamp_required?: number;
   @ApiProperty({
     description: 'The title of the reward',
     example: 'Free Coffee',
