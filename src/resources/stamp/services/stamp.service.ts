@@ -20,7 +20,6 @@ import { Role } from "../../../common/role.enum";
 import { StampCardStatus } from "../enums/stamp-card-status.enum";
 import { StampTriggerMethod } from "../enums/stamp-trigger-method.enum";
 import { ScanParticipantQrDto } from "../dto/scan-participant-qr.dto";
-import { ParticipantCampaignBalanceService } from "../../participant-campaign-balance/services/participant-campaign-balance.service";
 
 @Injectable()
 export class StampService {
@@ -493,6 +492,12 @@ export class StampService {
     metadata?: string,
   ): Promise<StampCard> {
     return this.dataSource.transaction(async (manager) => {
+      // LOCK Participant to prevent concurrent card creation race
+      await manager.findOne(Participant, {
+        where: { id: participant.id },
+        lock: { mode: "pessimistic_write" },
+      });
+
       // Find existing card or create new
       let card = await manager.findOne(StampCard, {
         where: {
@@ -503,17 +508,8 @@ export class StampService {
         relations: ["businessStampReward", "businessStampReward.template"], // Ensure relations are loaded
       });
 
-      let isNew = false;
       if (!card) {
         // Check if there are completed but unredeemed cards?
-        // Usually, users can only have one active card per reward at a time.
-        // If they have a completed one, they must redeem it before starting a new one?
-        // Requirement 4.5: "After redemption: A new empty card starts automatically".
-        // So if they have a 'COMPLETED' card, maybe they can't earn more stamps until they redeem?
-        // Or they can have multiple?
-        // "System checks if they already have a card. If not, creates new."
-        // I'll assume one active card at a time.
-
         const completedCard = await manager.findOne(StampCard, {
           where: {
             participant: { id: participant.id },
@@ -535,7 +531,6 @@ export class StampService {
           status: StampCardStatus.IN_PROGRESS,
         });
         card = await manager.save(StampCard, card); // Save to get ID
-        isNew = true;
 
         // Update enrolled count
         await manager.increment(
@@ -590,7 +585,6 @@ export class StampService {
 
         if (pointsAdded > 0) {
           // Add points to participant global wallet
-          // Assuming direct update for now as I don't have a wallet service interface in context
           await manager.increment(
             Participant,
             { id: participant.id },
@@ -618,54 +612,65 @@ export class StampService {
     participantUniqueCode?: string,
     cardId?: string,
   ): Promise<StampCard> {
-    let card: StampCard;
-
-    if (cardId) {
-      card = await this.stampCardRepo.findOne({
-        where: { id: cardId },
-        relations: [
-          "businessStampReward",
-          "businessStampReward.business",
-          "participant",
-        ],
-      });
-    } else if (participantUniqueCode) {
-      const participant = await this.participantRepo.findOne({
-        where: { uniqueCode: participantUniqueCode },
-      });
-      if (!participant) throw new NotFoundException("Participant not found");
-
-      // Find a completed card for this business
-      card = await this.stampCardRepo.findOne({
-        where: {
-          participant: { id: participant.id },
-          businessStampReward: { business: { id: businessId } },
-          status: StampCardStatus.COMPLETED,
-        },
-        relations: [
-          "businessStampReward",
-          "businessStampReward.business",
-          "participant",
-        ],
-      });
-    } else {
-      throw new BadRequestException(
-        "Either participantUniqueCode or stampCardId must be provided",
-      );
-    }
-
-    if (!card) throw new NotFoundException("No completed stamp card found");
-
-    if (card.businessStampReward.business.id !== businessId) {
-      throw new ForbiddenException("This reward belongs to another business");
-    }
-
-    if (card.status !== StampCardStatus.COMPLETED) {
-      throw new BadRequestException("Card is not completed yet");
-    }
-
-    // Redeem
     return this.dataSource.transaction(async (manager) => {
+      let card: StampCard;
+
+      if (cardId) {
+        // Lock the card immediately
+        card = await manager.findOne(StampCard, {
+          where: { id: cardId },
+          lock: { mode: "pessimistic_write" },
+          relations: [
+            "businessStampReward",
+            "businessStampReward.business",
+            "participant",
+          ],
+        });
+      } else if (participantUniqueCode) {
+        const participant = await manager.findOne(Participant, {
+          where: { uniqueCode: participantUniqueCode },
+        });
+        if (!participant) throw new NotFoundException("Participant not found");
+
+        // Find a completed card for this business with LOCK
+        // We lock the participant to avoid finding the same card twice in race
+        await manager.findOne(Participant, {
+          where: { id: participant.id },
+          lock: { mode: "pessimistic_write" },
+        });
+
+        card = await manager.findOne(StampCard, {
+          where: {
+            participant: { id: participant.id },
+            businessStampReward: { business: { id: businessId } },
+            status: StampCardStatus.COMPLETED,
+          },
+          relations: [
+            "businessStampReward",
+            "businessStampReward.business",
+            "participant",
+          ],
+        });
+      } else {
+        throw new BadRequestException(
+          "Either participantUniqueCode or stampCardId must be provided",
+        );
+      }
+
+      if (!card) throw new NotFoundException("No completed stamp card found");
+
+      if (card.businessStampReward.business.id !== businessId) {
+        throw new ForbiddenException("This reward belongs to another business");
+      }
+
+      if (card.status !== StampCardStatus.COMPLETED) {
+        if (card.status === StampCardStatus.REDEEMED) {
+          throw new BadRequestException("Card has already been redeemed");
+        }
+        throw new BadRequestException("Card is not completed yet");
+      }
+
+      // Redeem
       card.status = StampCardStatus.REDEEMED;
       card.redeemed_at = new Date();
       await manager.save(StampCard, card);
@@ -677,12 +682,7 @@ export class StampService {
         1,
       );
 
-      // Auto-create new card?
-      // Requirement 4.5: "After redemption: A new empty card starts automatically (if the reward is repeatable)"
-      // I don't see a "repeatable" flag in the doc, but usually stamp cards are repeatable.
-      // I will assume yes.
-
-      // Ensure participant relation is present
+      // Auto-create new card
       const participant = card.participant;
 
       const newCard = manager.create(StampCard, {
@@ -693,16 +693,6 @@ export class StampService {
       });
       await manager.save(StampCard, newCard);
 
-      // Update enrolled count?
-      // Technically they were already enrolled.
-      // "Total customers enrolled" might mean "Active cards" or "Unique customers".
-      // Usually it's active cards.
-      // If I count active cards, then +1.
-      // If unique users, no change.
-      // "Total customers enrolled" -> "Customers".
-      // I'll stick to +1 enrolled if we consider a new card as a new enrollment instance,
-      // or just leave it if it means unique people.
-      // Given simple counters, let's just increment enrolled to track volume of cards started.
       await manager.increment(
         BusinessStampReward,
         { id: card.businessStampReward.id },
