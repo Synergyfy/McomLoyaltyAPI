@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Stripe from 'stripe';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import Stripe from "stripe";
 
 @Injectable()
 export class StripeService {
   public readonly stripe: Stripe;
 
   constructor(private readonly configService: ConfigService) {
-    this.stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY'));
+    this.stripe = new Stripe(
+      this.configService.get<string>("STRIPE_SECRET_KEY"),
+    );
   }
 
   async createPaymentIntent(amount: number, currency: string, metadata: any) {
@@ -33,7 +35,12 @@ export class StripeService {
     });
   }
 
-  async createCharge(amount: number, currency: string, customerId: string, description: string) {
+  async createCharge(
+    amount: number,
+    currency: string,
+    customerId: string,
+    description: string,
+  ) {
     return await this.stripe.charges.create({
       amount,
       currency,
@@ -42,7 +49,11 @@ export class StripeService {
     });
   }
 
-  async createSubscription(customerId: string, priceId: string, trialPeriodDays?: number) {
+  async createSubscription(
+    customerId: string,
+    priceId: string,
+    trialPeriodDays?: number,
+  ) {
     return await this.stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],

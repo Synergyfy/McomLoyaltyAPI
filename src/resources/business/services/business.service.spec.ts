@@ -1,17 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { BusinessService } from './business.service';
-import { Business } from '../entities/business.entity';
-import { OnboardingDto } from '../dto/onboarding.dto';
-import { HashService } from '../../../common/hash/hash.service';
-import { NotFoundException } from '@nestjs/common';
-import { Referral } from '../../referral/entities/referral.entity';
-import { SectorService } from '../../sector/services/sector.service';
-import { CategoryService } from '../../category/category.service';
-import { SubcategoryService } from '../../subcategory/subcategory.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { BusinessService } from "./business.service";
+import { Business } from "../entities/business.entity";
+import { OnboardingDto } from "../dto/onboarding.dto";
+import { HashService } from "../../../common/hash/hash.service";
+import { NotFoundException } from "@nestjs/common";
+import { Referral } from "../../referral/entities/referral.entity";
+import { SectorService } from "../../sector/services/sector.service";
+import { CategoryService } from "../../category/category.service";
+import { SubcategoryService } from "../../subcategory/subcategory.service";
 
-describe('BusinessService', () => {
+describe("BusinessService", () => {
   let service: BusinessService;
   let repository: Repository<Business>;
 
@@ -78,19 +78,21 @@ describe('BusinessService', () => {
     repository = module.get<Repository<Business>>(getRepositoryToken(Business));
   });
 
-  describe('onboarding', () => {
-    it('should update a business with onboarding data', async () => {
-      const businessId = 'some-uuid';
+  describe("onboarding", () => {
+    it("should update a business with onboarding data", async () => {
+      const businessId = "some-uuid";
       const onboardingDto: OnboardingDto = {
-        phone: '+1234567890',
-        address: '123 Foodie Lane, Culinary City',
-        sectorId: 'some-sector-uuid',
-        referralCapacity: '12+',
+        phone: "+1234567890",
+        address: "123 Foodie Lane, Culinary City",
+        sectorId: "some-sector-uuid",
+        referralCapacity: "12+",
       };
 
       const existingBusiness = new Business();
       mockBusinessRepository.findOne.mockResolvedValue(existingBusiness);
-      mockSectorService.findOne.mockResolvedValue({ id: onboardingDto.sectorId });
+      mockSectorService.findOne.mockResolvedValue({
+        id: onboardingDto.sectorId,
+      });
 
       const { sectorId, referralCapacity, ...rest } = onboardingDto;
       const expectedSaveObject = {
@@ -105,23 +107,28 @@ describe('BusinessService', () => {
 
       const result = await service.onboarding(businessId, onboardingDto);
 
-      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: businessId }, relations: [] });
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: businessId },
+        relations: [],
+      });
       expect(repository.save).toHaveBeenCalledWith(expectedSaveObject);
       expect(result).toBeDefined();
     });
 
-    it('should throw a NotFoundException if the business does not exist', async () => {
-      const businessId = 'non-existent-uuid';
+    it("should throw a NotFoundException if the business does not exist", async () => {
+      const businessId = "non-existent-uuid";
       const onboardingDto: OnboardingDto = {
-        phone: '+1234567890',
-        address: '123 Foodie Lane, Culinary City',
-        sectorId: 'some-sector-uuid',
-        referralCapacity: '12+',
+        phone: "+1234567890",
+        address: "123 Foodie Lane, Culinary City",
+        sectorId: "some-sector-uuid",
+        referralCapacity: "12+",
       };
 
       mockBusinessRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.onboarding(businessId, onboardingDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.onboarding(businessId, onboardingDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

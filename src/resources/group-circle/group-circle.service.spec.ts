@@ -1,21 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GroupCircleService } from './group-circle.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { GroupCircle } from './entities/group-circle.entity';
-import { GroupCircleMember } from './entities/group-circle-member.entity';
-import { GroupMessage } from './entities/group-message.entity';
-import { GroupActivity } from './entities/group-activity.entity';
-import { GroupCircleContribution } from './entities/group-circle-contribution.entity';
-import { NetworkList } from '../network/entities/network-list.entity';
-import { Network } from '../network/entities/network.entity';
-import { StripeService } from '../payment/stripe.service';
-import { PaypalService } from '../payment/paypal.service';
-import { Repository } from 'typeorm';
-import { SendMessageDto } from './dto/send-message.dto';
-import { Business } from '../business/entities/business.entity';
-import { GroupMessageType } from './enums/group-circle.enums';
+import { Test, TestingModule } from "@nestjs/testing";
+import { GroupCircleService } from "./group-circle.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { GroupCircle } from "./entities/group-circle.entity";
+import { GroupCircleMember } from "./entities/group-circle-member.entity";
+import { GroupMessage } from "./entities/group-message.entity";
+import { GroupActivity } from "./entities/group-activity.entity";
+import { GroupCircleContribution } from "./entities/group-circle-contribution.entity";
+import { NetworkList } from "../network/entities/network-list.entity";
+import { Network } from "../network/entities/network.entity";
+import { StripeService } from "../payment/stripe.service";
+import { PaypalService } from "../payment/paypal.service";
+import { Repository } from "typeorm";
+import { SendMessageDto } from "./dto/send-message.dto";
+import { Business } from "../business/entities/business.entity";
+import { GroupMessageType } from "./enums/group-circle.enums";
 
-describe('GroupCircleService', () => {
+describe("GroupCircleService", () => {
   let service: GroupCircleService;
   let messageRepo: Repository<GroupMessage>;
   let memberRepo: Repository<GroupCircleMember>;
@@ -27,10 +27,10 @@ describe('GroupCircleService', () => {
     create: jest.fn(),
     save: jest.fn(),
     manager: {
-        findOne: jest.fn()
+      findOne: jest.fn(),
     },
     update: jest.fn(),
-    remove: jest.fn()
+    remove: jest.fn(),
   };
 
   const mockStripeService = {
@@ -51,7 +51,10 @@ describe('GroupCircleService', () => {
         { provide: getRepositoryToken(GroupCircleMember), useValue: mockRepo },
         { provide: getRepositoryToken(GroupMessage), useValue: mockRepo },
         { provide: getRepositoryToken(GroupActivity), useValue: mockRepo },
-        { provide: getRepositoryToken(GroupCircleContribution), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(GroupCircleContribution),
+          useValue: mockRepo,
+        },
         { provide: getRepositoryToken(NetworkList), useValue: mockRepo },
         { provide: getRepositoryToken(Network), useValue: mockRepo },
         { provide: StripeService, useValue: mockStripeService },
@@ -60,85 +63,137 @@ describe('GroupCircleService', () => {
     }).compile();
 
     service = module.get<GroupCircleService>(GroupCircleService);
-    messageRepo = module.get<Repository<GroupMessage>>(getRepositoryToken(GroupMessage));
-    memberRepo = module.get<Repository<GroupCircleMember>>(getRepositoryToken(GroupCircleMember));
-    circleRepo = module.get<Repository<GroupCircle>>(getRepositoryToken(GroupCircle));
+    messageRepo = module.get<Repository<GroupMessage>>(
+      getRepositoryToken(GroupMessage),
+    );
+    memberRepo = module.get<Repository<GroupCircleMember>>(
+      getRepositoryToken(GroupCircleMember),
+    );
+    circleRepo = module.get<Repository<GroupCircle>>(
+      getRepositoryToken(GroupCircle),
+    );
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('sendMessage', () => {
-    it('should send a group message', async () => {
-      const dto: SendMessageDto = { content: 'Hello Group' };
-      const business = { id: 'bus1', name: 'Business 1' } as Business;
-      const circleId = 'circle1';
+  describe("sendMessage", () => {
+    it("should send a group message", async () => {
+      const dto: SendMessageDto = { content: "Hello Group" };
+      const business = { id: "bus1", name: "Business 1" } as Business;
+      const circleId = "circle1";
 
-      jest.spyOn(circleRepo, 'findOne').mockResolvedValue({ id: circleId, business } as any);
-      jest.spyOn(messageRepo, 'create').mockReturnValue({ id: 'msg1', ...dto, type: GroupMessageType.GROUP } as any);
-      jest.spyOn(messageRepo, 'save').mockResolvedValue({ id: 'msg1', ...dto, type: GroupMessageType.GROUP } as any);
+      jest
+        .spyOn(circleRepo, "findOne")
+        .mockResolvedValue({ id: circleId, business } as any);
+      jest.spyOn(messageRepo, "create").mockReturnValue({
+        id: "msg1",
+        ...dto,
+        type: GroupMessageType.GROUP,
+      } as any);
+      jest.spyOn(messageRepo, "save").mockResolvedValue({
+        id: "msg1",
+        ...dto,
+        type: GroupMessageType.GROUP,
+      } as any);
 
       const result = await service.sendMessage(circleId, dto, business);
 
-      expect(messageRepo.create).toHaveBeenCalledWith(expect.objectContaining({
-        type: GroupMessageType.GROUP,
-        recipientId: null
-      }));
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: GroupMessageType.GROUP,
+          recipientId: null,
+        }),
+      );
       expect(result).toBeDefined();
     });
 
-    it('should send a direct message', async () => {
-      const dto: SendMessageDto = { content: 'Hello Member', recipientId: 'net1' };
-      const business = { id: 'bus1', name: 'Business 1' } as Business;
-      const circleId = 'circle1';
+    it("should send a direct message", async () => {
+      const dto: SendMessageDto = {
+        content: "Hello Member",
+        recipientId: "net1",
+      };
+      const business = { id: "bus1", name: "Business 1" } as Business;
+      const circleId = "circle1";
 
-      jest.spyOn(circleRepo, 'findOne').mockResolvedValue({ id: circleId, business } as any);
-      jest.spyOn(memberRepo, 'findOne').mockResolvedValue({
-          id: 'mem1',
-          network: { id: 'net1', fullName: 'John Doe' }
+      jest
+        .spyOn(circleRepo, "findOne")
+        .mockResolvedValue({ id: circleId, business } as any);
+      jest.spyOn(memberRepo, "findOne").mockResolvedValue({
+        id: "mem1",
+        network: { id: "net1", fullName: "John Doe" },
       } as any);
 
-      jest.spyOn(messageRepo, 'create').mockReturnValue({ id: 'msg1', ...dto, type: GroupMessageType.DIRECT } as any);
-      jest.spyOn(messageRepo, 'save').mockResolvedValue({ id: 'msg1', ...dto, type: GroupMessageType.DIRECT } as any);
+      jest.spyOn(messageRepo, "create").mockReturnValue({
+        id: "msg1",
+        ...dto,
+        type: GroupMessageType.DIRECT,
+      } as any);
+      jest.spyOn(messageRepo, "save").mockResolvedValue({
+        id: "msg1",
+        ...dto,
+        type: GroupMessageType.DIRECT,
+      } as any);
 
       const result = await service.sendMessage(circleId, dto, business);
 
-      expect(messageRepo.create).toHaveBeenCalledWith(expect.objectContaining({
-        type: GroupMessageType.DIRECT,
-        recipientId: 'net1',
-        recipientName: 'John Doe'
-      }));
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: GroupMessageType.DIRECT,
+          recipientId: "net1",
+          recipientName: "John Doe",
+        }),
+      );
       expect(result).toBeDefined();
     });
   });
 
-  describe('getMessages', () => {
-      it('should return messages', async () => {
-          const businessId = 'bus1';
-          const circleId = 'circle1';
-          jest.spyOn(circleRepo, 'findOne').mockResolvedValue({ id: circleId } as any);
-          jest.spyOn(messageRepo, 'find').mockResolvedValue([]);
+  describe("getMessages", () => {
+    it("should return messages", async () => {
+      const businessId = "bus1";
+      const circleId = "circle1";
+      jest
+        .spyOn(circleRepo, "findOne")
+        .mockResolvedValue({ id: circleId } as any);
+      jest.spyOn(messageRepo, "find").mockResolvedValue([]);
 
-          await service.getMessages(circleId, businessId);
-          expect(messageRepo.find).toHaveBeenCalled();
-      });
+      await service.getMessages(circleId, businessId);
+      expect(messageRepo.find).toHaveBeenCalled();
+    });
 
-      it('should filter messages by type and memberId', async () => {
-        const businessId = 'bus1';
-        const circleId = 'circle1';
-        const memberId = 'mem1';
-        jest.spyOn(circleRepo, 'findOne').mockResolvedValue({ id: circleId } as any);
-        jest.spyOn(messageRepo, 'find').mockResolvedValue([]);
+    it("should filter messages by type and memberId", async () => {
+      const businessId = "bus1";
+      const circleId = "circle1";
+      const memberId = "mem1";
+      jest
+        .spyOn(circleRepo, "findOne")
+        .mockResolvedValue({ id: circleId } as any);
+      jest.spyOn(messageRepo, "find").mockResolvedValue([]);
 
-        await service.getMessages(circleId, businessId, 1, 20, GroupMessageType.DIRECT, memberId);
+      await service.getMessages(
+        circleId,
+        businessId,
+        1,
+        20,
+        GroupMessageType.DIRECT,
+        memberId,
+      );
 
-        expect(messageRepo.find).toHaveBeenCalledWith(expect.objectContaining({
-            where: [
-                expect.objectContaining({ senderId: memberId, type: GroupMessageType.DIRECT }),
-                expect.objectContaining({ recipientId: memberId, type: GroupMessageType.DIRECT })
-            ]
-        }));
+      expect(messageRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: [
+            expect.objectContaining({
+              senderId: memberId,
+              type: GroupMessageType.DIRECT,
+            }),
+            expect.objectContaining({
+              recipientId: memberId,
+              type: GroupMessageType.DIRECT,
+            }),
+          ],
+        }),
+      );
     });
   });
 });

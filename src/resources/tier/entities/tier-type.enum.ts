@@ -1,4 +1,4 @@
 export enum TierType {
-    STANDARD = 'standard',
-    SEASONAL = 'seasonal',
+  STANDARD = "standard",
+  SEASONAL = "seasonal",
 }

@@ -1,13 +1,12 @@
-
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Category } from './entities/category.entity';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SectorService } from '../sector/services/sector.service';
-import { SubCategory } from '../subcategory/entities/subcategory.entity';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Category } from "./entities/category.entity";
+import { CreateCategoryDto } from "./dto/create-category.dto";
+import { UpdateCategoryDto } from "./dto/update-category.dto";
+import { SectorService } from "../sector/services/sector.service";
+import { SubCategory } from "../subcategory/entities/subcategory.entity";
+import { PaginationDto } from "src/common/dto/pagination.dto";
 
 @Injectable()
 export class CategoryService {
@@ -35,7 +34,7 @@ export class CategoryService {
   async findOne(id: string): Promise<Category> {
     const category = await this.categoryRepository.findOne({
       where: { id },
-      relations: ['subCategories', 'sector'],
+      relations: ["subCategories", "sector"],
     });
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found`);
@@ -49,7 +48,9 @@ export class CategoryService {
   ): Promise<Category> {
     const category = await this.findOne(id);
     if (updateCategoryDto.sectorId) {
-      const sector = await this.sectorService.findOne(updateCategoryDto.sectorId);
+      const sector = await this.sectorService.findOne(
+        updateCategoryDto.sectorId,
+      );
       category.sector = sector;
     }
     Object.assign(category, updateCategoryDto);
@@ -66,13 +67,12 @@ export class CategoryService {
     paginationDto: PaginationDto,
   ) {
     const { page, limit } = paginationDto;
-    const [subCategories, total] = await this.subCategoryRepository.findAndCount(
-      {
+    const [subCategories, total] =
+      await this.subCategoryRepository.findAndCount({
         where: { category: { id: categoryId } },
         take: limit,
         skip: (page - 1) * limit,
-      },
-    );
+      });
 
     return {
       data: subCategories,

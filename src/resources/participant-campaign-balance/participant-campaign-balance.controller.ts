@@ -1,15 +1,23 @@
-import { Controller, Post, Body, Get, Param, Query, BadRequestException } from '@nestjs/common';
-import { RedemptionService } from './services/redemption.service';
-import { PointEarningService } from './services/point-earning.service';
-import { TransactionCodeService } from './services/transaction-code.service';
-import { GenerateCodeDto } from './dto/generate-code.dto';
-import { ClaimCodeDto } from './dto/claim-code.dto';
-import { ScanParticipantDto } from './dto/scan-participant.dto';
-import { DualScanDto } from './dto/dual-scan.dto';
-import { IsJoinedDto } from './dto/is-joined.dto';
-import { AwardPointsDto } from './dto/award-points.dto';
-import { AwardStampsDto } from './dto/award-stamps.dto';
-import { RedeemRewardDto } from './dto/redeem-reward.dto';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  Query,
+  BadRequestException,
+} from "@nestjs/common";
+import { RedemptionService } from "./services/redemption.service";
+import { PointEarningService } from "./services/point-earning.service";
+import { TransactionCodeService } from "./services/transaction-code.service";
+import { GenerateCodeDto } from "./dto/generate-code.dto";
+import { ClaimCodeDto } from "./dto/claim-code.dto";
+import { ScanParticipantDto } from "./dto/scan-participant.dto";
+import { DualScanDto } from "./dto/dual-scan.dto";
+import { IsJoinedDto } from "./dto/is-joined.dto";
+import { AwardPointsDto } from "./dto/award-points.dto";
+import { AwardStampsDto } from "./dto/award-stamps.dto";
+import { RedeemRewardDto } from "./dto/redeem-reward.dto";
 import {
   ApiTags,
   ApiOperation,
@@ -17,62 +25,68 @@ import {
   ApiBody,
   ApiBearerAuth,
   ApiQuery,
-} from '@nestjs/swagger';
-import { Role } from '../../common/role.enum';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ParticipantCampaignBalance } from './entities/participant-campaign-balance.entity';
-import { ParticipantCampaignBalanceService } from './services/participant-campaign-balance.service';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { User } from 'src/common/interfaces/user.interface';
-import { GetParticipantBalanceDto } from './dto/get-participant-balance.dto';
-import { GetParticipantBalanceForCampaignDto } from './dto/get-participant-balance-for-campaign.dto';
-import { TransactionCode, TransactionType } from './entities/transaction-code.entity';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+} from "@nestjs/swagger";
+import { Role } from "../../common/role.enum";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { ParticipantCampaignBalance } from "./entities/participant-campaign-balance.entity";
+import { ParticipantCampaignBalanceService } from "./services/participant-campaign-balance.service";
+import { CurrentUser } from "src/common/decorators/current-user.decorator";
+import { User } from "src/common/interfaces/user.interface";
+import { GetParticipantBalanceDto } from "./dto/get-participant-balance.dto";
+import { GetParticipantBalanceForCampaignDto } from "./dto/get-participant-balance-for-campaign.dto";
+import {
+  TransactionCode,
+  TransactionType,
+} from "./entities/transaction-code.entity";
+import { PaginationDto } from "../../common/dto/pagination.dto";
 
-@ApiTags('Participant Campaign Balance')
+@ApiTags("Participant Campaign Balance")
 @ApiBearerAuth()
-@Controller('participant-campaign-balance')
+@Controller("participant-campaign-balance")
 export class ParticipantCampaignBalanceController {
   constructor(
     private readonly redemptionService: RedemptionService,
     private readonly pointEarningService: PointEarningService,
     private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
     private readonly transactionCodeService: TransactionCodeService,
-  ) { }
+  ) {}
 
-  @Get('my-balance')
+  @Get("my-balance")
   @ApiOperation({
-    summary: 'Get the current participant`s point balance',
+    summary: "Get the current participant`s point balance",
     description:
-      'Allows a participant to view their global point balance and their balance for each campaign. Accessible only by the Participant role.',
+      "Allows a participant to view their global point balance and their balance for each campaign. Accessible only by the Participant role.",
   })
   @ApiResponse({
     status: 200,
-    description: 'The participant`s point balance.',
+    description: "The participant`s point balance.",
     type: GetParticipantBalanceDto,
   })
-  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @ApiResponse({ status: 404, description: "Not Found." })
   @Roles(Role.Participant)
   getParticipantBalance(@CurrentUser() user: User) {
-    return this.participantCampaignBalanceService.getParticipantBalance(user.id);
+    return this.participantCampaignBalanceService.getParticipantBalance(
+      user.id,
+    );
   }
 
-  @Get('my-balance/:campaignId')
+  @Get("my-balance/:campaignId")
   @ApiOperation({
-    summary: 'Get the current participant`s point balance for a specific campaign',
+    summary:
+      "Get the current participant`s point balance for a specific campaign",
     description:
-      'Allows a participant to view their point balance for a specific campaign. Accessible only by the Participant role.',
+      "Allows a participant to view their point balance for a specific campaign. Accessible only by the Participant role.",
   })
   @ApiResponse({
     status: 200,
-    description: 'The participant`s point balance for the specified campaign.',
+    description: "The participant`s point balance for the specified campaign.",
     type: GetParticipantBalanceForCampaignDto,
   })
-  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @ApiResponse({ status: 404, description: "Not Found." })
   @Roles(Role.Participant)
   getParticipantBalanceForCampaign(
     @CurrentUser() user: User,
-    @Param('campaignId') campaignId: string,
+    @Param("campaignId") campaignId: string,
   ) {
     return this.participantCampaignBalanceService.getParticipantBalanceForCampaign(
       user.id,
@@ -80,39 +94,47 @@ export class ParticipantCampaignBalanceController {
     );
   }
 
-  @Post('is-joined')
+  @Post("is-joined")
   @ApiOperation({
-    summary: 'Check if participant has joined a campaign',
-    description: 'Checks if the authenticated participant is part of the specified campaign.',
+    summary: "Check if participant has joined a campaign",
+    description:
+      "Checks if the authenticated participant is part of the specified campaign.",
   })
   @ApiBody({ type: IsJoinedDto })
   @ApiResponse({
     status: 200,
-    description: 'Returns whether the participant has joined.',
+    description: "Returns whether the participant has joined.",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        isJoined: { type: 'boolean' },
+        isJoined: { type: "boolean" },
       },
     },
   })
   @Roles(Role.Participant)
   async isJoined(@CurrentUser() user: User, @Body() dto: IsJoinedDto) {
-    return this.participantCampaignBalanceService.isJoined(user.id, dto.campaignId);
+    return this.participantCampaignBalanceService.isJoined(
+      user.id,
+      dto.campaignId,
+    );
   }
 
-  @Get('history')
+  @Get("history")
   @ApiOperation({
-    summary: 'Get all transaction history for the participant',
-    description: 'Returns a paginated list of all point transactions across all campaigns.',
+    summary: "Get all transaction history for the participant",
+    description:
+      "Returns a paginated list of all point transactions across all campaigns.",
   })
   @ApiQuery({ type: PaginationDto })
   @ApiResponse({
     status: 200,
-    description: 'Returns transaction history.',
+    description: "Returns transaction history.",
   })
   @Roles(Role.Participant)
-  async getAllHistory(@CurrentUser() user: User, @Query() query: PaginationDto) {
+  async getAllHistory(
+    @CurrentUser() user: User,
+    @Query() query: PaginationDto,
+  ) {
     return this.participantCampaignBalanceService.getAllHistory(
       user.id,
       query.page || 1,
@@ -120,21 +142,25 @@ export class ParticipantCampaignBalanceController {
     );
   }
 
-  @Get('history/:campaignId')
+  @Get("history/:campaignId")
   @ApiOperation({
-    summary: 'Get transaction history for a specific campaign',
-    description: 'Returns a paginated list of point transactions for a specific campaign.',
+    summary: "Get transaction history for a specific campaign",
+    description:
+      "Returns a paginated list of point transactions for a specific campaign.",
   })
   @ApiQuery({ type: PaginationDto })
   @ApiResponse({
     status: 200,
-    description: 'Returns transaction history for the campaign.',
+    description: "Returns transaction history for the campaign.",
   })
-  @ApiResponse({ status: 400, description: 'Participant is not participating in this campaign.' })
+  @ApiResponse({
+    status: 400,
+    description: "Participant is not participating in this campaign.",
+  })
   @Roles(Role.Participant)
   async getHistoryForCampaign(
     @CurrentUser() user: User,
-    @Param('campaignId') campaignId: string,
+    @Param("campaignId") campaignId: string,
     @Query() query: PaginationDto,
   ) {
     return this.participantCampaignBalanceService.getHistoryForCampaign(
@@ -145,77 +171,77 @@ export class ParticipantCampaignBalanceController {
     );
   }
 
-  @Post('award-points')
+  @Post("award-points")
   @ApiOperation({
-    summary: 'Award points to a participant',
+    summary: "Award points to a participant",
     description:
-      'Allows a staff member to award points to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.',
+      "Allows a staff member to award points to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.",
   })
   @ApiBody({ type: AwardPointsDto })
   @ApiResponse({
     status: 201,
-    description: 'The points have been successfully awarded.',
+    description: "The points have been successfully awarded.",
     type: ParticipantCampaignBalance,
   })
-  @ApiResponse({ status: 400, description: 'Bad Request.' })
-  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @ApiResponse({ status: 400, description: "Bad Request." })
+  @ApiResponse({ status: 404, description: "Not Found." })
   @Roles(Role.Admin, Role.Business, Role.Staff)
   awardPoints(@Body() awardPointsDto: AwardPointsDto) {
     return this.pointEarningService.awardPoints(
       awardPointsDto.staffId,
-      'Staff',
+      "Staff",
       awardPointsDto.participantId,
       awardPointsDto.campaignId,
       awardPointsDto.points,
     );
   }
 
-  @Post('award-stamps')
+  @Post("award-stamps")
   @ApiOperation({
-    summary: 'Award stamps to a participant',
+    summary: "Award stamps to a participant",
     description:
-      'Allows a staff member to award stamps to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.',
+      "Allows a staff member to award stamps to a participant for a specific campaign. Accessible by Admin, Business, and Staff roles.",
   })
   @ApiBody({ type: AwardStampsDto })
   @ApiResponse({
     status: 201,
-    description: 'The stamps have been successfully awarded.',
+    description: "The stamps have been successfully awarded.",
   })
-  @ApiResponse({ status: 400, description: 'Bad Request.' })
-  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @ApiResponse({ status: 400, description: "Bad Request." })
+  @ApiResponse({ status: 404, description: "Not Found." })
   @Roles(Role.Admin, Role.Business, Role.Staff)
   awardStamps(@Body() awardStampsDto: AwardStampsDto) {
     return this.pointEarningService.awardStamps(
       awardStampsDto.staffId,
-      'Staff',
+      "Staff",
       awardStampsDto.participantId,
       awardStampsDto.campaignId,
       awardStampsDto.stamps || 1,
     );
   }
 
-  @Post('redeem-reward')
+  @Post("redeem-reward")
   @ApiOperation({
-    summary: 'Redeem a reward for a participant',
+    summary: "Redeem a reward for a participant",
     description:
-      'Allows a staff member to process a reward redemption for a participant. Accessible by Admin, Business, and Staff roles.',
+      "Allows a staff member to process a reward redemption for a participant. Accessible by Admin, Business, and Staff roles.",
   })
   @ApiBody({ type: RedeemRewardDto })
   @ApiResponse({
     status: 201,
-    description: 'The reward has been successfully redeemed.',
+    description: "The reward has been successfully redeemed.",
     type: ParticipantCampaignBalance,
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad Request. For example, not enough points.',
+    description: "Bad Request. For example, not enough points.",
   })
-  @ApiResponse({ status: 404, description: 'Not Found.' })
+  @ApiResponse({ status: 404, description: "Not Found." })
   @Roles(Role.Admin, Role.Business, Role.Staff)
   redeemReward(@Body() redeemRewardDto: RedeemRewardDto) {
     return this.redemptionService.redeemReward(
       redeemRewardDto.staffId,
-      'Staff',
+      "Staff",
       redeemRewardDto.participantId,
       redeemRewardDto.rewardId,
       redeemRewardDto.campaignId,
@@ -224,30 +250,55 @@ export class ParticipantCampaignBalanceController {
   }
 
   // Method A: Scan Participant
-  @Post('scan-participant')
+  @Post("scan-participant")
   @ApiOperation({
-    summary: 'Method A: Staff/Business scans Participant to Award Points or Redeem Reward',
+    summary:
+      "Method A: Staff/Business scans Participant to Award Points or Redeem Reward",
   })
   @ApiBody({ type: ScanParticipantDto })
   @Roles(Role.Business, Role.Staff)
-  async scanParticipant(@CurrentUser() user: User, @Body() dto: ScanParticipantDto) {
-    const performerType = user.role === Role.Staff ? 'Staff' : 'Business';
+  async scanParticipant(
+    @CurrentUser() user: User,
+    @Body() dto: ScanParticipantDto,
+  ) {
+    const performerType = user.role === Role.Staff ? "Staff" : "Business";
 
     if (dto.type === TransactionType.EARN) {
-      if (!dto.points) throw new BadRequestException('Points are required for EARN type');
-      return this.pointEarningService.awardPointsByScan(user.id, performerType, dto.participantCode, dto.campaignId, dto.points);
+      if (!dto.points)
+        throw new BadRequestException("Points are required for EARN type");
+      return this.pointEarningService.awardPointsByScan(
+        user.id,
+        performerType,
+        dto.participantCode,
+        dto.campaignId,
+        dto.points,
+      );
     } else if (dto.type === TransactionType.STAMP_EARN) {
-      return this.pointEarningService.awardStampsByScan(user.id, performerType, dto.participantCode, dto.campaignId);
+      return this.pointEarningService.awardStampsByScan(
+        user.id,
+        performerType,
+        dto.participantCode,
+        dto.campaignId,
+      );
     } else {
-      if (!dto.rewardId) throw new BadRequestException('Reward ID is required for REDEEM type');
-      return this.redemptionService.redeemRewardByScan(user.id, performerType, dto.participantCode, dto.rewardId, dto.campaignId, null);
+      if (!dto.rewardId)
+        throw new BadRequestException("Reward ID is required for REDEEM type");
+      return this.redemptionService.redeemRewardByScan(
+        user.id,
+        performerType,
+        dto.participantCode,
+        dto.rewardId,
+        dto.campaignId,
+        null,
+      );
     }
   }
 
   // Method B: Generate Code
-  @Post('generate-code')
+  @Post("generate-code")
   @ApiOperation({
-    summary: 'Method B: Staff/Business generates a code for Participant to claim',
+    summary:
+      "Method B: Staff/Business generates a code for Participant to claim",
   })
   @ApiBody({ type: GenerateCodeDto })
   @Roles(Role.Business, Role.Staff)
@@ -256,46 +307,78 @@ export class ParticipantCampaignBalanceController {
   }
 
   // Method B: Claim Code
-  @Post('claim-code')
+  @Post("claim-code")
   @ApiOperation({
-    summary: 'Method B: Participant claims a generated code',
+    summary: "Method B: Participant claims a generated code",
   })
   @ApiBody({ type: ClaimCodeDto })
   @Roles(Role.Participant)
   async claimCode(@CurrentUser() user: User, @Body() dto: ClaimCodeDto) {
     // Use the service method that handles the transaction
-    return this.participantCampaignBalanceService.claimCode(user.id, dto.code, dto.campaignId);
+    return this.participantCampaignBalanceService.claimCode(
+      user.id,
+      dto.code,
+      dto.campaignId,
+    );
   }
 
   // Method C: Dual Scan
-  @Post('dual-scan')
+  @Post("dual-scan")
   @ApiOperation({
-    summary: 'Method C: Authenticated Staff/Business sends their own code and Participant code',
+    summary:
+      "Method C: Authenticated Staff/Business sends their own code and Participant code",
   })
   @ApiBody({ type: DualScanDto })
   @Roles(Role.Business, Role.Staff)
   async dualScan(@CurrentUser() user: User, @Body() dto: DualScanDto) {
     // Security Check: Ensure the code belongs to the authenticated user or their business
-    await this.transactionCodeService.validateDualScanPermission(user, dto.staffOrBusinessCode);
+    await this.transactionCodeService.validateDualScanPermission(
+      user,
+      dto.staffOrBusinessCode,
+    );
 
     if (dto.type === TransactionType.EARN) {
-      if (!dto.points) throw new BadRequestException('Points are required for EARN type');
-      return this.pointEarningService.awardPointsDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.campaignId, dto.points);
+      if (!dto.points)
+        throw new BadRequestException("Points are required for EARN type");
+      return this.pointEarningService.awardPointsDualScan(
+        dto.staffOrBusinessCode,
+        dto.participantCode,
+        dto.campaignId,
+        dto.points,
+      );
     } else if (dto.type === TransactionType.STAMP_EARN) {
-      return this.pointEarningService.awardStampsDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.campaignId);
+      return this.pointEarningService.awardStampsDualScan(
+        dto.staffOrBusinessCode,
+        dto.participantCode,
+        dto.campaignId,
+      );
     } else {
-      if (!dto.rewardId) throw new BadRequestException('Reward ID is required for REDEEM type');
-      return this.redemptionService.redeemRewardDualScan(dto.staffOrBusinessCode, dto.participantCode, dto.rewardId, dto.campaignId, null);
+      if (!dto.rewardId)
+        throw new BadRequestException("Reward ID is required for REDEEM type");
+      return this.redemptionService.redeemRewardDualScan(
+        dto.staffOrBusinessCode,
+        dto.participantCode,
+        dto.rewardId,
+        dto.campaignId,
+        null,
+      );
     }
   }
 
-  @Get('codes/generated')
+  @Get("codes/generated")
   @ApiOperation({
-    summary: 'Get list of codes generated by the current user',
+    summary: "Get list of codes generated by the current user",
   })
   @ApiQuery({ type: PaginationDto })
   @Roles(Role.Business, Role.Staff)
-  async getGeneratedCodes(@CurrentUser() user: User, @Query() query: PaginationDto) {
-    return this.transactionCodeService.getGeneratedCodes(user, query.page || 1, query.limit || 10);
+  async getGeneratedCodes(
+    @CurrentUser() user: User,
+    @Query() query: PaginationDto,
+  ) {
+    return this.transactionCodeService.getGeneratedCodes(
+      user,
+      query.page || 1,
+      query.limit || 10,
+    );
   }
 }

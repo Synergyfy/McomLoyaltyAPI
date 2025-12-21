@@ -1,5 +1,8 @@
-import { IsNotEmpty, IsString, IsEnum, IsNumber } from 'class-validator';
-import { PaymentProvider, PaymentStatus } from '../entities/payment-history.entity';
+import { IsNotEmpty, IsString, IsEnum, IsNumber } from "class-validator";
+import {
+  PaymentProvider,
+  PaymentStatus,
+} from "../entities/payment-history.entity";
 
 export class CreatePaymentHistoryDto {
   @IsNotEmpty()

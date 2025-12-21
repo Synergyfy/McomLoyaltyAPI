@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { PointHistoryService } from './point-history.service';
-import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
-import { Repository } from 'typeorm';
+import { Test, TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { PointHistoryService } from "./point-history.service";
+import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
+import { Repository } from "typeorm";
 
 const mockQueryBuilder = {
   andWhere: jest.fn().mockReturnThis(),
@@ -12,7 +12,7 @@ const mockQueryBuilder = {
   getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
 };
 
-describe('PointHistoryService', () => {
+describe("PointHistoryService", () => {
   let service: PointHistoryService;
   let repository: Repository<PointHistory>;
 
@@ -39,18 +39,18 @@ describe('PointHistoryService', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  it('should apply businessId filter', async () => {
-    const filterDto = { businessId: 'some-uuid', page: 1, limit: 10 };
+  it("should apply businessId filter", async () => {
+    const filterDto = { businessId: "some-uuid", page: 1, limit: 10 };
     await service.findAll(filterDto);
-    expect(repository.createQueryBuilder).toHaveBeenCalledWith('pointHistory');
+    expect(repository.createQueryBuilder).toHaveBeenCalledWith("pointHistory");
     expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-      'pointHistory.business_id = :businessId',
+      "pointHistory.business_id = :businessId",
       {
-        businessId: 'some-uuid',
+        businessId: "some-uuid",
       },
     );
     expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);

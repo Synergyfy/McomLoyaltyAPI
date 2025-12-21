@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { TierController } from './tier.controller';
-import { TierService } from './tier.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { TierController } from "./tier.controller";
+import { TierService } from "./tier.service";
 
-describe('TierController', () => {
+describe("TierController", () => {
   let controller: TierController;
 
   beforeEach(async () => {
@@ -26,11 +26,11 @@ describe('TierController', () => {
     controller = module.get<TierController>(TierController);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
-  it('should return tier breakdown', async () => {
+  it("should return tier breakdown", async () => {
     const result = await controller.getBreakdown();
     expect(result).toEqual([]);
   });

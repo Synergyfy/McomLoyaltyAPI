@@ -1,33 +1,30 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
-import moment from 'moment';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Between, In, Repository } from "typeorm";
+import moment from "moment";
 
-import { Business } from '../../business/entities/business.entity';
-import { Campaign } from '../../campaign/entities/campaign.entity';
-import { Participant } from '../../participant/entities/participant.entity';
+import { Business } from "../../business/entities/business.entity";
+import { Campaign } from "../../campaign/entities/campaign.entity";
+import { Participant } from "../../participant/entities/participant.entity";
 import {
   PointHistory,
   PointHistoryType,
-} from '../../participant-campaign-balance/entities/point-history.entity';
-import { Reward } from '../../rewards/entities/reward.entity';
+} from "../../participant-campaign-balance/entities/point-history.entity";
+import { Reward } from "../../rewards/entities/reward.entity";
 import {
   SystemOverviewDto,
   TopBusinessDto,
   TopRewardDto,
-} from '../dto/admin_analytics.dto';
-import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
-import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
+} from "../dto/admin_analytics.dto";
+import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
+import { ParticipantCampaignBalance } from "../../participant-campaign-balance/entities/participant-campaign-balance.entity";
 import {
   GrowthActivityChartDto,
   GrowthActivityResponseDto,
-} from '../dto/growth-activity-chart.dto';
-import {
-  PointLogResponseDto,
-  PointLogItemDto,
-} from '../dto/point-log.dto';
-import { PointLogFilterDto } from '../dto/point-log-filter.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+} from "../dto/growth-activity-chart.dto";
+import { PointLogResponseDto, PointLogItemDto } from "../dto/point-log.dto";
+import { PointLogFilterDto } from "../dto/point-log-filter.dto";
+import { PaginationDto } from "src/common/dto/pagination.dto";
 
 @Injectable()
 export class AdminAnalyticsService {
@@ -46,7 +43,7 @@ export class AdminAnalyticsService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(ParticipantCampaignBalance)
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
-  ) { }
+  ) {}
 
   /**
    * Retrieves a high-level overview of the entire system.
@@ -60,8 +57,8 @@ export class AdminAnalyticsService {
     });
     const totalBusiness = await this.businessRepository.count();
     const { totalMatchingPoints } = await this.businessRepository
-      .createQueryBuilder('business')
-      .select('SUM(business.referralPoints)', 'totalMatchingPoints')
+      .createQueryBuilder("business")
+      .select("SUM(business.referralPoints)", "totalMatchingPoints")
       .getRawOne();
 
     return {
@@ -79,14 +76,14 @@ export class AdminAnalyticsService {
    */
   async getTopBusinesses(): Promise<TopBusinessDto[]> {
     const topBusinesses = await this.businessRepository
-      .createQueryBuilder('business')
-      .select('business.id', 'id')
-      .addSelect('business.name', 'name')
-      .addSelect('business.total_points_earned', 'totalPointsEarned')
-      .addSelect('business.total_points_redeemed', 'totalPointsRedeemed')
+      .createQueryBuilder("business")
+      .select("business.id", "id")
+      .addSelect("business.name", "name")
+      .addSelect("business.total_points_earned", "totalPointsEarned")
+      .addSelect("business.total_points_redeemed", "totalPointsRedeemed")
       .orderBy(
-        'business.total_points_earned + business.total_points_redeemed',
-        'DESC',
+        "business.total_points_earned + business.total_points_redeemed",
+        "DESC",
       )
       .limit(10)
       .getRawMany();
@@ -105,14 +102,14 @@ export class AdminAnalyticsService {
    */
   async getTopRewards(): Promise<TopRewardDto[]> {
     const topRewards = await this.pointHistoryRepository
-      .createQueryBuilder('ph')
-      .select('reward.id', 'id')
-      .addSelect('reward.title', 'name')
-      .addSelect('COUNT(ph.id)', 'totalRedemptions')
-      .innerJoin('ph.reward', 'reward')
-      .where('ph.type = :type', { type: PointHistoryType.REDEEM })
-      .groupBy('reward.id, reward.title')
-      .orderBy('"totalRedemptions"', 'DESC')
+      .createQueryBuilder("ph")
+      .select("reward.id", "id")
+      .addSelect("reward.title", "name")
+      .addSelect("COUNT(ph.id)", "totalRedemptions")
+      .innerJoin("ph.reward", "reward")
+      .where("ph.type = :type", { type: PointHistoryType.REDEEM })
+      .groupBy("reward.id, reward.title")
+      .orderBy('"totalRedemptions"', "DESC")
       .limit(10)
       .getRawMany();
 
@@ -131,13 +128,13 @@ export class AdminAnalyticsService {
     dto: GrowthActivityChartDto,
   ): Promise<GrowthActivityResponseDto> {
     const startDate = dto.startDate
-      ? moment(dto.startDate).startOf('day')
-      : moment().subtract(30, 'days').startOf('day');
+      ? moment(dto.startDate).startOf("day")
+      : moment().subtract(30, "days").startOf("day");
     const endDate = dto.endDate
-      ? moment(dto.endDate).endOf('day')
-      : moment().endOf('day');
+      ? moment(dto.endDate).endOf("day")
+      : moment().endOf("day");
 
-    const days = endDate.diff(startDate, 'days') + 1;
+    const days = endDate.diff(startDate, "days") + 1;
     const labels: string[] = [];
     const registrations: number[] = [];
     const activities: number[] = [];
@@ -149,17 +146,17 @@ export class AdminAnalyticsService {
     >();
 
     for (let i = 0; i < days; i++) {
-      const date = startDate.clone().add(i, 'days').format('YYYY-MM-DD');
+      const date = startDate.clone().add(i, "days").format("YYYY-MM-DD");
       labels.push(date);
       dataMap.set(date, { registrations: 0, activities: 0 });
     }
 
     // 1. Registrations: Businesses
     const newBusinesses = await this.businessRepository
-      .createQueryBuilder('business')
-      .select("TO_CHAR(business.created_at, 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(business.id)', 'count')
-      .where('business.created_at BETWEEN :start AND :end', {
+      .createQueryBuilder("business")
+      .select("TO_CHAR(business.created_at, 'YYYY-MM-DD')", "date")
+      .addSelect("COUNT(business.id)", "count")
+      .where("business.created_at BETWEEN :start AND :end", {
         start: startDate.toDate(),
         end: endDate.toDate(),
       })
@@ -174,10 +171,10 @@ export class AdminAnalyticsService {
 
     // 2. Registrations: Participants
     const newParticipants = await this.participantRepository
-      .createQueryBuilder('participant')
-      .select("TO_CHAR(participant.created_at, 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(participant.id)', 'count')
-      .where('participant.created_at BETWEEN :start AND :end', {
+      .createQueryBuilder("participant")
+      .select("TO_CHAR(participant.created_at, 'YYYY-MM-DD')", "date")
+      .addSelect("COUNT(participant.id)", "count")
+      .where("participant.created_at BETWEEN :start AND :end", {
         start: startDate.toDate(),
         end: endDate.toDate(),
       })
@@ -192,14 +189,14 @@ export class AdminAnalyticsService {
 
     // 3. Activities: Point History (EARN & REDEEM)
     const pointActivities = await this.pointHistoryRepository
-      .createQueryBuilder('ph')
-      .select("TO_CHAR(ph.created_at, 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(ph.id)', 'count')
-      .where('ph.created_at BETWEEN :start AND :end', {
+      .createQueryBuilder("ph")
+      .select("TO_CHAR(ph.created_at, 'YYYY-MM-DD')", "date")
+      .addSelect("COUNT(ph.id)", "count")
+      .where("ph.created_at BETWEEN :start AND :end", {
         start: startDate.toDate(),
         end: endDate.toDate(),
       })
-      .andWhere('ph.type IN (:...types)', {
+      .andWhere("ph.type IN (:...types)", {
         types: [PointHistoryType.EARN, PointHistoryType.REDEEM],
       })
       .groupBy("TO_CHAR(ph.created_at, 'YYYY-MM-DD')")
@@ -213,10 +210,10 @@ export class AdminAnalyticsService {
 
     // 4. Activities: Joining Campaigns (ParticipantCampaignBalance created)
     const joinActivities = await this.participantCampaignBalanceRepository
-      .createQueryBuilder('pcb')
-      .select("TO_CHAR(pcb.created_at, 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(pcb.id)', 'count')
-      .where('pcb.created_at BETWEEN :start AND :end', {
+      .createQueryBuilder("pcb")
+      .select("TO_CHAR(pcb.created_at, 'YYYY-MM-DD')", "date")
+      .addSelect("COUNT(pcb.id)", "count")
+      .where("pcb.created_at BETWEEN :start AND :end", {
         start: startDate.toDate(),
         end: endDate.toDate(),
       })
@@ -231,10 +228,10 @@ export class AdminAnalyticsService {
 
     // 5. Activities: Campaigns Created by Business (BusinessCampaign)
     const businessCampaignActivities = await this.businessCampaignRepository
-      .createQueryBuilder('bc')
-      .select("TO_CHAR(bc.created_at, 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(bc.id)', 'count')
-      .where('bc.created_at BETWEEN :start AND :end', {
+      .createQueryBuilder("bc")
+      .select("TO_CHAR(bc.created_at, 'YYYY-MM-DD')", "date")
+      .addSelect("COUNT(bc.id)", "count")
+      .where("bc.created_at BETWEEN :start AND :end", {
         start: startDate.toDate(),
         end: endDate.toDate(),
       })
@@ -250,14 +247,14 @@ export class AdminAnalyticsService {
     // 6. Activities: Campaigns Created by Business (Direct Campaign creation)
     // We check for campaigns where business_id is NOT NULL
     const directCampaignActivities = await this.campaignRepository
-      .createQueryBuilder('c')
-      .select("TO_CHAR(c.created_at, 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(c.id)', 'count')
-      .where('c.created_at BETWEEN :start AND :end', {
+      .createQueryBuilder("c")
+      .select("TO_CHAR(c.created_at, 'YYYY-MM-DD')", "date")
+      .addSelect("COUNT(c.id)", "count")
+      .where("c.created_at BETWEEN :start AND :end", {
         start: startDate.toDate(),
         end: endDate.toDate(),
       })
-      .andWhere('c.business_id IS NOT NULL')
+      .andWhere("c.business_id IS NOT NULL")
       .groupBy("TO_CHAR(c.created_at, 'YYYY-MM-DD')")
       .getRawMany();
 
@@ -286,7 +283,9 @@ export class AdminAnalyticsService {
    * @param paginationDto The pagination options.
    * @returns A promise that resolves to a paginated list of point logs.
    */
-  async getPointLogs(filterDto: PointLogFilterDto): Promise<PointLogResponseDto> {
+  async getPointLogs(
+    filterDto: PointLogFilterDto,
+  ): Promise<PointLogResponseDto> {
     const {
       page,
       limit,
@@ -300,47 +299,47 @@ export class AdminAnalyticsService {
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.pointHistoryRepository
-      .createQueryBuilder('ph')
-      .leftJoin('ph.participant', 'participant')
+      .createQueryBuilder("ph")
+      .leftJoin("ph.participant", "participant")
       .select([
-        'ph.id',
-        'ph.points',
-        'ph.type',
-        'ph.created_at',
-        'participant.name',
-        'participant.email',
+        "ph.id",
+        "ph.points",
+        "ph.type",
+        "ph.created_at",
+        "participant.name",
+        "participant.email",
       ])
-      .orderBy('ph.created_at', 'DESC')
+      .orderBy("ph.created_at", "DESC")
       .skip(skip)
       .take(limit);
 
     if (businessId) {
-      queryBuilder.andWhere('ph.business_id = :businessId', { businessId });
+      queryBuilder.andWhere("ph.business_id = :businessId", { businessId });
     }
 
     if (campaignId) {
-      queryBuilder.andWhere('ph.campaign_id = :campaignId', { campaignId });
+      queryBuilder.andWhere("ph.campaign_id = :campaignId", { campaignId });
     }
 
     if (participantId) {
-      queryBuilder.andWhere('ph.participant_id = :participantId', {
+      queryBuilder.andWhere("ph.participant_id = :participantId", {
         participantId,
       });
     }
 
     if (transactionType) {
-      queryBuilder.andWhere('ph.type = :transactionType', { transactionType });
+      queryBuilder.andWhere("ph.type = :transactionType", { transactionType });
     }
 
     if (startDate) {
-      queryBuilder.andWhere('ph.created_at >= :startDate', {
-        startDate: moment(startDate).startOf('day').toDate(),
+      queryBuilder.andWhere("ph.created_at >= :startDate", {
+        startDate: moment(startDate).startOf("day").toDate(),
       });
     }
 
     if (endDate) {
-      queryBuilder.andWhere('ph.created_at <= :endDate', {
-        endDate: moment(endDate).endOf('day').toDate(),
+      queryBuilder.andWhere("ph.created_at <= :endDate", {
+        endDate: moment(endDate).endOf("day").toDate(),
       });
     }
 
@@ -355,11 +354,11 @@ export class AdminAnalyticsService {
         description = PointHistoryType.EARN;
       }
 
-      const type = isMatching ? 'Matching' : 'Regular';
+      const type = isMatching ? "Matching" : "Regular";
 
       return {
-        name: log.participant ? log.participant.name : 'Unknown',
-        email: log.participant ? log.participant.email : 'Unknown',
+        name: log.participant ? log.participant.name : "Unknown",
+        email: log.participant ? log.participant.email : "Unknown",
         points: log.points,
         description: description,
         type: type,

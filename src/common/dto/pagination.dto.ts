@@ -1,10 +1,10 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, Min } from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { IsInt, Min } from "class-validator";
 
 export class PaginationDto {
   @ApiProperty({
-    description: 'The page number.',
+    description: "The page number.",
     default: 1,
   })
   @Type(() => Number)
@@ -13,7 +13,7 @@ export class PaginationDto {
   page: number;
 
   @ApiProperty({
-    description: 'The number of items per page.',
+    description: "The number of items per page.",
     default: 10,
   })
   @Type(() => Number)

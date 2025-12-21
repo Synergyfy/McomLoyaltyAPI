@@ -1,25 +1,24 @@
+import { Test, TestingModule } from "@nestjs/testing";
+import { RewardsService } from "./rewards.service";
+import { Repository } from "typeorm";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Reward } from "../entities/reward.entity";
+import { BusinessReward } from "../entities/business-reward.entity";
+import { Business } from "../../business/entities/business.entity";
+import { Membership } from "../../membership/entities/membership.entity";
+import { Sector } from "../../sector/entities/sector.entity";
+import { Tier } from "../../tier/entities/tier.entity";
+import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
+import { TierProgressionService } from "../../tier-progression/tier-progression.service";
+import { CreateRewardDto } from "../dto/create-reward.dto";
+import { RewardType } from "../enums/reward-type.enum";
+import { BadgeLevel } from "../enums/badge-level.enum";
+import { RewardSource } from "../enums/reward-source.enum";
+import { RewardAudience } from "../enums/reward-audience.enum";
+import { RewardStatus } from "../enums/reward-status.enum";
+import { NotFoundException, ForbiddenException } from "@nestjs/common";
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { RewardsService } from './rewards.service';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Reward } from '../entities/reward.entity';
-import { BusinessReward } from '../entities/business-reward.entity';
-import { Business } from '../../business/entities/business.entity';
-import { Membership } from '../../membership/entities/membership.entity';
-import { Sector } from '../../sector/entities/sector.entity';
-import { Tier } from '../../tier/entities/tier.entity';
-import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
-import { TierProgressionService } from '../../tier-progression/tier-progression.service';
-import { CreateRewardDto } from '../dto/create-reward.dto';
-import { RewardType } from '../enums/reward-type.enum';
-import { BadgeLevel } from '../enums/badge-level.enum';
-import { RewardSource } from '../enums/reward-source.enum';
-import { RewardAudience } from '../enums/reward-audience.enum';
-import { RewardStatus } from '../enums/reward-status.enum';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
-
-describe('RewardsService', () => {
+describe("RewardsService", () => {
   let service: RewardsService;
   let rewardRepository: Repository<Reward>;
   let sectorRepository: Repository<Sector>;
@@ -63,138 +62,211 @@ describe('RewardsService', () => {
       providers: [
         RewardsService,
         { provide: getRepositoryToken(Reward), useValue: mockRewardRepository },
-        { provide: getRepositoryToken(BusinessReward), useValue: mockBusinessRewardRepository },
-        { provide: getRepositoryToken(Business), useValue: mockBusinessRepository },
-        { provide: getRepositoryToken(Membership), useValue: mockMembershipRepository },
+        {
+          provide: getRepositoryToken(BusinessReward),
+          useValue: mockBusinessRewardRepository,
+        },
+        {
+          provide: getRepositoryToken(Business),
+          useValue: mockBusinessRepository,
+        },
+        {
+          provide: getRepositoryToken(Membership),
+          useValue: mockMembershipRepository,
+        },
         { provide: getRepositoryToken(Sector), useValue: mockSectorRepository },
         { provide: getRepositoryToken(Tier), useValue: mockTierRepository },
-        { provide: getRepositoryToken(BusinessCampaign), useValue: mockBusinessCampaignRepository },
-        { provide: TierProgressionService, useValue: mockTierProgressionService },
+        {
+          provide: getRepositoryToken(BusinessCampaign),
+          useValue: mockBusinessCampaignRepository,
+        },
+        {
+          provide: TierProgressionService,
+          useValue: mockTierProgressionService,
+        },
       ],
     }).compile();
 
     service = module.get<RewardsService>(RewardsService);
-    rewardRepository = module.get<Repository<Reward>>(getRepositoryToken(Reward));
-    sectorRepository = module.get<Repository<Sector>>(getRepositoryToken(Sector));
+    rewardRepository = module.get<Repository<Reward>>(
+      getRepositoryToken(Reward),
+    );
+    sectorRepository = module.get<Repository<Sector>>(
+      getRepositoryToken(Sector),
+    );
     tierRepository = module.get<Repository<Tier>>(getRepositoryToken(Tier));
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('createReward', () => {
+  describe("createReward", () => {
     const createRewardDto: CreateRewardDto = {
-      title: 'Test Reward',
+      title: "Test Reward",
       max_points: 100,
       value: 10,
-      description: 'Test Description',
-      image: 'image-url',
+      description: "Test Description",
+      image: "image-url",
       reward_type: RewardType.VOUCHER,
       audience: RewardAudience.ALL_BUSINESS,
       status: RewardStatus.ACTIVE,
     };
 
-    it('should create a reward without sectors or tiers', async () => {
+    it("should create a reward without sectors or tiers", async () => {
       mockRewardRepository.create.mockReturnValue(createRewardDto);
       mockRewardRepository.save.mockResolvedValue(createRewardDto);
 
       const result = await service.createReward(createRewardDto);
       expect(result).toEqual(createRewardDto);
-      expect(mockRewardRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-        ...createRewardDto,
-        sectors: [],
-        tiers: [],
-      }));
+      expect(mockRewardRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...createRewardDto,
+          sectors: [],
+          tiers: [],
+        }),
+      );
     });
 
-    it('should create a reward with valid sectors', async () => {
-      const sectors = [{ id: 's1', name: 'Sector 1' }] as Sector[];
+    it("should create a reward with valid sectors", async () => {
+      const sectors = [{ id: "s1", name: "Sector 1" }] as Sector[];
       mockSectorRepository.findBy.mockResolvedValue(sectors);
-      mockRewardRepository.create.mockReturnValue({ ...createRewardDto, sectors });
-      mockRewardRepository.save.mockResolvedValue({ ...createRewardDto, sectors });
+      mockRewardRepository.create.mockReturnValue({
+        ...createRewardDto,
+        sectors,
+      });
+      mockRewardRepository.save.mockResolvedValue({
+        ...createRewardDto,
+        sectors,
+      });
 
-      const dto = { ...createRewardDto, sector_ids: ['s1'] };
+      const dto = { ...createRewardDto, sector_ids: ["s1"] };
       const result = await service.createReward(dto);
 
-      expect(mockSectorRepository.findBy).toHaveBeenCalledWith({ id: expect.any(Object) }); // In(['s1'])
-      expect(mockRewardRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-        sectors: sectors,
-      }));
+      expect(mockSectorRepository.findBy).toHaveBeenCalledWith({
+        id: expect.any(Object),
+      }); // In(['s1'])
+      expect(mockRewardRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sectors: sectors,
+        }),
+      );
       expect(result).toBeDefined();
     });
 
-    it('should throw NotFoundException if sector not found', async () => {
+    it("should throw NotFoundException if sector not found", async () => {
       mockSectorRepository.findBy.mockResolvedValue([]);
-      const dto = { ...createRewardDto, sector_ids: ['s1'] };
+      const dto = { ...createRewardDto, sector_ids: ["s1"] };
 
-      await expect(service.createReward(dto)).rejects.toThrow(NotFoundException);
+      await expect(service.createReward(dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
-    it('should create a reward with valid tiers', async () => {
-      const tiers = [{ id: 't1', name: 'Tier 1' }] as Tier[];
+    it("should create a reward with valid tiers", async () => {
+      const tiers = [{ id: "t1", name: "Tier 1" }] as Tier[];
       mockTierRepository.findBy.mockResolvedValue(tiers);
-      mockRewardRepository.create.mockReturnValue({ ...createRewardDto, tiers });
-      mockRewardRepository.save.mockResolvedValue({ ...createRewardDto, tiers });
+      mockRewardRepository.create.mockReturnValue({
+        ...createRewardDto,
+        tiers,
+      });
+      mockRewardRepository.save.mockResolvedValue({
+        ...createRewardDto,
+        tiers,
+      });
 
-      const dto = { ...createRewardDto, tier_ids: ['t1'] };
+      const dto = { ...createRewardDto, tier_ids: ["t1"] };
       const result = await service.createReward(dto);
 
-      expect(mockTierRepository.findBy).toHaveBeenCalledWith({ id: expect.any(Object) });
-      expect(mockRewardRepository.create).toHaveBeenCalledWith(expect.objectContaining({
-        tiers: tiers,
-      }));
+      expect(mockTierRepository.findBy).toHaveBeenCalledWith({
+        id: expect.any(Object),
+      });
+      expect(mockRewardRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tiers: tiers,
+        }),
+      );
       expect(result).toBeDefined();
     });
 
-    it('should throw NotFoundException if tier not found', async () => {
+    it("should throw NotFoundException if tier not found", async () => {
       mockTierRepository.findBy.mockResolvedValue([]);
-      const dto = { ...createRewardDto, tier_ids: ['t1'] };
+      const dto = { ...createRewardDto, tier_ids: ["t1"] };
 
-      await expect(service.createReward(dto)).rejects.toThrow(NotFoundException);
+      await expect(service.createReward(dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
-    it('should throw ForbiddenException if neither points nor stamps are provided', async () => {
-      const dto = { ...createRewardDto, max_points: undefined, max_stamp_required: undefined };
-      await expect(service.createReward(dto)).rejects.toThrow(ForbiddenException);
+    it("should throw ForbiddenException if neither points nor stamps are provided", async () => {
+      const dto = {
+        ...createRewardDto,
+        max_points: undefined,
+        max_stamp_required: undefined,
+      };
+      await expect(service.createReward(dto)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
-  describe('updateBusinessReward', () => {
+  describe("updateBusinessReward", () => {
     const updateDto = { quantity: 50 };
-    const businessId = 'b1';
-    const rewardId = 'r1';
-    const businessReward = { id: rewardId, business: { id: businessId }, quantity: 100 } as BusinessReward;
+    const businessId = "b1";
+    const rewardId = "r1";
+    const businessReward = {
+      id: rewardId,
+      business: { id: businessId },
+      quantity: 100,
+    } as BusinessReward;
 
-    it('should update a business reward successfully', async () => {
+    it("should update a business reward successfully", async () => {
       mockBusinessRewardRepository.findOne.mockResolvedValue(businessReward);
-      mockBusinessRewardRepository.save.mockResolvedValue({ ...businessReward, ...updateDto });
+      mockBusinessRewardRepository.save.mockResolvedValue({
+        ...businessReward,
+        ...updateDto,
+      });
 
-      const result = await service.updateBusinessReward(businessId, rewardId, updateDto);
+      const result = await service.updateBusinessReward(
+        businessId,
+        rewardId,
+        updateDto,
+      );
 
       expect(mockBusinessRewardRepository.findOne).toHaveBeenCalledWith({
         where: { id: rewardId, business: { id: businessId } },
-        relations: ['reward'],
+        relations: ["reward"],
       });
-      expect(mockBusinessRewardRepository.save).toHaveBeenCalledWith(expect.objectContaining({
-        ...businessReward,
-        ...updateDto,
-      }));
+      expect(mockBusinessRewardRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...businessReward,
+          ...updateDto,
+        }),
+      );
       expect(result).toEqual(expect.objectContaining(updateDto));
     });
 
-    it('should throw ForbiddenException if reward not found', async () => {
+    it("should throw ForbiddenException if reward not found", async () => {
       mockBusinessRewardRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.updateBusinessReward(businessId, rewardId, updateDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.updateBusinessReward(businessId, rewardId, updateDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw ForbiddenException if stamps requested exceed admin max', async () => {
+    it("should throw ForbiddenException if stamps requested exceed admin max", async () => {
       const reward = { max_stamp_required: 10 } as Reward;
-      const br = { id: rewardId, business: { id: businessId }, reward } as BusinessReward;
+      const br = {
+        id: rewardId,
+        business: { id: businessId },
+        reward,
+      } as BusinessReward;
       mockBusinessRewardRepository.findOne.mockResolvedValue(br);
 
-      await expect(service.updateBusinessReward(businessId, rewardId, { stamp_required: 11 }))
-        .rejects.toThrow(ForbiddenException);
+      await expect(
+        service.updateBusinessReward(businessId, rewardId, {
+          stamp_required: 11,
+        }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

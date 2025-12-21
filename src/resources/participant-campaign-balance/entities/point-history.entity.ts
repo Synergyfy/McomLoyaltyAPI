@@ -1,59 +1,67 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Participant } from '../../participant/entities/participant.entity';
-import { Campaign } from '../../campaign/entities/campaign.entity';
-import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
-import { Business } from '../../business/entities/business.entity';
-import { Staff } from '../../staff/entities/staff.entity';
-import { Reward } from '../../rewards/entities/reward.entity';
-import { BusinessReward } from '../../rewards/entities/business-reward.entity';
-import { Deal } from '../../deal/entities/deal.entity';
+import { Entity, Column, ManyToOne, JoinColumn } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Participant } from "../../participant/entities/participant.entity";
+import { Campaign } from "../../campaign/entities/campaign.entity";
+import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
+import { Business } from "../../business/entities/business.entity";
+import { Staff } from "../../staff/entities/staff.entity";
+import { Reward } from "../../rewards/entities/reward.entity";
+import { BusinessReward } from "../../rewards/entities/business-reward.entity";
+import { Deal } from "../../deal/entities/deal.entity";
 
 export enum PointHistoryType {
-  EARN = 'EARN',
-  REDEEM = 'REDEEM',
-  MATCHING = 'MATCHING',
-  PURCHASED_EXTRA = 'PURCHASED_EXTRA',
+  EARN = "EARN",
+  REDEEM = "REDEEM",
+  MATCHING = "MATCHING",
+  PURCHASED_EXTRA = "PURCHASED_EXTRA",
 }
 
-@Entity('point_histories')
+@Entity("point_histories")
 export class PointHistory extends AbstractBaseEntity {
-  @Column({ type: 'enum', enum: PointHistoryType })
+  @Column({ type: "enum", enum: PointHistoryType })
   type: PointHistoryType;
 
   @Column()
   points: number;
 
-  @ManyToOne(() => Participant, (participant) => participant.pointHistories, { nullable: true })
-  @JoinColumn({ name: 'participant_id' })
+  @ManyToOne(() => Participant, (participant) => participant.pointHistories, {
+    nullable: true,
+  })
+  @JoinColumn({ name: "participant_id" })
   participant: Participant;
 
-  @ManyToOne(() => Campaign, (campaign) => campaign.pointHistories, { nullable: true })
-  @JoinColumn({ name: 'campaign_id' })
+  @ManyToOne(() => Campaign, (campaign) => campaign.pointHistories, {
+    nullable: true,
+  })
+  @JoinColumn({ name: "campaign_id" })
   campaign: Campaign;
 
-  @ManyToOne(() => BusinessCampaign, (businessCampaign) => businessCampaign.pointHistories, { nullable: true })
-  @JoinColumn({ name: 'business_campaign_id' })
+  @ManyToOne(
+    () => BusinessCampaign,
+    (businessCampaign) => businessCampaign.pointHistories,
+    { nullable: true },
+  )
+  @JoinColumn({ name: "business_campaign_id" })
   businessCampaign: BusinessCampaign;
 
   @ManyToOne(() => Reward, { nullable: true })
-  @JoinColumn({ name: 'reward_id' })
+  @JoinColumn({ name: "reward_id" })
   reward: Reward;
 
   @ManyToOne(() => BusinessReward, { nullable: true })
-  @JoinColumn({ name: 'business_reward_id' })
+  @JoinColumn({ name: "business_reward_id" })
   businessReward: BusinessReward;
 
   @ManyToOne(() => Deal, { nullable: true })
-  @JoinColumn({ name: 'deal_id' })
+  @JoinColumn({ name: "deal_id" })
   deal: Deal;
 
   @ManyToOne(() => Staff, { nullable: true })
-  @JoinColumn({ name: 'initiated_by_staff_id' })
+  @JoinColumn({ name: "initiated_by_staff_id" })
   initiated_by_staff: Staff;
 
   @ManyToOne(() => Business)
-  @JoinColumn({ name: 'business_id' })
+  @JoinColumn({ name: "business_id" })
   business: Business;
 
   @Column({ nullable: true })

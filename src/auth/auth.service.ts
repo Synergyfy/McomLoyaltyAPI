@@ -1,25 +1,30 @@
-import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
-import { UserService } from '../user/user.service';
-import { HashService } from '../common/hash/hash.service';
-import { JwtService } from '@nestjs/jwt';
-import { OtpService } from '../resources/otp/otp.service';
-import { MailService } from '../mail/mail.service';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { Role } from '../common/role.enum';
-import { BusinessService } from '../resources/business/services/business.service';
-import { InjectRepository } from '@nestjs/typeorm';
+import {
+  Injectable,
+  UnauthorizedException,
+  Inject,
+  forwardRef,
+} from "@nestjs/common";
+import { UserService } from "../user/user.service";
+import { HashService } from "../common/hash/hash.service";
+import { JwtService } from "@nestjs/jwt";
+import { OtpService } from "../resources/otp/otp.service";
+import { MailService } from "../mail/mail.service";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { Role } from "../common/role.enum";
+import { BusinessService } from "../resources/business/services/business.service";
+import { InjectRepository } from "@nestjs/typeorm";
 import {
   Membership,
   MembershipStatus,
-} from '../resources/membership/entities/membership.entity';
-import { Repository } from 'typeorm';
-import { PartnerService } from '../resources/partner/partner.service';
-import { Business } from '../resources/business/entities/business.entity';
-import { Staff } from '../resources/staff/entities/staff.entity';
-import { Participant } from '../resources/participant/entities/participant.entity';
-import { User } from 'src/common/interfaces/user.interface';
+} from "../resources/membership/entities/membership.entity";
+import { Repository } from "typeorm";
+import { PartnerService } from "../resources/partner/partner.service";
+import { Business } from "../resources/business/entities/business.entity";
+import { Staff } from "../resources/staff/entities/staff.entity";
+import { Participant } from "../resources/participant/entities/participant.entity";
+import { User } from "src/common/interfaces/user.interface";
 
-import { ParticipantProgressionService } from '../resources/participant-progression/participant-progression.service';
+import { ParticipantProgressionService } from "../resources/participant-progression/participant-progression.service";
 
 @Injectable()
 export class AuthService {
@@ -41,7 +46,7 @@ export class AuthService {
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
     private readonly progressionService: ParticipantProgressionService,
-  ) { }
+  ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.userService.findOne(email);
@@ -49,7 +54,7 @@ export class AuthService {
       const { password, ...result } = user;
       return { ...result, isEmailVerified: user.isEmailVerified };
     }
-    throw new UnauthorizedException('Invalid login credentials');
+    throw new UnauthorizedException("Invalid login credentials");
   }
 
   async login(user: any) {
@@ -65,30 +70,31 @@ export class AuthService {
         role: user.role,
         isEmailVerified: user.isEmailVerified,
       },
-      access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      access_token: this.jwtService.sign(payload, { expiresIn: "1h" }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: "7d" }),
     };
 
     if (user.role === Role.Participant) {
       // Trigger Daily Login Reward
       await this.progressionService.handleLoginStreak(user.id);
-      this.progressionService.triggerAction(user.id, 'LOGIN_DAILY');
+      this.progressionService.triggerAction(user.id, "LOGIN_DAILY");
     }
 
     if (user.role === Role.Business) {
-      const business = await this.businessService.findById(user.id, ['sector']);
+      const business = await this.businessService.findById(user.id, ["sector"]);
       response.user.isOnboarded = !!business.sector;
 
       const membership = await this.membershipRepository.findOne({
         where: { business: { id: user.id } },
-        order: { created_at: 'DESC' },
+        order: { created_at: "DESC" },
       });
 
       const isTrialValid =
         membership &&
         membership.is_trial &&
         new Date(membership.expires_at) > new Date();
-      const isActive = membership && membership.status === MembershipStatus.ACTIVE;
+      const isActive =
+        membership && membership.status === MembershipStatus.ACTIVE;
 
       const hasActiveSubscription = isActive || isTrialValid;
 
@@ -100,10 +106,10 @@ export class AuthService {
       // Update payload
       const newPayload = { ...payload, hasActiveSubscription };
       response.access_token = this.jwtService.sign(newPayload, {
-        expiresIn: '1h',
+        expiresIn: "1h",
       });
       response.refresh_token = this.jwtService.sign(newPayload, {
-        expiresIn: '7d',
+        expiresIn: "7d",
       });
     }
 
@@ -113,19 +119,19 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.userService.findOne(email);
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpService.create(email, otp);
     await this.mailService.sendOtp(email, otp);
 
-    return { message: 'OTP sent successfully' };
+    return { message: "OTP sent successfully" };
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     if (resetPasswordDto.password !== resetPasswordDto.confirmPassword) {
-      throw new UnauthorizedException('Passwords do not match');
+      throw new UnauthorizedException("Passwords do not match");
     }
 
     const otp = await this.otpService.findOne(
@@ -134,16 +140,16 @@ export class AuthService {
     );
 
     if (!otp) {
-      throw new UnauthorizedException('Invalid OTP');
+      throw new UnauthorizedException("Invalid OTP");
     }
 
     if (otp.expiresAt < new Date()) {
-      throw new UnauthorizedException('OTP has expired');
+      throw new UnauthorizedException("OTP has expired");
     }
 
     const user = await this.userService.findOne(resetPasswordDto.email);
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     user.password = await this.hashService.hashPassword(
@@ -153,7 +159,7 @@ export class AuthService {
 
     await this.otpService.remove(otp.id);
 
-    return { message: 'Password reset successfully' };
+    return { message: "Password reset successfully" };
   }
 
   async refreshToken(token: string) {
@@ -161,11 +167,11 @@ export class AuthService {
       const payload = this.jwtService.verify(token);
       const user = await this.userService.findOne(payload.username);
       if (!user) {
-        throw new UnauthorizedException('Invalid token');
+        throw new UnauthorizedException("Invalid token");
       }
       return this.login(user);
     } catch (e) {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException("Invalid token");
     }
   }
 
@@ -178,51 +184,51 @@ export class AuthService {
       const { password, ...result } = partner;
       return result;
     }
-    throw new UnauthorizedException('Invalid login credentials');
+    throw new UnauthorizedException("Invalid login credentials");
   }
 
   async verifyEmail(email: string, otp: string) {
     const validOtp = await this.otpService.findOne(email, otp);
 
     if (!validOtp) {
-      throw new UnauthorizedException('Invalid OTP');
+      throw new UnauthorizedException("Invalid OTP");
     }
 
     if (validOtp.expiresAt < new Date()) {
-      throw new UnauthorizedException('OTP has expired');
+      throw new UnauthorizedException("OTP has expired");
     }
 
     let user: Business | Participant;
-    let userType: 'business' | 'participant';
+    let userType: "business" | "participant";
 
     // Try finding in Business
     user = await this.businessRepository.findOneBy({ email });
     if (user) {
-      userType = 'business';
+      userType = "business";
     } else {
       // Try finding in Participant
       user = await this.participantRepository.findOneBy({ email });
       if (user) {
-        userType = 'participant';
+        userType = "participant";
       }
     }
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     if (user.isEmailVerified) {
-      return { message: 'Email already verified' };
+      return { message: "Email already verified" };
     }
 
     user.isEmailVerified = true;
 
-    if (userType === 'business') {
+    if (userType === "business") {
       await this.businessRepository.save(user as Business);
     } else {
       await this.participantRepository.save(user as Participant);
       // Trigger Email Verified Reward
-      this.progressionService.triggerAction(user.id, 'EMAIL_VERIFIED');
+      this.progressionService.triggerAction(user.id, "EMAIL_VERIFIED");
     }
 
     await this.otpService.remove(validOtp.id);
@@ -236,25 +242,26 @@ export class AuthService {
       hasActiveSubscription: false,
     };
 
-    if (userType === 'business') {
+    if (userType === "business") {
       const membership = await this.membershipRepository.findOne({
         where: { business: { id: user.id } },
-        order: { created_at: 'DESC' },
+        order: { created_at: "DESC" },
       });
 
       const isTrialValid =
         membership &&
         membership.is_trial &&
         new Date(membership.expires_at) > new Date();
-      const isActive = membership && membership.status === MembershipStatus.ACTIVE;
+      const isActive =
+        membership && membership.status === MembershipStatus.ACTIVE;
 
       payload.hasActiveSubscription = isActive || isTrialValid;
     }
 
     return {
-      message: 'Email verified successfully',
-      access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      message: "Email verified successfully",
+      access_token: this.jwtService.sign(payload, { expiresIn: "1h" }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: "7d" }),
     };
   }
 
@@ -269,18 +276,18 @@ export class AuthService {
     }
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     if (user.isEmailVerified) {
-      return { message: 'Account is already verified' };
+      return { message: "Account is already verified" };
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpService.create(user.email, otp);
     await this.mailService.sendOtp(user.email, otp);
 
-    return { message: 'OTP sent successfully' };
+    return { message: "OTP sent successfully" };
   }
 
   async loginPartner(partner: any) {
@@ -294,8 +301,8 @@ export class AuthService {
         name: partner.name,
         role: Role.Partner,
       },
-      access_token: this.jwtService.sign(payload, { expiresIn: '1h' }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      access_token: this.jwtService.sign(payload, { expiresIn: "1h" }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: "7d" }),
     };
   }
 
@@ -315,11 +322,11 @@ export class AuthService {
         });
         break;
       default:
-        throw new UnauthorizedException('User role not supported');
+        throw new UnauthorizedException("User role not supported");
     }
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     console.log(user);

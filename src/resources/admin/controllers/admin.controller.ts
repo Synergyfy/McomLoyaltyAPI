@@ -8,35 +8,35 @@ import {
   UseGuards,
   ValidationPipe,
   Patch,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBody,
   ApiBearerAuth,
-} from '@nestjs/swagger';
-import { AdminService } from '../services/admin.service';
-import { CreateAdminDto } from '../dto/create-admin.dto';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { Role } from '../../../common/role.enum';
-import { Public } from '../../../common/decorators/public.decorator';
-import { MatchingPointsService } from '../../participant-campaign-balance/services/matching-points.service';
-import { AwardMatchingPointsDto } from '../dto/award-matching-points.dto';
-import { Participant } from '../../participant/entities/participant.entity';
-import { ToggleMatchingPointsDto } from '../dto/toggle-matching-points.dto';
-import { Campaign } from 'src/resources/campaign/entities/campaign.entity';
-import { RolesGuard } from '../../../common/guards/roles.guard';
-import { PaginationDto } from '../../../common/dto/pagination.dto';
-import { PageDto } from '../../../common/dto/page.dto';
-import { Business } from '../../business/entities/business.entity';
-import { UpdateBusinessDto } from '../../business/dto/update-business.dto';
-import { Staff } from '../../staff/entities/staff.entity';
-import { UpdateStaffDto } from '../../staff/dto/update-staff.dto';
-import { UpdateCampaignDto } from '../../campaign/dto/update-campaign.dto';
+} from "@nestjs/swagger";
+import { AdminService } from "../services/admin.service";
+import { CreateAdminDto } from "../dto/create-admin.dto";
+import { Roles } from "../../../common/decorators/roles.decorator";
+import { Role } from "../../../common/role.enum";
+import { Public } from "../../../common/decorators/public.decorator";
+import { MatchingPointsService } from "../../participant-campaign-balance/services/matching-points.service";
+import { AwardMatchingPointsDto } from "../dto/award-matching-points.dto";
+import { Participant } from "../../participant/entities/participant.entity";
+import { ToggleMatchingPointsDto } from "../dto/toggle-matching-points.dto";
+import { Campaign } from "src/resources/campaign/entities/campaign.entity";
+import { RolesGuard } from "../../../common/guards/roles.guard";
+import { PaginationDto } from "../../../common/dto/pagination.dto";
+import { PageDto } from "../../../common/dto/page.dto";
+import { Business } from "../../business/entities/business.entity";
+import { UpdateBusinessDto } from "../../business/dto/update-business.dto";
+import { Staff } from "../../staff/entities/staff.entity";
+import { UpdateStaffDto } from "../../staff/dto/update-staff.dto";
+import { UpdateCampaignDto } from "../../campaign/dto/update-campaign.dto";
 
-@ApiTags('admin')
-@Controller('admin')
+@ApiTags("admin")
+@Controller("admin")
 @ApiBearerAuth()
 @UseGuards(RolesGuard)
 @Roles(Role.Admin)
@@ -44,41 +44,40 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly matchingPointsService: MatchingPointsService,
-  ) { }
+  ) {}
 
   @Public()
-  @Post('signup')
-  @ApiOperation({ summary: 'Create a new admin account' })
+  @Post("signup")
+  @ApiOperation({ summary: "Create a new admin account" })
   @ApiResponse({
     status: 201,
-    description: 'The admin has been successfully created.',
+    description: "The admin has been successfully created.",
   })
   @ApiBody({ type: CreateAdminDto })
   create(@Body() createAdminDto: CreateAdminDto) {
     return this.adminService.create(createAdminDto);
   }
 
-  @Get('search')
-  @ApiOperation({ summary: 'Admin: Search businesses, participants, staffs, rewards, campaigns' })
-  @ApiResponse({ status: 200, description: 'Search results.' })
-  search(@Query('q') query: string) {
+  @Get("search")
+  @ApiOperation({
+    summary:
+      "Admin: Search businesses, participants, staffs, rewards, campaigns",
+  })
+  @ApiResponse({ status: 200, description: "Search results." })
+  search(@Query("q") query: string) {
     if (!query) {
       return [];
     }
     return this.adminService.globalSearch(query);
   }
 
-
-
-
-
   @Roles(Role.Admin)
-  @Post('award-matching-points')
+  @Post("award-matching-points")
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin: Award matching points to a participant' })
+  @ApiOperation({ summary: "Admin: Award matching points to a participant" })
   @ApiResponse({
     status: 201,
-    description: 'The matching points have been successfully awarded.',
+    description: "The matching points have been successfully awarded.",
     type: Participant,
   })
   @ApiBody({ type: AwardMatchingPointsDto })
@@ -89,14 +88,14 @@ export class AdminController {
   }
 
   @Roles(Role.Admin)
-  @Post('toggle-matching-points')
+  @Post("toggle-matching-points")
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Admin: Toggle the matching points for a campaign',
+    summary: "Admin: Toggle the matching points for a campaign",
   })
   @ApiResponse({
     status: 200,
-    description: 'The matching points have been successfully toggled.',
+    description: "The matching points have been successfully toggled.",
     type: Campaign,
   })
   @ApiBody({ type: ToggleMatchingPointsDto })
@@ -108,24 +107,14 @@ export class AdminController {
     );
   }
 
-
-
-
-
-
-
-
-
   @Roles(Role.Admin)
-  @Patch('campaigns/:id')
-  @ApiOperation({ summary: 'Admin: Update or disable campaign' })
-  @ApiResponse({ status: 200, description: 'Campaign updated.' })
+  @Patch("campaigns/:id")
+  @ApiOperation({ summary: "Admin: Update or disable campaign" })
+  @ApiResponse({ status: 200, description: "Campaign updated." })
   async updateCampaign(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() updateCampaignDto: UpdateCampaignDto,
   ) {
     return this.adminService.updateCampaign(id, updateCampaignDto);
   }
-
-
 }

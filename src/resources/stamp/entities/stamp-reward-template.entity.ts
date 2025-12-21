@@ -1,9 +1,9 @@
-import { Entity, Column } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { StampTriggerMethod } from '../enums/stamp-trigger-method.enum';
-import { StampRewardType } from '../enums/stamp-reward-type.enum';
+import { Entity, Column } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { StampTriggerMethod } from "../enums/stamp-trigger-method.enum";
+import { StampRewardType } from "../enums/stamp-reward-type.enum";
 
-@Entity('stamp_reward_templates')
+@Entity("stamp_reward_templates")
 export class StampRewardTemplate extends AbstractBaseEntity {
   /**
    * The name of the reward template (e.g., "Buy 5 Get 1 Free").
@@ -20,13 +20,13 @@ export class StampRewardTemplate extends AbstractBaseEntity {
   /**
    * Number of stamps a customer must collect to unlock the reward.
    */
-  @Column({ type: 'int' })
+  @Column({ type: "int" })
   required_stamps: number;
 
   /**
    * The type of reward given upon completion (e.g., FREE_ITEM, DISCOUNT).
    */
-  @Column({ type: 'enum', enum: StampRewardType })
+  @Column({ type: "enum", enum: StampRewardType })
   reward_benefit: StampRewardType;
 
   /**
@@ -38,19 +38,23 @@ export class StampRewardTemplate extends AbstractBaseEntity {
   /**
    * The action required to earn a stamp (e.g., QR_SCAN).
    */
-  @Column({ type: 'enum', enum: StampTriggerMethod })
+  @Column({ type: "enum", enum: StampTriggerMethod })
   trigger_method: StampTriggerMethod;
 
   /**
    * (Optional) Number of days the stamps are valid after the first stamp is earned.
    */
-  @Column({ type: 'int', nullable: true, comment: 'Days valid after start' })
+  @Column({ type: "int", nullable: true, comment: "Days valid after start" })
   stamp_validity_days: number;
 
   /**
    * (Optional) Number of days the customer has to claim the reward after unlocking it.
    */
-  @Column({ type: 'int', nullable: true, comment: 'Days to redeem after completion' })
+  @Column({
+    type: "int",
+    nullable: true,
+    comment: "Days to redeem after completion",
+  })
   reward_claim_deadline_days: number;
 
   // --- Hybrid Mode (Stamps + Points) ---
@@ -64,13 +68,13 @@ export class StampRewardTemplate extends AbstractBaseEntity {
   /**
    * Points awarded per stamp earned.
    */
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: "int", default: 0 })
   hybrid_points_per_stamp: number;
 
   /**
    * Extra points awarded when the card is completed.
    */
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: "int", default: 0 })
   hybrid_completion_bonus_points: number;
 
   /**

@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { PaymentHistoryService } from './payment-history.service';
-import { PaymentHistory } from './entities/payment-history.entity';
+import { Test, TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { PaymentHistoryService } from "./payment-history.service";
+import { PaymentHistory } from "./entities/payment-history.entity";
 
-describe('PaymentHistoryService', () => {
+describe("PaymentHistoryService", () => {
   let service: PaymentHistoryService;
 
   beforeEach(async () => {
@@ -22,7 +22,7 @@ describe('PaymentHistoryService', () => {
     service = module.get<PaymentHistoryService>(PaymentHistoryService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 });

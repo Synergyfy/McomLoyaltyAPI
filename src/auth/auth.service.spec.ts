@@ -1,17 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
-import { UserService } from '../user/user.service';
-import { HashService } from '../common/hash/hash.service';
-import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
-import { Role } from '../common/role.enum';
-import { OtpService } from '../resources/otp/otp.service';
-import { MailService } from '../mail/mail.service';
-import { BusinessService } from '../resources/business/services/business.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Membership } from '../resources/membership/entities/membership.entity';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AuthService } from "./auth.service";
+import { UserService } from "../user/user.service";
+import { HashService } from "../common/hash/hash.service";
+import { JwtService } from "@nestjs/jwt";
+import { UnauthorizedException } from "@nestjs/common";
+import { Role } from "../common/role.enum";
+import { OtpService } from "../resources/otp/otp.service";
+import { MailService } from "../mail/mail.service";
+import { BusinessService } from "../resources/business/services/business.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Membership } from "../resources/membership/entities/membership.entity";
 
-describe('AuthService', () => {
+describe("AuthService", () => {
   let service: AuthService;
 
   const mockUserService = {
@@ -64,43 +64,56 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('validateUser', () => {
-    it('should return user if passwords match', async () => {
-      const user = { email: 'test@test.com', password: 'hashedPassword', role: Role.Admin };
+  describe("validateUser", () => {
+    it("should return user if passwords match", async () => {
+      const user = {
+        email: "test@test.com",
+        password: "hashedPassword",
+        role: Role.Admin,
+      };
       mockUserService.findOne.mockResolvedValue(user);
       mockHashService.comparePassword.mockResolvedValue(true);
 
       const { password, ...expectedResult } = user;
-      const result = await service.validateUser('test@test.com', 'password');
+      const result = await service.validateUser("test@test.com", "password");
       expect(result).toEqual(expectedResult);
     });
 
-    it('should throw UnauthorizedException if passwords do not match', async () => {
-      const user = { email: 'test@test.com', password: 'hashedPassword' };
+    it("should throw UnauthorizedException if passwords do not match", async () => {
+      const user = { email: "test@test.com", password: "hashedPassword" };
       mockUserService.findOne.mockResolvedValue(user);
       mockHashService.comparePassword.mockResolvedValue(false);
 
-      await expect(service.validateUser('test@test.com', 'password')).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateUser("test@test.com", "password"),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw UnauthorizedException if user not found', async () => {
+    it("should throw UnauthorizedException if user not found", async () => {
       mockUserService.findOne.mockResolvedValue(null);
 
-      await expect(service.validateUser('test@test.com', 'password')).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.validateUser("test@test.com", "password"),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
-  describe('login', () => {
-    it('should return user, access token, and refresh token', async () => {
-      const user = { name: 'Test User', email: 'test@test.com', id: 'someId', role: Role.Admin };
-      const accessToken = 'someAccessToken';
-      const refreshToken = 'someRefreshToken';
+  describe("login", () => {
+    it("should return user, access token, and refresh token", async () => {
+      const user = {
+        name: "Test User",
+        email: "test@test.com",
+        id: "someId",
+        role: Role.Admin,
+      };
+      const accessToken = "someAccessToken";
+      const refreshToken = "someRefreshToken";
       mockJwtService.sign.mockImplementation((payload, options) => {
-        if (options?.expiresIn === '7d') {
+        if (options?.expiresIn === "7d") {
           return refreshToken;
         }
         return accessToken;
@@ -117,12 +130,17 @@ describe('AuthService', () => {
       });
     });
 
-    it('should return isOnboarded for business users', async () => {
-      const user = { name: 'Test User', email: 'test@test.com', id: 'someId', role: Role.Business };
-      const accessToken = 'someAccessToken';
-      const refreshToken = 'someRefreshToken';
+    it("should return isOnboarded for business users", async () => {
+      const user = {
+        name: "Test User",
+        email: "test@test.com",
+        id: "someId",
+        role: Role.Business,
+      };
+      const accessToken = "someAccessToken";
+      const refreshToken = "someRefreshToken";
       mockJwtService.sign.mockImplementation((payload, options) => {
-        if (options?.expiresIn === '7d') {
+        if (options?.expiresIn === "7d") {
           return refreshToken;
         }
         return accessToken;

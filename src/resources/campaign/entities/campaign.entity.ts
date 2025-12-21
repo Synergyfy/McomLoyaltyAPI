@@ -6,28 +6,33 @@ import {
   JoinTable,
   JoinColumn,
   OneToMany,
-} from 'typeorm';
-import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
-import { Reward } from '../../rewards/entities/reward.entity';
-import { Participant } from '../../participant/entities/participant.entity';
-import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
-import { BusinessCampaign } from './business-campaign.entity';
-import { CampaignType, AudienceType, RewardType, CampaignRewardMode } from './campaign-enums';
-import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
-import { Tier } from '../../tier/entities/tier.entity';
-import { Deal } from '../../deal/entities/deal.entity';
+} from "typeorm";
+import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Business } from "../../business/entities/business.entity";
+import { Reward } from "../../rewards/entities/reward.entity";
+import { Participant } from "../../participant/entities/participant.entity";
+import { ParticipantCampaignBalance } from "../../participant-campaign-balance/entities/participant-campaign-balance.entity";
+import { BusinessCampaign } from "./business-campaign.entity";
+import {
+  CampaignType,
+  AudienceType,
+  RewardType,
+  CampaignRewardMode,
+} from "./campaign-enums";
+import { WishlistAggregate } from "../../wishlist/entities/wishlist-aggregate.entity";
+import { Tier } from "../../tier/entities/tier.entity";
+import { Deal } from "../../deal/entities/deal.entity";
 
-@Entity('campaigns')
+@Entity("campaigns")
 export class Campaign extends AbstractBaseEntity {
   @Column()
   name: string;
 
-  @Column({ type: 'enum', enum: CampaignType, default: CampaignType.QR_CODE })
+  @Column({ type: "enum", enum: CampaignType, default: CampaignType.QR_CODE })
   campaign_type: CampaignType;
 
-  @Column('text')
+  @Column("text")
   campaign_message: string;
 
   @Column()
@@ -39,7 +44,7 @@ export class Campaign extends AbstractBaseEntity {
   @Column()
   quantity: number;
 
-  @Column({ type: 'enum', enum: AudienceType })
+  @Column({ type: "enum", enum: AudienceType })
   audience_type: AudienceType;
 
   @Column()
@@ -66,7 +71,7 @@ export class Campaign extends AbstractBaseEntity {
   deals: Deal[];
 
   @ManyToOne(() => Business, { nullable: true })
-  @JoinColumn({ name: 'business_id' })
+  @JoinColumn({ name: "business_id" })
   business: Business;
 
   @Column({ default: false })
@@ -106,23 +111,23 @@ export class Campaign extends AbstractBaseEntity {
   total_points_redeemed: number;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: RewardType,
     default: RewardType.REGULAR,
   })
   reward_type: RewardType;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: CampaignRewardMode,
     default: CampaignRewardMode.POINTS,
   })
   reward_mode: CampaignRewardMode;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   regular_points_threshold: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   matching_points_threshold: number;
 
   @Column({ default: 0 })
@@ -137,19 +142,19 @@ export class Campaign extends AbstractBaseEntity {
   @Column({ nullable: true })
   earn_point_page_title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   earn_point_page_description: string;
 
   @Column({ nullable: true })
   redeem_reward_page_title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   redeem_reward_page_description: string;
 
   @Column({ nullable: true })
   contact_us_page_title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   contact_us_page_description: string;
 
   @Column({ nullable: true })
@@ -162,13 +167,13 @@ export class Campaign extends AbstractBaseEntity {
   footer_text: string;
 
   @ManyToOne(() => WishlistAggregate, { nullable: true })
-  @JoinColumn({ name: 'wishlist_aggregate_id' })
+  @JoinColumn({ name: "wishlist_aggregate_id" })
   wishlistAggregate: WishlistAggregate;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   initial_audience_size: number;
 
   @ManyToOne(() => Tier, { nullable: true })
-  @JoinColumn({ name: 'target_tier_id' })
+  @JoinColumn({ name: "target_tier_id" })
   targetTier: Tier;
 }

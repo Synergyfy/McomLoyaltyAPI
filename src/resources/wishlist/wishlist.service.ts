@@ -1,15 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, EntityManager } from 'typeorm';
-import { CreateWishlistDto } from './dto/create-wishlist.dto';
-import { UpdateWishlistDto } from './dto/update-wishlist.dto';
-import { WishlistItem } from './entities/wishlist-item.entity';
-import { WishlistAggregate } from './entities/wishlist-aggregate.entity';
-import { Category } from '../category/entities/category.entity';
-import { Business } from '../business/entities/business.entity';
-import { Participant } from '../participant/entities/participant.entity';
-import { Role } from '../../common/role.enum';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { DataSource, Repository, EntityManager } from "typeorm";
+import { CreateWishlistDto } from "./dto/create-wishlist.dto";
+import { UpdateWishlistDto } from "./dto/update-wishlist.dto";
+import { WishlistItem } from "./entities/wishlist-item.entity";
+import { WishlistAggregate } from "./entities/wishlist-aggregate.entity";
+import { Category } from "../category/entities/category.entity";
+import { Business } from "../business/entities/business.entity";
+import { Participant } from "../participant/entities/participant.entity";
+import { Role } from "../../common/role.enum";
+import { PaginationDto } from "src/common/dto/pagination.dto";
 
 @Injectable()
 export class WishlistService {
@@ -21,7 +21,7 @@ export class WishlistService {
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   async create(
     createWishlistDto: CreateWishlistDto,
@@ -69,17 +69,22 @@ export class WishlistService {
   async findMyWishlist(
     participant: Participant,
     paginationDto: PaginationDto,
-  ): Promise<{ data: WishlistItem[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    data: WishlistItem[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
     const [data, total] = await this.wishlistItemRepository.findAndCount({
       where: { participant: { id: participant.id } },
-      relations: ['category'],
+      relations: ["category"],
       take: limit,
       skip,
       order: {
-        created_at: 'DESC',
+        created_at: "DESC",
       },
     });
 
@@ -94,7 +99,12 @@ export class WishlistService {
   async getWishlistInsights(
     paginationDto: PaginationDto,
     user: { id: string; role: Role },
-  ): Promise<{ data: WishlistAggregate[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    data: WishlistAggregate[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -103,7 +113,7 @@ export class WishlistService {
     if (user.role === Role.Business) {
       const business = await this.businessRepository.findOne({
         where: { id: user.id },
-        relations: ['category'],
+        relations: ["category"],
       });
 
       if (business && business.category) {
@@ -121,11 +131,11 @@ export class WishlistService {
 
     const [data, total] = await this.wishlistAggregateRepository.findAndCount({
       where,
-      relations: ['category'],
+      relations: ["category"],
       take: limit,
       skip,
       order: {
-        audienceSize: 'DESC',
+        audienceSize: "DESC",
       },
     });
 
@@ -148,7 +158,7 @@ export class WishlistService {
 
       const wishlistItem = await wishlistItemRepository.findOne({
         where: { id, participant: { id: participant.id } },
-        relations: ['category'],
+        relations: ["category"],
       });
 
       if (!wishlistItem) {
@@ -169,7 +179,9 @@ export class WishlistService {
         });
 
         if (!category) {
-          throw new NotFoundException(`Category with ID ${categoryId} not found`);
+          throw new NotFoundException(
+            `Category with ID ${categoryId} not found`,
+          );
         }
         wishlistItem.category = category;
       }
@@ -189,16 +201,16 @@ export class WishlistService {
       const newMarketingConsent = savedItem.marketingConsent;
 
       if (oldMarketingConsent) {
-        const datesDifferent = this.areDatesDifferent(oldTargetDate, newTargetDate);
+        const datesDifferent = this.areDatesDifferent(
+          oldTargetDate,
+          newTargetDate,
+        );
         const keyFieldsChanged =
           oldItemName !== newItemName ||
           oldCategoryId !== newCategoryId ||
           datesDifferent;
 
-        if (
-          !newMarketingConsent ||
-          keyFieldsChanged
-        ) {
+        if (!newMarketingConsent || keyFieldsChanged) {
           await this.removeFromAggregate(
             manager,
             oldItemName,
@@ -209,7 +221,10 @@ export class WishlistService {
       }
 
       if (newMarketingConsent) {
-        const datesDifferent = this.areDatesDifferent(oldTargetDate, newTargetDate);
+        const datesDifferent = this.areDatesDifferent(
+          oldTargetDate,
+          newTargetDate,
+        );
         const keyFieldsChanged =
           oldItemName !== newItemName ||
           oldCategoryId !== newCategoryId ||
@@ -234,7 +249,7 @@ export class WishlistService {
       const wishlistItemRepository = manager.getRepository(WishlistItem);
       const wishlistItem = await wishlistItemRepository.findOne({
         where: { id, participant: { id: participant.id } },
-        relations: ['category'],
+        relations: ["category"],
       });
 
       if (!wishlistItem) {
@@ -315,7 +330,10 @@ export class WishlistService {
     ]);
   }
 
-  private areDatesDifferent(d1: Date | string | null, d2: Date | string | null): boolean {
+  private areDatesDifferent(
+    d1: Date | string | null,
+    d2: Date | string | null,
+  ): boolean {
     const t1 = d1 ? new Date(d1).getTime() : null;
     const t2 = d2 ? new Date(d2).getTime() : null;
     return t1 !== t2;

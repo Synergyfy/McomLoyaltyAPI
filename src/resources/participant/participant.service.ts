@@ -4,27 +4,27 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import { nanoid } from 'nanoid';
-import { CreateParticipantDto } from './dto/create-participant.dto';
-import { LoginParticipantDto } from './dto/login-participant.dto';
-import { Participant } from './entities/participant.entity';
-import { Campaign } from '../campaign/entities/campaign.entity';
-import { BusinessCampaign } from '../campaign/entities/business-campaign.entity';
-import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
-import { AuthService } from 'src/auth/auth.service';
-import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
-import { PointHistoryType } from '../participant-campaign-balance/entities/point-history.entity';
-import { MailService } from '../../mail/mail.service';
-import { PaginationResult } from '../../common/interfaces/pagination-result.interface';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import * as bcrypt from "bcrypt";
+import { nanoid } from "nanoid";
+import { CreateParticipantDto } from "./dto/create-participant.dto";
+import { LoginParticipantDto } from "./dto/login-participant.dto";
+import { Participant } from "./entities/participant.entity";
+import { Campaign } from "../campaign/entities/campaign.entity";
+import { BusinessCampaign } from "../campaign/entities/business-campaign.entity";
+import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
+import { AuthService } from "src/auth/auth.service";
+import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
+import { PointHistoryType } from "../participant-campaign-balance/entities/point-history.entity";
+import { MailService } from "../../mail/mail.service";
+import { PaginationResult } from "../../common/interfaces/pagination-result.interface";
 
-import { OtpService } from '../otp/otp.service';
+import { OtpService } from "../otp/otp.service";
 
-import { ParticipantProgressionService } from '../participant-progression/participant-progression.service';
-import { ReferralService } from '../referral/referral.service';
+import { ParticipantProgressionService } from "../participant-progression/participant-progression.service";
+import { ReferralService } from "../referral/referral.service";
 
 @Injectable()
 export class ParticipantService {
@@ -44,14 +44,14 @@ export class ParticipantService {
     private readonly otpService: OtpService,
     private readonly progressionService: ParticipantProgressionService,
     private readonly referralService: ReferralService,
-  ) { }
+  ) {}
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
       createParticipantDto;
 
     if (password !== confirmPassword) {
-      throw new BadRequestException('Passwords do not match');
+      throw new BadRequestException("Passwords do not match");
     }
 
     const existingParticipant = await this.participantRepository.findOne({
@@ -59,7 +59,7 @@ export class ParticipantService {
     });
 
     if (existingParticipant) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException("Email already exists");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -71,9 +71,8 @@ export class ParticipantService {
       uniqueCode: nanoid(9),
     });
 
-    const savedParticipant = await this.participantRepository.save(
-      newParticipant,
-    );
+    const savedParticipant =
+      await this.participantRepository.save(newParticipant);
 
     if (campaignId) {
       await this.joinCampaign(savedParticipant.id, campaignId);
@@ -85,14 +84,17 @@ export class ParticipantService {
     await this.mailService.sendOtp(savedParticipant.email, otp);
 
     // Trigger Registration Reward
-    this.progressionService.triggerAction(savedParticipant.id, 'REGISTRATION');
+    this.progressionService.triggerAction(savedParticipant.id, "REGISTRATION");
 
     // Process Referral if code provided
     // Assuming createParticipantDto has a referralCode field or we extract it from somewhere else.
     // If not in DTO, I should add it to DTO or check if it's passed differently.
     // For now assuming it is in DTO as optional.
     if ((createParticipantDto as any).referralCode) {
-      await this.referralService.processReferral((createParticipantDto as any).referralCode, savedParticipant);
+      await this.referralService.processReferral(
+        (createParticipantDto as any).referralCode,
+        savedParticipant,
+      );
     }
 
     return this.authService.login(savedParticipant);
@@ -106,7 +108,7 @@ export class ParticipantService {
     });
 
     if (!participant) {
-      throw new NotFoundException('Participant not found');
+      throw new NotFoundException("Participant not found");
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -115,7 +117,7 @@ export class ParticipantService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     if (campaignId) {
@@ -128,25 +130,25 @@ export class ParticipantService {
   async joinCampaign(participantId: string, campaignId: string) {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
-      relations: ['campaigns', 'businessCampaigns'],
+      relations: ["campaigns", "businessCampaigns"],
     });
 
     if (!participant) {
-      throw new NotFoundException('Participant not found');
+      throw new NotFoundException("Participant not found");
     }
 
     // 1. Try to find BusinessCampaign first
     const businessCampaign = await this.businessCampaignRepository.findOne({
       where: { id: campaignId },
-      relations: ['campaign', 'business'],
+      relations: ["campaign", "business"],
     });
 
     if (businessCampaign) {
       if (businessCampaign.disabled) {
-        throw new BadRequestException('Campaign is disabled');
+        throw new BadRequestException("Campaign is disabled");
       }
       if (new Date(businessCampaign.end_date) < new Date()) {
-        throw new BadRequestException('Campaign has expired');
+        throw new BadRequestException("Campaign has expired");
       }
 
       // Check if already joined
@@ -162,15 +164,17 @@ export class ParticipantService {
           await this.mailService.sendCampaignJoinedEmail(
             participant.email,
             businessCampaign.name,
-            businessCampaign.business ? businessCampaign.business.name : 'Mcom Loyalty',
-            businessCampaign.signUpPoint || 0
+            businessCampaign.business
+              ? businessCampaign.business.name
+              : "Mcom Loyalty",
+            businessCampaign.signUpPoint || 0,
           );
         } catch (error) {
-          console.error('Failed to send campaign joined email:', error);
+          console.error("Failed to send campaign joined email:", error);
         }
 
         // Trigger Progression Action
-        this.progressionService.triggerAction(participant.id, 'CAMPAIGN_JOIN');
+        this.progressionService.triggerAction(participant.id, "CAMPAIGN_JOIN");
       }
 
       if (businessCampaign.signUpPoint) {
@@ -192,7 +196,8 @@ export class ParticipantService {
             });
         }
 
-        participantCampaignBalance.campaign_balance += businessCampaign.signUpPoint;
+        participantCampaignBalance.campaign_balance +=
+          businessCampaign.signUpPoint;
         participant.global_total_points += businessCampaign.signUpPoint;
         businessCampaign.total_points_earned += businessCampaign.signUpPoint;
 
@@ -213,21 +218,21 @@ export class ParticipantService {
         await this.pointHistoryRepository.save(pointHistory);
       }
 
-      return { message: 'Successfully joined business campaign' };
+      return { message: "Successfully joined business campaign" };
     }
 
     // 2. Fallback to Campaign
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId },
-      relations: ['business'],
+      relations: ["business"],
     });
 
     if (!campaign) {
-      throw new NotFoundException('Campaign not found');
+      throw new NotFoundException("Campaign not found");
     }
 
     if (campaign.end_date < new Date()) {
-      throw new BadRequestException('Campaign has expired');
+      throw new BadRequestException("Campaign has expired");
     }
 
     const alreadyJoinedCampaign = participant.campaigns.some(
@@ -243,15 +248,15 @@ export class ParticipantService {
         await this.mailService.sendCampaignJoinedEmail(
           participant.email,
           campaign.name,
-          campaign.business ? campaign.business.name : 'Mcom Loyalty',
-          campaign.signUpPoint || 0
+          campaign.business ? campaign.business.name : "Mcom Loyalty",
+          campaign.signUpPoint || 0,
         );
       } catch (error) {
-        console.error('Failed to send campaign joined email:', error);
+        console.error("Failed to send campaign joined email:", error);
       }
 
       // Trigger Progression Action
-      this.progressionService.triggerAction(participant.id, 'CAMPAIGN_JOIN');
+      this.progressionService.triggerAction(participant.id, "CAMPAIGN_JOIN");
     }
 
     if (campaign.signUpPoint) {
@@ -291,7 +296,7 @@ export class ParticipantService {
       await this.pointHistoryRepository.save(pointHistory);
     }
 
-    return { message: 'Successfully joined campaign' };
+    return { message: "Successfully joined campaign" };
   }
 
   async findAll(
@@ -299,7 +304,7 @@ export class ParticipantService {
     limit: number,
   ): Promise<PaginationResult<Participant>> {
     const [data, total] = await this.participantRepository.findAndCount({
-      order: { created_at: 'DESC' },
+      order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -333,7 +338,7 @@ export class ParticipantService {
   async update(id: string, attrs: Partial<Participant>): Promise<Participant> {
     const participant = await this.findById(id);
     if (!participant) {
-      throw new NotFoundException('Participant not found');
+      throw new NotFoundException("Participant not found");
     }
 
     const wasComplete = this.isProfileComplete(participant);
@@ -344,7 +349,7 @@ export class ParticipantService {
     const isComplete = this.isProfileComplete(updated);
 
     if (!wasComplete && isComplete) {
-      this.progressionService.triggerAction(id, 'PROFILE_COMPLETE');
+      this.progressionService.triggerAction(id, "PROFILE_COMPLETE");
     }
 
     return updated;
@@ -361,10 +366,10 @@ export class ParticipantService {
   ): Promise<void> {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
-      relations: ['campaigns'],
+      relations: ["campaigns"],
     });
     if (!participant) {
-      throw new NotFoundException('Participant not found');
+      throw new NotFoundException("Participant not found");
     }
 
     participant.campaigns = participant.campaigns.filter(
@@ -386,10 +391,16 @@ export class ParticipantService {
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({
       where,
-      order: { created_at: 'DESC' },
+      order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
-      relations: ['campaign', 'business', 'businessCampaign', 'reward', 'businessReward'],
+      relations: [
+        "campaign",
+        "business",
+        "businessCampaign",
+        "reward",
+        "businessReward",
+      ],
     });
     return { data, total };
   }
@@ -398,41 +409,41 @@ export class ParticipantService {
     const participant = await this.participantRepository.findOne({
       where: { id: participantId },
       select: [
-        'id',
-        'name',
-        'email',
-        'role',
-        'uniqueCode',
-        'global_total_points',
-        'matching_points',
-        'isDisabled',
-        'created_at',
-        'updated_at',
+        "id",
+        "name",
+        "email",
+        "role",
+        "uniqueCode",
+        "global_total_points",
+        "matching_points",
+        "isDisabled",
+        "created_at",
+        "updated_at",
       ],
     });
 
     if (!participant) {
-      throw new NotFoundException('Participant not found');
+      throw new NotFoundException("Participant not found");
     }
 
     const campaignBalances =
       await this.participantCampaignBalanceRepository.find({
         where: { participant: { id: participantId } },
-        relations: ['campaign'],
+        relations: ["campaign"],
       });
 
     // Calculate point utilization in a single query
     const { totalEarned, totalRedeemed } = await this.pointHistoryRepository
-      .createQueryBuilder('ph')
+      .createQueryBuilder("ph")
       .select(
-        'SUM(CASE WHEN ph.type IN (:...earnTypes) THEN ph.points ELSE 0 END)',
-        'totalEarned',
+        "SUM(CASE WHEN ph.type IN (:...earnTypes) THEN ph.points ELSE 0 END)",
+        "totalEarned",
       )
       .addSelect(
-        'SUM(CASE WHEN ph.type = :redeemType THEN ph.points ELSE 0 END)',
-        'totalRedeemed',
+        "SUM(CASE WHEN ph.type = :redeemType THEN ph.points ELSE 0 END)",
+        "totalRedeemed",
       )
-      .where('ph.participant_id = :participantId', { participantId })
+      .where("ph.participant_id = :participantId", { participantId })
       .setParameters({
         earnTypes: [PointHistoryType.EARN, PointHistoryType.MATCHING],
         redeemType: PointHistoryType.REDEEM,
@@ -464,10 +475,10 @@ export class ParticipantService {
     const [data, total] =
       await this.participantCampaignBalanceRepository.findAndCount({
         where: { participant: { id: participantId } },
-        relations: ['campaign'],
+        relations: ["campaign"],
         skip: (page - 1) * limit,
         take: limit,
-        order: { created_at: 'DESC' },
+        order: { created_at: "DESC" },
       });
 
     return {

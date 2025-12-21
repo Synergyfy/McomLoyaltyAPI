@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { MembershipService } from './membership.service';
-import { Membership } from './entities/membership.entity';
-import { PaymentHistory } from '../payment-history/entities/payment-history.entity';
+import { Test, TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { MembershipService } from "./membership.service";
+import { Membership } from "./entities/membership.entity";
+import { PaymentHistory } from "../payment-history/entities/payment-history.entity";
 
-describe('MembershipService', () => {
+describe("MembershipService", () => {
   let service: MembershipService;
 
   beforeEach(async () => {
@@ -29,7 +29,7 @@ describe('MembershipService', () => {
     service = module.get<MembershipService>(MembershipService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 });

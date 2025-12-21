@@ -1,12 +1,12 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
-import { Reward } from './reward.entity';
-import { Campaign } from '../../campaign/entities/campaign.entity';
-import { RewardType } from '../enums/reward-type.enum';
-import { RewardSource } from '../enums/reward-source.enum';
-import { RewardAudience } from '../enums/reward-audience.enum';
-import { RewardStatus } from '../enums/reward-status.enum';
+import { Entity, Column, ManyToOne, JoinColumn } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Business } from "../../business/entities/business.entity";
+import { Reward } from "./reward.entity";
+import { Campaign } from "../../campaign/entities/campaign.entity";
+import { RewardType } from "../enums/reward-type.enum";
+import { RewardSource } from "../enums/reward-source.enum";
+import { RewardAudience } from "../enums/reward-audience.enum";
+import { RewardStatus } from "../enums/reward-status.enum";
 
 @Entity()
 export class BusinessReward extends AbstractBaseEntity {
@@ -25,20 +25,20 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column()
   title: string;
 
-  @Column({ type: 'enum', enum: RewardType })
+  @Column({ type: "enum", enum: RewardType })
   reward_type: RewardType;
 
-  @Column({ type: 'enum', enum: RewardSource })
+  @Column({ type: "enum", enum: RewardSource })
   reward_source: RewardSource;
 
-  @Column({ type: 'enum', enum: RewardAudience })
+  @Column({ type: "enum", enum: RewardAudience })
   audience: RewardAudience;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   expiry_datetime: Date;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: RewardStatus,
     default: RewardStatus.ACTIVE,
   })
@@ -50,21 +50,21 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column()
   image: string;
 
-  @Column('text', { array: true, nullable: true })
+  @Column("text", { array: true, nullable: true })
   gallery: string[];
 
   @Column({ default: false })
   disabled: boolean;
 
   @ManyToOne(() => Business)
-  @JoinColumn({ name: 'business_id' })
+  @JoinColumn({ name: "business_id" })
   business: Business;
 
   @ManyToOne(() => Reward, { nullable: true })
-  @JoinColumn({ name: 'reward_id' })
+  @JoinColumn({ name: "reward_id" })
   reward: Reward;
 
   @ManyToOne(() => Campaign)
-  @JoinColumn({ name: 'campaign_id' })
+  @JoinColumn({ name: "campaign_id" })
   campaign: Campaign;
 }

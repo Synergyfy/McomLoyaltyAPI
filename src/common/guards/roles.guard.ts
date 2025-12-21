@@ -1,13 +1,13 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { Role } from '../role.enum';
-import { ROLES_KEY } from '../decorators/roles.decorator';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { SKIP_MEMBERSHIP_CHECK_KEY } from '../decorators/skip-membership-check.decorator';
+import { Injectable, CanActivate, ExecutionContext } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { Role } from "../role.enum";
+import { ROLES_KEY } from "../decorators/roles.decorator";
+import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
+import { SKIP_MEMBERSHIP_CHECK_KEY } from "../decorators/skip-membership-check.decorator";
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) { }
+  constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -38,10 +38,10 @@ export class RolesGuard implements CanActivate {
       return false;
     }
 
-    const skipSubscriptionCheck = this.reflector.getAllAndOverride<boolean>(SKIP_MEMBERSHIP_CHECK_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const skipSubscriptionCheck = this.reflector.getAllAndOverride<boolean>(
+      SKIP_MEMBERSHIP_CHECK_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     // Check for active subscription for Business role
     if (

@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsEnum, IsDate } from 'class-validator';
-import { PlanType } from '../entities/membership.entity';
+import { IsNotEmpty, IsString, IsEnum, IsDate } from "class-validator";
+import { PlanType } from "../entities/membership.entity";
 
 export class CreateMembershipDto {
   @IsNotEmpty()

@@ -1,22 +1,22 @@
-import { DataSource } from 'typeorm';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
+import { DataSource } from "typeorm";
+import * as dotenv from "dotenv";
+import * as path from "path";
 
 dotenv.config();
 
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
+const isDevelopment = process.env.NODE_ENV === "development";
+const isTest = process.env.NODE_ENV === "test";
 
 const dataSource = new DataSource({
-  type: 'postgres',
+  type: "postgres",
   port: +process.env.POSTGRES_PORT,
-  username: process.env.POSTGRES_USERNAME || 'user',
-  password: process.env.POSTGRES_PASSWORD || 'password',
-  database: process.env.POSTGRES_NAME || 'dbname',
-  host: process.env.POSTGRES_HOST || 'localhost',
-  entities: [path.resolve(__dirname, '..') + '/**/*.entity{.ts,.js}'],
+  username: process.env.POSTGRES_USERNAME || "user",
+  password: process.env.POSTGRES_PASSWORD || "password",
+  database: process.env.POSTGRES_NAME || "dbname",
+  host: process.env.POSTGRES_HOST || "localhost",
+  entities: [path.resolve(__dirname, "..") + "/**/*.entity{.ts,.js}"],
   //migrations: [process.env.DB_MIGRATIONS],
-  migrations: [path.join(__dirname, './migrations/*.ts')],
+  migrations: [path.join(__dirname, "./migrations/*.ts")],
   migrationsRun: true,
   synchronize: false,
   // migrationsTableName: 'migrations',
