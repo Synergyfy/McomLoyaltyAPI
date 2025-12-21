@@ -10,6 +10,12 @@ import { MailService } from "../mail/mail.service";
 import { BusinessService } from "../resources/business/services/business.service";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { Membership } from "../resources/membership/entities/membership.entity";
+import { PartnerService } from "../resources/partner/partner.service";
+import { Business } from "../resources/business/entities/business.entity";
+import { Staff } from "../resources/staff/entities/staff.entity";
+import { Participant } from "../resources/participant/entities/participant.entity";
+import { ParticipantProgressionService } from "../resources/participant-progression/participant-progression.service";
+import { getToken } from "@willsoto/nestjs-prometheus";
 
 describe("AuthService", () => {
   let service: AuthService;
@@ -44,6 +50,18 @@ describe("AuthService", () => {
     findOne: jest.fn(),
   };
 
+  const mockPartnerService = {};
+  const mockBusinessRepository = {};
+  const mockStaffRepository = {};
+  const mockParticipantRepository = {};
+  const mockProgressionService = {
+    handleLoginStreak: jest.fn(),
+    triggerAction: jest.fn(),
+  };
+  const mockUserLoginsCounter = {
+    inc: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,9 +72,27 @@ describe("AuthService", () => {
         { provide: OtpService, useValue: mockOtpService },
         { provide: MailService, useValue: mockMailService },
         { provide: BusinessService, useValue: mockBusinessService },
+        { provide: PartnerService, useValue: mockPartnerService },
+        { provide: ParticipantProgressionService, useValue: mockProgressionService },
         {
           provide: getRepositoryToken(Membership),
           useValue: mockMembershipRepository,
+        },
+        {
+          provide: getRepositoryToken(Business),
+          useValue: mockBusinessRepository,
+        },
+        {
+          provide: getRepositoryToken(Staff),
+          useValue: mockStaffRepository,
+        },
+        {
+          provide: getRepositoryToken(Participant),
+          useValue: mockParticipantRepository,
+        },
+        {
+          provide: getToken("user_logins_total"),
+          useValue: mockUserLoginsCounter,
         },
       ],
     }).compile();
@@ -136,6 +172,7 @@ describe("AuthService", () => {
         email: "test@test.com",
         id: "someId",
         role: Role.Business,
+        isEmailVerified: true,
       };
       const accessToken = "someAccessToken";
       const refreshToken = "someRefreshToken";
@@ -155,8 +192,9 @@ describe("AuthService", () => {
           name: user.name,
           role: user.role,
           isOnboarded: true,
+          isEmailVerified: true,
           subscription: {
-            isActive: false,
+            isActive: null,
             isTrial: false,
           },
         },
