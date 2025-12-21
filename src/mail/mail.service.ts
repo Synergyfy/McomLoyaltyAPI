@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
+import { Injectable } from "@nestjs/common";
+import { MailerService } from "@nestjs-modules/mailer";
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailerService: MailerService) { }
+  constructor(private readonly mailerService: MailerService) {}
 
   async sendOtp(email: string, otp: string) {
     await this.mailerService.sendMail({
       to: email,
-      subject: 'Password Reset OTP',
+      subject: "Password Reset OTP",
       text: `Your OTP is ${otp}`,
     });
   }
@@ -16,7 +16,7 @@ export class MailService {
   async sendInviteEmail(email: string, inviteCode: string) {
     await this.mailerService.sendMail({
       to: email,
-      subject: 'You have been invited to claim a QR Plaque',
+      subject: "You have been invited to claim a QR Plaque",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -50,10 +50,16 @@ export class MailService {
     });
   }
 
-  async sendPointsEarnedEmail(email: string, points: number, businessName: string, campaignName: string, newBalance: number) {
+  async sendPointsEarnedEmail(
+    email: string,
+    points: number,
+    businessName: string,
+    campaignName: string,
+    newBalance: number,
+  ) {
     await this.mailerService.sendMail({
       to: email,
-      subject: 'You Earned Points!',
+      subject: "You Earned Points!",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -90,10 +96,16 @@ export class MailService {
     });
   }
 
-  async sendStampEarnedEmail(email: string, stamps: number, businessName: string, campaignName: string, currentStamps: number) {
+  async sendStampEarnedEmail(
+    email: string,
+    stamps: number,
+    businessName: string,
+    campaignName: string,
+    currentStamps: number,
+  ) {
     await this.mailerService.sendMail({
       to: email,
-      subject: 'You Earned a Stamp!',
+      subject: "You Earned a Stamp!",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -130,10 +142,17 @@ export class MailService {
     });
   }
 
-  async sendRewardRedeemedEmail(email: string, rewardName: string, pointsSpent: number, businessName: string, campaignName: string, newBalance: number) {
+  async sendRewardRedeemedEmail(
+    email: string,
+    rewardName: string,
+    pointsSpent: number,
+    businessName: string,
+    campaignName: string,
+    newBalance: number,
+  ) {
     await this.mailerService.sendMail({
       to: email,
-      subject: 'Reward Redeemed!',
+      subject: "Reward Redeemed!",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -168,26 +187,34 @@ export class MailService {
     });
   }
 
-  async sendBusinessActivityEmail(email: string, activityType: 'EARN' | 'REDEEM' | 'ALLOWANCE_WARNING' | 'JOIN', points: number, participantName: string, staffName: string, campaignName: string, details: string) {
-    let title = '';
-    let color = '';
+  async sendBusinessActivityEmail(
+    email: string,
+    activityType: "EARN" | "REDEEM" | "ALLOWANCE_WARNING" | "JOIN",
+    points: number,
+    participantName: string,
+    staffName: string,
+    campaignName: string,
+    details: string,
+  ) {
+    let title = "";
+    let color = "";
 
     switch (activityType) {
-      case 'EARN':
-        title = 'Points Awarded';
-        color = '#10b981'; // Green
+      case "EARN":
+        title = "Points Awarded";
+        color = "#10b981"; // Green
         break;
-      case 'REDEEM':
-        title = 'Reward Redeemed';
-        color = '#ea580c'; // Orange
+      case "REDEEM":
+        title = "Reward Redeemed";
+        color = "#ea580c"; // Orange
         break;
-      case 'ALLOWANCE_WARNING':
-        title = 'Allowance Warning';
-        color = '#ef4444'; // Red
+      case "ALLOWANCE_WARNING":
+        title = "Allowance Warning";
+        color = "#ef4444"; // Red
         break;
-      case 'JOIN':
-        title = 'New Participant';
-        color = '#3b82f6'; // Blue
+      case "JOIN":
+        title = "New Participant";
+        color = "#3b82f6"; // Blue
         break;
     }
 
@@ -204,7 +231,7 @@ export class MailService {
           <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; border-left: 4px solid ${color}; margin-bottom: 25px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <span style="font-weight: bold; color: #333; font-size: 18px;">${title}</span>
-              <span style="font-weight: bold; color: ${color}; font-size: 18px;">${activityType === 'EARN' ? '+' : '-'}${points} Pts</span>
+              <span style="font-weight: bold; color: ${color}; font-size: 18px;">${activityType === "EARN" ? "+" : "-"}${points} Pts</span>
             </div>
             <p style="margin: 0; color: #64748b; font-size: 14px;">${details}</p>
           </div>
@@ -236,7 +263,12 @@ export class MailService {
     });
   }
 
-  async sendCampaignJoinedEmail(email: string, campaignName: string, businessName: string, signUpPoints: number) {
+  async sendCampaignJoinedEmail(
+    email: string,
+    campaignName: string,
+    businessName: string,
+    signUpPoints: number,
+  ) {
     await this.mailerService.sendMail({
       to: email,
       subject: `Welcome to ${campaignName}!`,
@@ -251,14 +283,18 @@ export class MailService {
             <p>Hello,</p>
             <p>You have successfully joined the <strong>${campaignName}</strong> campaign at <strong>${businessName}</strong>.</p>
             
-            ${signUpPoints > 0 ? `
+            ${
+              signUpPoints > 0
+                ? `
             <div style="text-align: center; margin: 35px 0;">
               <div style="display: inline-block; padding: 15px 30px; background-color: #fff7ed; border-radius: 8px; border: 1px solid #ea580c;">
                 <span style="display: block; color: #ea580c; font-size: 24px; font-weight: bold;">+${signUpPoints} Points</span>
                 <span style="display: block; color: #666; font-size: 12px; margin-top: 4px;">Sign-up Bonus</span>
               </div>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <p>Start engaging with ${businessName} to earn more points and unlock exclusive rewards!</p>
             
@@ -273,7 +309,13 @@ export class MailService {
       `,
     });
   }
-  async sendWishlistCampaignEmail(email: string, campaignName: string, businessName: string, itemName: string, ctaLink: string) {
+  async sendWishlistCampaignEmail(
+    email: string,
+    campaignName: string,
+    businessName: string,
+    itemName: string,
+    ctaLink: string,
+  ) {
     await this.mailerService.sendMail({
       to: email,
       subject: `Good News! A Campaign for ${itemName} is Here!`,
@@ -315,7 +357,7 @@ export class MailService {
   ) {
     await this.mailerService.sendMail({
       to,
-      subject: 'You Earned Matching Points! 🎉',
+      subject: "You Earned Matching Points! 🎉",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #f0f0f0;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -350,8 +392,15 @@ export class MailService {
     });
   }
 
-  async sendLevelPromotionEmail(email: string, participantName: string, newLevelName: string, benefits: string[]) {
-    const benefitsHtml = benefits.map(b => `<li style="margin-bottom: 8px;">${b}</li>`).join('');
+  async sendLevelPromotionEmail(
+    email: string,
+    participantName: string,
+    newLevelName: string,
+    benefits: string[],
+  ) {
+    const benefitsHtml = benefits
+      .map((b) => `<li style="margin-bottom: 8px;">${b}</li>`)
+      .join("");
 
     await this.mailerService.sendMail({
       to: email,

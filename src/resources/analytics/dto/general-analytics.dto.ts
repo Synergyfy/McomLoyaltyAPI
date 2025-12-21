@@ -1,8 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
+import { ApiProperty } from "@nestjs/swagger";
+import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
 
 class ActiveCampaign {
-  @ApiProperty({ example: 'Summer Sale Campaign' })
+  @ApiProperty({ example: "Summer Sale Campaign" })
   name: string;
 
   @ApiProperty({ example: 120 })

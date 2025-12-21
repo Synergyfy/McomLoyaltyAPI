@@ -1,11 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, IsDateString, IsEnum, IsBoolean, IsArray } from 'class-validator';
-import { RewardStatus } from '../enums/reward-status.enum';
-import { RewardType } from '../enums/reward-type.enum';
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsDateString,
+  IsEnum,
+  IsBoolean,
+  IsArray,
+} from "class-validator";
+import { RewardStatus } from "../enums/reward-status.enum";
+import { RewardType } from "../enums/reward-type.enum";
 
 export class CreateBusinessRewardDto {
   @ApiProperty({
-    description: 'The quantity of the reward available for the business',
+    description: "The quantity of the reward available for the business",
     example: 100,
   })
   @IsNumber()
@@ -13,38 +21,52 @@ export class CreateBusinessRewardDto {
   quantity?: number;
 
   @ApiProperty({
-    description: 'The points required to redeem the reward',
+    description: "The points required to redeem the reward",
     example: 1000,
+    required: false,
   })
   @IsNumber()
-  point_required: number;
+  @IsOptional()
+  point_required?: number;
+
   @ApiProperty({
-    description: 'The title of the reward',
-    example: 'Free Coffee',
+    description: "The stamps required to redeem the reward",
+    example: 10,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  stamp_required?: number;
+  @ApiProperty({
+    description: "The title of the reward",
+    example: "Free Coffee",
   })
   @IsString()
   @IsOptional()
   title?: string;
 
   @ApiProperty({
-    description: 'The description of the reward',
-    example: 'Get a free coffee with any purchase',
+    description: "The description of the reward",
+    example: "Get a free coffee with any purchase",
   })
   @IsString()
   @IsOptional()
   description?: string;
 
   @ApiProperty({
-    description: 'The image URL of the reward',
-    example: 'https://example.com/image.jpg',
+    description: "The image URL of the reward",
+    example: "https://example.com/image.jpg",
   })
   @IsString()
   @IsOptional()
   image?: string;
 
   @ApiProperty({
-    description: 'The gallery images of the reward',
-    example: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg'],
+    description: "The gallery images of the reward",
+    example: [
+      "https://example.com/image1.jpg",
+      "https://example.com/image2.jpg",
+    ],
   })
   @IsArray()
   @IsString({ each: true })
@@ -52,15 +74,15 @@ export class CreateBusinessRewardDto {
   gallery?: string[];
 
   @ApiProperty({
-    description: 'The expiry date and time of the reward',
-    example: '2024-12-31T23:59:59.000Z',
+    description: "The expiry date and time of the reward",
+    example: "2024-12-31T23:59:59.000Z",
   })
   @IsDateString()
   @IsOptional()
   expiry_datetime?: Date;
 
   @ApiProperty({
-    description: 'The status of the reward',
+    description: "The status of the reward",
     enum: RewardStatus,
     example: RewardStatus.ACTIVE,
   })
@@ -69,7 +91,7 @@ export class CreateBusinessRewardDto {
   status?: RewardStatus;
 
   @ApiProperty({
-    description: 'The type of the reward',
+    description: "The type of the reward",
     enum: RewardType,
     example: RewardType.VOUCHER,
   })
@@ -77,7 +99,7 @@ export class CreateBusinessRewardDto {
   reward_type: RewardType;
 
   @ApiProperty({
-    description: 'Whether the reward is disabled',
+    description: "Whether the reward is disabled",
     example: false,
   })
   @IsBoolean()

@@ -1,55 +1,54 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { nanoid } from 'nanoid';
-import * as bcrypt from 'bcrypt';
-import { Admin } from '../resources/admin/entities/admin.entity';
-import { Business } from '../resources/business/entities/business.entity';
-import {
-  Campaign,
-} from '../resources/campaign/entities/campaign.entity';
-import { BusinessCampaign } from '../resources/campaign/entities/business-campaign.entity';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { nanoid } from "nanoid";
+import * as bcrypt from "bcrypt";
+import { Admin } from "../resources/admin/entities/admin.entity";
+import { Business } from "../resources/business/entities/business.entity";
+import { Campaign } from "../resources/campaign/entities/campaign.entity";
+import { BusinessCampaign } from "../resources/campaign/entities/business-campaign.entity";
 import {
   CampaignType,
   AudienceType,
   RewardType as CampaignRewardType,
-} from '../resources/campaign/entities/campaign-enums';
-import { Category } from '../resources/category/entities/category.entity';
-import { Deal } from '../resources/deal/entities/deal.entity';
-import { Otp } from '../resources/otp/entities/otp.entity';
-import { Participant } from '../resources/participant/entities/participant.entity';
-import { ParticipantCampaignBalance } from '../resources/participant-campaign-balance/entities/participant-campaign-balance.entity';
+} from "../resources/campaign/entities/campaign-enums";
+import { Category } from "../resources/category/entities/category.entity";
+import { Deal } from "../resources/deal/entities/deal.entity";
+import { Otp } from "../resources/otp/entities/otp.entity";
+import { Participant } from "../resources/participant/entities/participant.entity";
+import { ParticipantCampaignBalance } from "../resources/participant-campaign-balance/entities/participant-campaign-balance.entity";
 import {
   PointHistory,
   PointHistoryType,
-} from '../resources/participant-campaign-balance/entities/point-history.entity';
-import { Referral } from '../resources/referral/entities/referral.entity';
-import { Reward } from '../resources/rewards/entities/reward.entity';
-import { BusinessReward } from '../resources/rewards/entities/business-reward.entity';
-import { Sector } from '../resources/sector/entities/sector.entity';
-import { Staff } from '../resources/staff/entities/staff.entity';
-import { SubCategory } from '../resources/subcategory/entities/subcategory.entity';
-import { Gender } from '../common/gender.enum';
-import { Partner } from '../resources/partner/entities/partner.entity';
-import { QrPlaque, QrPlaqueStatus } from '../resources/qr-plaques/entities/qr-plaque.entity';
-import { Membership } from '../resources/membership/entities/membership.entity';
-import { Tier } from '../resources/tier/entities/tier.entity';
-import { Coupon } from '../resources/coupon/entities/coupon.entity';
-import { RewardType } from '../resources/rewards/enums/reward-type.enum';
-import { BadgeLevel } from '../resources/rewards/enums/badge-level.enum';
-import { RewardSource } from '../resources/rewards/enums/reward-source.enum';
-import { RewardAudience } from '../resources/rewards/enums/reward-audience.enum';
-import { RewardStatus } from '../resources/rewards/enums/reward-status.enum';
-import { TierStatus } from '../resources/tier/entities/tier-status.enum';
+} from "../resources/participant-campaign-balance/entities/point-history.entity";
+import { Referral } from "../resources/referral/entities/referral.entity";
+import { Reward } from "../resources/rewards/entities/reward.entity";
+import { BusinessReward } from "../resources/rewards/entities/business-reward.entity";
+import { Sector } from "../resources/sector/entities/sector.entity";
+import { Staff } from "../resources/staff/entities/staff.entity";
+import { SubCategory } from "../resources/subcategory/entities/subcategory.entity";
+import { Gender } from "../common/gender.enum";
+import { Partner } from "../resources/partner/entities/partner.entity";
 import {
-  MembershipStatus,
-} from '../resources/membership/entities/membership.entity';
+  QrPlaque,
+  QrPlaqueStatus,
+} from "../resources/qr-plaques/entities/qr-plaque.entity";
+import { Membership } from "../resources/membership/entities/membership.entity";
+import { Tier } from "../resources/tier/entities/tier.entity";
+import { Coupon } from "../resources/coupon/entities/coupon.entity";
+import { RewardType } from "../resources/rewards/enums/reward-type.enum";
+import { BadgeLevel } from "../resources/rewards/enums/badge-level.enum";
+import { RewardSource } from "../resources/rewards/enums/reward-source.enum";
+import { RewardAudience } from "../resources/rewards/enums/reward-audience.enum";
+import { RewardStatus } from "../resources/rewards/enums/reward-status.enum";
+import { TierStatus } from "../resources/tier/entities/tier-status.enum";
+import { MembershipStatus } from "../resources/membership/entities/membership.entity";
 import {
   PaymentHistory,
   PaymentProvider,
   PaymentStatus,
-} from '../resources/payment-history/entities/payment-history.entity';
-import { ReferralStatus } from '../resources/referral/entities/referral.entity';
+} from "../resources/payment-history/entities/payment-history.entity";
+import { ReferralStatus } from "../resources/referral/entities/referral.entity";
 
 @Injectable()
 export class SeederService {
@@ -98,53 +97,53 @@ export class SeederService {
     private readonly couponRepository: Repository<Coupon>,
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
-  ) { }
+  ) {}
 
   async seed() {
     await this.clearDatabase();
 
     const sectors = await this.sectorRepository.save([
-      { name: 'Technology' },
-      { name: 'Retail' },
-      { name: 'Hospitality' },
+      { name: "Technology" },
+      { name: "Retail" },
+      { name: "Hospitality" },
     ]);
     const categories = await this.categoryRepository.save([
-      { name: 'Software', sector: sectors[0] },
-      { name: 'Fashion', sector: sectors[1] },
-      { name: 'Dining', sector: sectors[2] },
+      { name: "Software", sector: sectors[0] },
+      { name: "Fashion", sector: sectors[1] },
+      { name: "Dining", sector: sectors[2] },
     ]);
     const subcategories = await this.subCategoryRepository.save([
-      { name: 'Web Development', category: categories[0] },
-      { name: 'Clothing', category: categories[1] },
-      { name: 'Restaurants', category: categories[2] },
+      { name: "Web Development", category: categories[0] },
+      { name: "Clothing", category: categories[1] },
+      { name: "Restaurants", category: categories[2] },
     ]);
-    const hashedPassword = await bcrypt.hash('password', 10);
+    const hashedPassword = await bcrypt.hash("password", 10);
 
     const admins = await this.adminRepository.save([
       {
-        name: 'Admin User',
-        email: 'admin@example.com',
+        name: "Admin User",
+        email: "admin@example.com",
         password: hashedPassword,
       },
     ]);
 
     const tiers = await this.tierRepository.save([
       {
-        name: 'Bronze',
+        name: "Bronze",
         status: TierStatus.PUBLISHED,
         monthly_price: 10,
         quarterly_price: 25,
         annual_price: 90,
       },
       {
-        name: 'Silver',
+        name: "Silver",
         status: TierStatus.PUBLISHED,
         monthly_price: 20,
         quarterly_price: 50,
         annual_price: 180,
       },
       {
-        name: 'Gold',
+        name: "Gold",
         status: TierStatus.PUBLISHED,
         monthly_price: 30,
         quarterly_price: 75,
@@ -159,12 +158,12 @@ export class SeederService {
         email: `partner${i + 1}@example.com`,
         phoneNumber: `+123456789${i}`,
         password: hashedPassword,
-        subCategory: subcategories[0]
-      }))
+        subCategory: subcategories[0],
+      })),
     );
 
     // Create 50 Businesses
-    console.log('Creating businesses...');
+    console.log("Creating businesses...");
     const businesses = await this.businessRepository.save(
       Array.from({ length: 50 }, (_, i) => ({
         name: `Business ${i + 1}`,
@@ -182,7 +181,7 @@ export class SeederService {
       const tier = tiers[index % tiers.length];
       const membership = await this.membershipRepository.save({
         user_id: business.id,
-        user_type: 'business',
+        user_type: "business",
         tier: tier,
         status: MembershipStatus.ACTIVE,
         start_date: this.getDateDaysAgo(30),
@@ -215,14 +214,14 @@ export class SeederService {
           referrerBusiness: businesses[i - 1],
           refereeBusiness: businesses[i],
           status: ReferralStatus.SUCCESSFUL,
-          code: 'SEED',
-          refereeEmail: businesses[i].email
+          code: "SEED",
+          refereeEmail: businesses[i].email,
         });
       }
     }
 
     // Create Staff for each business
-    console.log('Creating staff...');
+    console.log("Creating staff...");
     const staffs = [];
     for (const business of businesses) {
       const staffList = await this.staffRepository.save(
@@ -231,14 +230,14 @@ export class SeederService {
           email: `staff${i + 1}_${business.uniqueCode}@example.com`,
           password: hashedPassword,
           uniqueCode: nanoid(9),
-          business: business
-        }))
+          business: business,
+        })),
       );
       staffs.push(...staffList);
     }
 
     // Create Participants (200)
-    console.log('Creating participants...');
+    console.log("Creating participants...");
     const participants = await this.participantRepository.save(
       Array.from({ length: 200 }, (_, i) => ({
         name: `Participant ${i + 1}`,
@@ -261,12 +260,12 @@ export class SeederService {
         audience_type: AudienceType.MEMBERS,
         business: null,
         campaign_message: `Message for admin campaign ${i + 1}`,
-        banner_url: 'https://placehold.co/600x400',
-        cta_text: 'Click Here',
-        cta_background_color: '#ffffff',
-        cta_text_color: '#000000',
-        text_color: '#000000',
-        background_color: '#ffffff',
+        banner_url: "https://placehold.co/600x400",
+        cta_text: "Click Here",
+        cta_background_color: "#ffffff",
+        cta_text_color: "#000000",
+        text_color: "#000000",
+        background_color: "#ffffff",
         uniqueCode: nanoid(9),
       })),
     );
@@ -277,13 +276,13 @@ export class SeederService {
         description: `Description for generic reward ${i + 1}`,
         max_points: 100 * (i + 1),
         value: 10 * (i + 1),
-        image: 'https://placehold.co/100x100',
+        image: "https://placehold.co/100x100",
         reward_type: RewardType.PHYSICAL_PRODUCT,
         badge_level: BadgeLevel.BRONZE,
         reward_source: RewardSource.MCOM_VAULT,
         audience: RewardAudience.ALL_BUSINESS,
         quantity: 1000,
-        status: RewardStatus.ACTIVE
+        status: RewardStatus.ACTIVE,
       })),
     );
 
@@ -293,7 +292,7 @@ export class SeederService {
       await this.campaignRepository.save(campaign);
     }
 
-    console.log('Creating business campaigns...');
+    console.log("Creating business campaigns...");
     // Business Campaigns (Mix of custom and claimed)
     // We will focus on BusinessCampaign entity as that's what Analytics uses
     const allBusinessCampaigns: BusinessCampaign[] = [];
@@ -311,12 +310,12 @@ export class SeederService {
           end_date: this.getDateDaysAgo(-90),
           quantity: 1000,
           audience_type: AudienceType.MEMBERS,
-          banner_url: 'https://placehold.co/600x400',
-          cta_text: 'Join Now',
-          cta_background_color: '#000',
-          cta_text_color: '#fff',
-          text_color: '#000',
-          background_color: '#fff',
+          banner_url: "https://placehold.co/600x400",
+          cta_text: "Join Now",
+          cta_background_color: "#000",
+          cta_text_color: "#fff",
+          text_color: "#000",
+          background_color: "#fff",
           total_points_earned: 0,
           total_points_redeemed: 0,
           reward_type: CampaignRewardType.REGULAR,
@@ -329,14 +328,14 @@ export class SeederService {
             description: `Exclusive from ${business.name}`,
             max_points: 200 * (r + 1),
             value: 20 * (r + 1),
-            image: 'https://placehold.co/100x100',
+            image: "https://placehold.co/100x100",
             reward_type: RewardType.COUPON,
             badge_level: BadgeLevel.SILVER,
             reward_source: RewardSource.PARTNER,
             audience: RewardAudience.ALL_BUSINESS,
             status: RewardStatus.ACTIVE,
-            quantity: 100
-          }))
+            quantity: 100,
+          })),
         );
 
         // Link rewards to BusinessCampaign
@@ -356,7 +355,8 @@ export class SeederService {
       }
 
       // Claim 1 Admin Template
-      const template = adminCampaigns[Math.floor(Math.random() * adminCampaigns.length)];
+      const template =
+        adminCampaigns[Math.floor(Math.random() * adminCampaigns.length)];
       const claimedCampaign = await this.businessCampaignRepository.save({
         business: business,
         campaign: template, // Link to template
@@ -376,7 +376,7 @@ export class SeederService {
         background_color: template.background_color,
         total_points_earned: 0,
         total_points_redeemed: 0,
-        reward_type: template.reward_type
+        reward_type: template.reward_type,
       });
 
       // Link template rewards to this BusinessCampaign
@@ -386,7 +386,7 @@ export class SeederService {
       allBusinessCampaigns.push(claimedCampaign);
     }
 
-    console.log('Generating historical data (Point History)...');
+    console.log("Generating historical data (Point History)...");
 
     // Historical Simulation: Past 90 Days
     const days = 90;
@@ -396,22 +396,29 @@ export class SeederService {
       const currentDate = new Date();
       currentDate.setDate(today.getDate() - d);
       // Randomize time within the day
-      currentDate.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+      currentDate.setHours(
+        Math.floor(Math.random() * 24),
+        Math.floor(Math.random() * 60),
+      );
 
       // 1. Random Participants join campaigns (EARN points or just join)
       // Let's assume 10-20 joins per day across the system
       const dailyJoins = Math.floor(Math.random() * 10) + 10;
 
       for (let j = 0; j < dailyJoins; j++) {
-        const participant = participants[Math.floor(Math.random() * participants.length)];
-        const bizCampaign = allBusinessCampaigns[Math.floor(Math.random() * allBusinessCampaigns.length)];
+        const participant =
+          participants[Math.floor(Math.random() * participants.length)];
+        const bizCampaign =
+          allBusinessCampaigns[
+            Math.floor(Math.random() * allBusinessCampaigns.length)
+          ];
 
         // Check if already joined
         let balance = await this.participantCampaignBalanceRepository.findOne({
           where: {
             participant: { id: participant.id },
-            businessCampaign: { id: bizCampaign.id }
-          }
+            businessCampaign: { id: bizCampaign.id },
+          },
         });
 
         if (!balance) {
@@ -422,7 +429,7 @@ export class SeederService {
             businessCampaign: bizCampaign,
             campaign: bizCampaign.campaign, // Nullable if custom
             campaign_balance: earnPoints,
-            created_at: currentDate
+            created_at: currentDate,
           });
 
           // Update BusinessCampaign total
@@ -440,8 +447,8 @@ export class SeederService {
             businessCampaign: bizCampaign,
             campaign: bizCampaign.campaign,
             business: bizCampaign.business,
-            description: 'Campaign Join Bonus',
-            created_at: currentDate
+            description: "Campaign Join Bonus",
+            created_at: currentDate,
           });
         } else {
           // Already joined, maybe earn more points (Scan)
@@ -460,8 +467,8 @@ export class SeederService {
               businessCampaign: bizCampaign,
               campaign: bizCampaign.campaign,
               business: bizCampaign.business,
-              description: 'Scan Earn',
-              created_at: currentDate
+              description: "Scan Earn",
+              created_at: currentDate,
             });
           }
         }
@@ -472,18 +479,24 @@ export class SeederService {
       const dailyRedemptions = Math.floor(Math.random() * 5) + 5;
       for (let r = 0; r < dailyRedemptions; r++) {
         // Pick a random participant
-        const participant = participants[Math.floor(Math.random() * participants.length)];
+        const participant =
+          participants[Math.floor(Math.random() * participants.length)];
 
         // Find a campaign they have balance in
-        const balance = await this.participantCampaignBalanceRepository.createQueryBuilder('pcb')
-          .leftJoinAndSelect('pcb.businessCampaign', 'bc')
-          .leftJoinAndSelect('bc.rewards', 'r')
-          .where('pcb.participantId = :pid', { pid: participant.id })
-          .andWhere('pcb.campaign_balance > 0')
-          .orderBy('RANDOM()')
+        const balance = await this.participantCampaignBalanceRepository
+          .createQueryBuilder("pcb")
+          .leftJoinAndSelect("pcb.businessCampaign", "bc")
+          .leftJoinAndSelect("bc.rewards", "r")
+          .where("pcb.participantId = :pid", { pid: participant.id })
+          .andWhere("pcb.campaign_balance > 0")
+          .orderBy("RANDOM()")
           .getOne();
 
-        if (balance && balance.businessCampaign && balance.businessCampaign.rewards.length > 0) {
+        if (
+          balance &&
+          balance.businessCampaign &&
+          balance.businessCampaign.rewards.length > 0
+        ) {
           const reward = balance.businessCampaign.rewards[0]; // Just pick the first available
           if (balance.campaign_balance >= reward.max_points) {
             // Redeem
@@ -503,14 +516,14 @@ export class SeederService {
               business: bizCampaign.business,
               reward: reward,
               description: `Redeemed ${reward.title}`,
-              created_at: currentDate
+              created_at: currentDate,
             });
           }
         }
       }
     }
 
-    console.log('Seeding completed successfully!');
+    console.log("Seeding completed successfully!");
   }
 
   private getDateDaysAgo(days: number): Date {
@@ -520,36 +533,36 @@ export class SeederService {
   }
 
   private async clearDatabase() {
-    await this.adminRepository.query('SET session_replication_role = replica;');
+    await this.adminRepository.query("SET session_replication_role = replica;");
     const tableNames = [
-      'admins',
-      'businesses',
-      'campaigns',
-      'business_campaigns',
-      'categories',
-      'deals',
-      'otp',
-      'participants',
-      'participant_campaign_balances',
-      'point_histories',
-      'referrals',
-      'reward',
-      'business_reward',
-      'sectors',
-      'staff',
-      'subcategories',
-      'partners',
-      'qr_plaques',
-      'membership',
-      'tier',
-      'payment_histories',
-      'coupon',
-      'business_campaigns_rewards_reward', // join tables
-      'campaigns_rewards_reward',
-      'reward_sectors_sectors',
-      'reward_tiers_tier',
-      'participants_campaigns_campaigns',
-      'participants_business_campaigns_business_campaigns'
+      "admins",
+      "businesses",
+      "campaigns",
+      "business_campaigns",
+      "categories",
+      "deals",
+      "otp",
+      "participants",
+      "participant_campaign_balances",
+      "point_histories",
+      "referrals",
+      "reward",
+      "business_reward",
+      "sectors",
+      "staff",
+      "subcategories",
+      "partners",
+      "qr_plaques",
+      "membership",
+      "tier",
+      "payment_histories",
+      "coupon",
+      "business_campaigns_rewards_reward", // join tables
+      "campaigns_rewards_reward",
+      "reward_sectors_sectors",
+      "reward_tiers_tier",
+      "participants_campaigns_campaigns",
+      "participants_business_campaigns_business_campaigns",
     ];
 
     for (const tableName of tableNames) {
@@ -562,6 +575,6 @@ export class SeederService {
       }
     }
 
-    await this.adminRepository.query('SET session_replication_role = DEFAULT;');
+    await this.adminRepository.query("SET session_replication_role = DEFAULT;");
   }
 }

@@ -1,31 +1,34 @@
-import { Entity, Column, ManyToOne, Index } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
-import { MatchingPointActivityType } from './matching-point-config.entity';
+import { Entity, Column, ManyToOne, Index } from "typeorm";
+import { ApiProperty } from "@nestjs/swagger";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Business } from "../../business/entities/business.entity";
+import { MatchingPointActivityType } from "./matching-point-config.entity";
 
-@Entity('matching_point_history')
-@Index(['business', 'created_at'])
-@Index(['business', 'activity_type', 'created_at'])
+@Entity("matching_point_history")
+@Index(["business", "created_at"])
+@Index(["business", "activity_type", "created_at"])
 export class MatchingPointHistory extends AbstractBaseEntity {
-    @ApiProperty({ type: () => Business })
-    @ManyToOne(() => Business, { onDelete: 'CASCADE' })
-    business: Business;
+  @ApiProperty({ type: () => Business })
+  @ManyToOne(() => Business, { onDelete: "CASCADE" })
+  business: Business;
 
-    @ApiProperty({ description: 'Points added or removed' })
-    @Column({ type: 'int' })
-    points: number;
+  @ApiProperty({ description: "Points added or removed" })
+  @Column({ type: "int" })
+  points: number;
 
-    @ApiProperty({ description: 'Balance after this transaction' })
-    @Column({ type: 'int', default: 0 })
-    balance_after: number;
+  @ApiProperty({ description: "Balance after this transaction" })
+  @Column({ type: "int", default: 0 })
+  balance_after: number;
 
-    @ApiProperty({ enum: MatchingPointActivityType, description: 'Type of activity' })
-    @Column({ type: 'enum', enum: MatchingPointActivityType })
-    activity_type: MatchingPointActivityType;
+  @ApiProperty({
+    enum: MatchingPointActivityType,
+    description: "Type of activity",
+  })
+  @Column({ type: "enum", enum: MatchingPointActivityType })
+  activity_type: MatchingPointActivityType;
 
-    @ApiProperty({ description: 'Description or reason for these points' })
-    @Column({ nullable: true })
-    @Index() // Simple index for description search
-    description: string;
+  @ApiProperty({ description: "Description or reason for these points" })
+  @Column({ nullable: true })
+  @Index() // Simple index for description search
+  description: string;
 }

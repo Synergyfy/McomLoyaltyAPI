@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AdminAnalyticsController } from './admin.analytics.controller';
-import { AdminAnalyticsService } from '../services/admin.analytics.service';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { PointLogResponseDto } from '../dto/point-log.dto';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AdminAnalyticsController } from "./admin.analytics.controller";
+import { AdminAnalyticsService } from "../services/admin.analytics.service";
+import { PaginationDto } from "src/common/dto/pagination.dto";
+import { PointLogResponseDto } from "../dto/point-log.dto";
 
-describe('AdminAnalyticsController', () => {
+describe("AdminAnalyticsController", () => {
   let controller: AdminAnalyticsController;
   let service: AdminAnalyticsService;
 
@@ -29,12 +29,12 @@ describe('AdminAnalyticsController', () => {
     service = module.get<AdminAnalyticsService>(AdminAnalyticsService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getPointLogs', () => {
-    it('should return point logs', async () => {
+  describe("getPointLogs", () => {
+    it("should return point logs", async () => {
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
       const expectedResult: PointLogResponseDto = {
         data: [],

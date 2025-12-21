@@ -1,13 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ParticipantService } from './participant.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Participant } from './entities/participant.entity';
-import { Campaign } from '../campaign/entities/campaign.entity';
-import { AuthService } from 'src/auth/auth.service';
-import { ParticipantCampaignBalance } from '../participant-campaign-balance/entities/participant-campaign-balance.entity';
-import { PointHistory } from '../participant-campaign-balance/entities/point-history.entity';
+import { Test, TestingModule } from "@nestjs/testing";
+import { ParticipantService } from "./participant.service";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Participant } from "./entities/participant.entity";
+import { Campaign } from "../campaign/entities/campaign.entity";
+import { AuthService } from "src/auth/auth.service";
+import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
+import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
 
-describe('ParticipantService', () => {
+describe("ParticipantService", () => {
   let service: ParticipantService;
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('ParticipantService', () => {
     service = module.get<ParticipantService>(ParticipantService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 });

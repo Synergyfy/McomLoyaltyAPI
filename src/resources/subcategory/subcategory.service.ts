@@ -1,11 +1,10 @@
-
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SubCategory } from './entities/subcategory.entity';
-import { CreateSubcategoryDto } from './dto/create-subcategory.dto';
-import { UpdateSubcategoryDto } from './dto/update-subcategory.dto';
-import { CategoryService } from '../category/category.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { SubCategory } from "./entities/subcategory.entity";
+import { CreateSubcategoryDto } from "./dto/create-subcategory.dto";
+import { UpdateSubcategoryDto } from "./dto/update-subcategory.dto";
+import { CategoryService } from "../category/category.service";
 
 @Injectable()
 export class SubcategoryService {
@@ -35,7 +34,7 @@ export class SubcategoryService {
   async findOne(id: string): Promise<SubCategory> {
     const subCategory = await this.subCategoryRepository.findOne({
       where: { id },
-      relations: ['category'],
+      relations: ["category"],
     });
     if (!subCategory) {
       throw new NotFoundException(`SubCategory with ID ${id} not found`);

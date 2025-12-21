@@ -1,4 +1,4 @@
 export enum DealVisibility {
-    PUBLIC = 'PUBLIC',
-    PRIVATE = 'PRIVATE',
+  PUBLIC = "PUBLIC",
+  PRIVATE = "PRIVATE",
 }

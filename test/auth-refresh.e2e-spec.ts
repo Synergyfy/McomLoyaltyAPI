@@ -1,14 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { Role } from '../src/common/role.enum';
-import { Admin } from '../src/resources/admin/entities/admin.entity';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { HashService } from '../src/common/hash/hash.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import * as request from "supertest";
+import { AppModule } from "../src/app.module";
+import { Role } from "../src/common/role.enum";
+import { Admin } from "../src/resources/admin/entities/admin.entity";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { HashService } from "../src/common/hash/hash.service";
 
-describe('AuthController (e2e)', () => {
+describe("AuthController (e2e)", () => {
   let app: INestApplication;
   let adminRepository: Repository<Admin>;
   let hashService: HashService;
@@ -27,10 +27,10 @@ describe('AuthController (e2e)', () => {
     hashService = moduleFixture.get<HashService>(HashService);
     await app.init();
 
-    const hashedPassword = await hashService.hashPassword('password');
+    const hashedPassword = await hashService.hashPassword("password");
     admin = adminRepository.create({
-      name: 'Test Admin',
-      email: 'test@example.com',
+      name: "Test Admin",
+      email: "test@example.com",
       password: hashedPassword,
       role: Role.Admin,
     });
@@ -42,31 +42,31 @@ describe('AuthController (e2e)', () => {
     await app.close();
   });
 
-  it('/auth/login (POST)', async () => {
+  it("/auth/login (POST)", async () => {
     const res = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: 'test@example.com', password: 'password' })
+      .post("/auth/login")
+      .send({ email: "test@example.com", password: "password" })
       .expect(201);
 
-    expect(res.body).toHaveProperty('access_token');
-    expect(res.body).toHaveProperty('refresh_token');
+    expect(res.body).toHaveProperty("access_token");
+    expect(res.body).toHaveProperty("refresh_token");
     refreshToken = res.body.refresh_token;
   });
 
-  it('/auth/refresh-token (POST)', async () => {
+  it("/auth/refresh-token (POST)", async () => {
     const res = await request(app.getHttpServer())
-      .post('/auth/refresh-token')
+      .post("/auth/refresh-token")
       .send({ refreshToken })
       .expect(201);
 
-    expect(res.body).toHaveProperty('access_token');
-    expect(res.body).toHaveProperty('refresh_token');
+    expect(res.body).toHaveProperty("access_token");
+    expect(res.body).toHaveProperty("refresh_token");
   });
 
-  it('/auth/refresh-token (POST) with invalid token', async () => {
+  it("/auth/refresh-token (POST) with invalid token", async () => {
     await request(app.getHttpServer())
-      .post('/auth/refresh-token')
-      .send({ refreshToken: 'invalidtoken' })
+      .post("/auth/refresh-token")
+      .send({ refreshToken: "invalidtoken" })
       .expect(401);
   });
 });

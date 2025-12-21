@@ -1,18 +1,19 @@
-import { IsNotEmpty, IsString, IsEnum, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { PlanType } from '../../membership/entities/membership.entity';
+import { IsNotEmpty, IsString, IsEnum, IsOptional } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { PlanType } from "../../membership/entities/membership.entity";
 
 export class InitiatePaymentDto {
   @ApiProperty({
-    description: 'The ID of the membership tier to purchase.',
-    example: 'd0b3b3e0-0b3e-4b3e-8e3e-3e0b3b3e0b3e',
+    description: "The ID of the membership tier to purchase.",
+    example: "d0b3b3e0-0b3e-4b3e-8e3e-3e0b3b3e0b3e",
   })
   @IsNotEmpty()
   @IsString()
   tier_id: string;
 
   @ApiProperty({
-    description: 'The type of plan to purchase. Ignored if the tier is Seasonal (defaults to fixed price).',
+    description:
+      "The type of plan to purchase. Ignored if the tier is Seasonal (defaults to fixed price).",
     enum: PlanType,
     example: PlanType.MONTHLY,
   })
@@ -21,8 +22,8 @@ export class InitiatePaymentDto {
   plan_type: PlanType;
 
   @ApiProperty({
-    description: 'An optional coupon code to apply to the purchase.',
-    example: 'SUMMER2024',
+    description: "An optional coupon code to apply to the purchase.",
+    example: "SUMMER2024",
     required: false,
   })
   @IsOptional()
@@ -30,8 +31,8 @@ export class InitiatePaymentDto {
   coupon_code?: string;
 
   @ApiProperty({
-    description: 'Array of Point Package IDs to purchase as add-ons.',
-    example: ['pkg_123', 'pkg_456'],
+    description: "Array of Point Package IDs to purchase as add-ons.",
+    example: ["pkg_123", "pkg_456"],
     required: false,
     type: [String],
   })

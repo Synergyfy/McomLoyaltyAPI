@@ -1,12 +1,11 @@
-
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Sector } from '../entities/sector.entity';
-import { CreateSectorDto } from '../dto/create-sector.dto';
-import { UpdateSectorDto } from '../dto/update-sector.dto';
-import { Category } from 'src/resources/category/entities/category.entity';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Sector } from "../entities/sector.entity";
+import { CreateSectorDto } from "../dto/create-sector.dto";
+import { UpdateSectorDto } from "../dto/update-sector.dto";
+import { Category } from "src/resources/category/entities/category.entity";
+import { PaginationDto } from "src/common/dto/pagination.dto";
 
 @Injectable()
 export class SectorService {
@@ -37,7 +36,7 @@ export class SectorService {
   async findOne(id: string): Promise<Sector> {
     const sector = await this.sectorRepository.findOne({
       where: { id },
-      relations: ['categories'],
+      relations: ["categories"],
     });
     if (!sector) {
       throw new NotFoundException(`Sector with ID ${id} not found`);
@@ -56,10 +55,7 @@ export class SectorService {
     await this.sectorRepository.remove(sector);
   }
 
-  async getCategoriesBySector(
-    sectorId: string,
-    paginationDto: PaginationDto,
-  ) {
+  async getCategoriesBySector(sectorId: string, paginationDto: PaginationDto) {
     const { page, limit } = paginationDto;
     const [categories, total] = await this.categoryRepository.findAndCount({
       where: { sector: { id: sectorId } },

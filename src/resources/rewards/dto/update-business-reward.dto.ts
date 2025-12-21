@@ -1,4 +1,6 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateBusinessRewardDto } from './create-business-reward.dto';
+import { PartialType } from "@nestjs/swagger";
+import { CreateBusinessRewardDto } from "./create-business-reward.dto";
 
-export class UpdateBusinessRewardDto extends PartialType(CreateBusinessRewardDto) { }
+export class UpdateBusinessRewardDto extends PartialType(
+  CreateBusinessRewardDto,
+) {}

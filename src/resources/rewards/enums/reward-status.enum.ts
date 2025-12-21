@@ -1,4 +1,4 @@
 export enum RewardStatus {
-  ACTIVE = 'active',
-  DRAFT = 'draft',
+  ACTIVE = "active",
+  DRAFT = "draft",
 }

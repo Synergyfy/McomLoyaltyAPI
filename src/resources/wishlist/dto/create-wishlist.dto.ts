@@ -1,4 +1,3 @@
-
 import {
   IsString,
   IsNotEmpty,
@@ -11,23 +10,28 @@ import {
   ValidateIf,
   IsEmail,
   IsPhoneNumber,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Relationship, Occasion, Season, Priority } from '../entities/wishlist-enums';
-import { IsOneOfTwoRequired } from '../../../common/decorators/is-one-of-two-required.decorator';
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  Relationship,
+  Occasion,
+  Season,
+  Priority,
+} from "../entities/wishlist-enums";
+import { IsOneOfTwoRequired } from "../../../common/decorators/is-one-of-two-required.decorator";
 
 export class CreateWishlistDto {
-  @ApiProperty({ example: 'Running Shoes' })
+  @ApiProperty({ example: "Running Shoes" })
   @IsString()
   @IsNotEmpty()
   itemName: string;
 
-  @ApiPropertyOptional({ example: 'https://example.com/shoes.jpg' })
+  @ApiPropertyOptional({ example: "https://example.com/shoes.jpg" })
   @IsUrl()
   @IsOptional()
   itemImageUrl?: string;
 
-  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
+  @ApiProperty({ example: "a1b2c3d4-e5f6-7890-1234-567890abcdef" })
   @IsUUID()
   categoryId: string;
 
@@ -41,7 +45,7 @@ export class CreateWishlistDto {
   @IsOptional()
   season?: Season;
 
-  @ApiPropertyOptional({ example: '2024-12-25' })
+  @ApiPropertyOptional({ example: "2024-12-25" })
   @IsDateString()
   @IsOptional()
   targetDate?: Date;
@@ -52,22 +56,22 @@ export class CreateWishlistDto {
   priority?: Priority;
 
   @ApiProperty({
-    description: 'User must opt-in to receive offers for this item',
+    description: "User must opt-in to receive offers for this item",
     example: true,
   })
   @IsBoolean()
   marketingConsent: boolean;
 
   @ApiProperty({
-    description: 'Flag to determine if the item is for a third party',
+    description: "Flag to determine if the item is for a third party",
     example: false,
   })
   @IsBoolean()
   isForThirdParty: boolean;
 
   @ApiPropertyOptional({
-    description: 'Required if isForThirdParty is true',
-    example: 'John Doe',
+    description: "Required if isForThirdParty is true",
+    example: "John Doe",
   })
   @ValidateIf((o) => o.isForThirdParty)
   @IsString()
@@ -75,18 +79,20 @@ export class CreateWishlistDto {
   recipientName?: string;
 
   @ApiPropertyOptional({
-    description: 'Required if isForThirdParty is true and recipientPhone is not provided',
-    example: 'john.doe@example.com',
+    description:
+      "Required if isForThirdParty is true and recipientPhone is not provided",
+    example: "john.doe@example.com",
   })
   @ValidateIf((o) => o.isForThirdParty)
   @IsEmail()
   @IsOptional()
-  @IsOneOfTwoRequired('recipientPhone')
+  @IsOneOfTwoRequired("recipientPhone")
   recipientEmail?: string;
 
   @ApiPropertyOptional({
-    description: 'Required if isForThirdParty is true and recipientEmail is not provided',
-    example: '+15551234567',
+    description:
+      "Required if isForThirdParty is true and recipientEmail is not provided",
+    example: "+15551234567",
   })
   @ValidateIf((o) => o.isForThirdParty)
   @IsPhoneNumber(null)
@@ -94,7 +100,7 @@ export class CreateWishlistDto {
   recipientPhone?: string;
 
   @ApiPropertyOptional({
-    description: 'Required if isForThirdParty is true',
+    description: "Required if isForThirdParty is true",
     enum: Relationship,
     example: Relationship.BROTHER,
   })

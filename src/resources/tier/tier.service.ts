@@ -1,15 +1,19 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Tier } from './entities/tier.entity';
-import { TierType } from './entities/tier-type.enum';
-import { CreateTierDto } from './dto/create-tier.dto';
-import { UpdateTierDto } from './dto/update-tier.dto';
-import { UpdateTierProgressionDto } from './dto/update-tier-progression.dto';
-import { TierHistory } from './entities/tier-history.entity';
-import { Admin } from '../admin/entities/admin.entity';
-import { Membership } from '../membership/entities/membership.entity';
-import { Role } from '../../common/role.enum';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Tier } from "./entities/tier.entity";
+import { TierType } from "./entities/tier-type.enum";
+import { CreateTierDto } from "./dto/create-tier.dto";
+import { UpdateTierDto } from "./dto/update-tier.dto";
+import { UpdateTierProgressionDto } from "./dto/update-tier-progression.dto";
+import { TierHistory } from "./entities/tier-history.entity";
+import { Admin } from "../admin/entities/admin.entity";
+import { Membership } from "../membership/entities/membership.entity";
+import { Role } from "../../common/role.enum";
 
 @Injectable()
 export class TierService {
@@ -20,7 +24,7 @@ export class TierService {
     private readonly tierHistoryRepository: Repository<TierHistory>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
-  ) { }
+  ) {}
 
   private async createHistory(tier: Tier, admin: Admin) {
     const history = this.tierHistoryRepository.create({
@@ -36,7 +40,7 @@ export class TierService {
       where: { name: createTierDto.name },
     });
     if (existingTier) {
-      throw new ConflictException('A tier with this name already exists');
+      throw new ConflictException("A tier with this name already exists");
     }
 
     const tier = this.tierRepository.create(createTierDto);
@@ -46,7 +50,7 @@ export class TierService {
   }
 
   async findAll(type?: string) {
-    if (type && type !== 'all') {
+    if (type && type !== "all") {
       return await this.tierRepository.find({
         where: { type: type as TierType },
       });
@@ -65,16 +69,20 @@ export class TierService {
     return updatedTier;
   }
 
-  async updateProgression(id: string, progressionDto: UpdateTierProgressionDto, admin: Admin) {
+  async updateProgression(
+    id: string,
+    progressionDto: UpdateTierProgressionDto,
+    admin: Admin,
+  ) {
     const tier = await this.findOne(id);
     if (!tier) {
-      throw new NotFoundException('Tier not found');
+      throw new NotFoundException("Tier not found");
     }
 
     // Merge progression config into existing configuration
     tier.configuration = {
       ...tier.configuration,
-      ...progressionDto
+      ...progressionDto,
     };
 
     await this.tierRepository.save(tier);

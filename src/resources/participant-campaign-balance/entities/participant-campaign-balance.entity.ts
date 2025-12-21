@@ -1,10 +1,10 @@
-import { Entity, Column, ManyToOne } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Participant } from '../../participant/entities/participant.entity';
-import { Campaign } from '../../campaign/entities/campaign.entity';
-import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
+import { Entity, Column, ManyToOne } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Participant } from "../../participant/entities/participant.entity";
+import { Campaign } from "../../campaign/entities/campaign.entity";
+import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 
-@Entity('participant_campaign_balances')
+@Entity("participant_campaign_balances")
 export class ParticipantCampaignBalance extends AbstractBaseEntity {
   @ManyToOne(
     () => Participant,
@@ -12,10 +12,18 @@ export class ParticipantCampaignBalance extends AbstractBaseEntity {
   )
   participant: Participant;
 
-  @ManyToOne(() => Campaign, (campaign) => campaign.participantCampaignBalances, { nullable: true })
+  @ManyToOne(
+    () => Campaign,
+    (campaign) => campaign.participantCampaignBalances,
+    { nullable: true },
+  )
   campaign: Campaign;
 
-  @ManyToOne(() => BusinessCampaign, (businessCampaign) => businessCampaign.participantCampaignBalances, { nullable: true })
+  @ManyToOne(
+    () => BusinessCampaign,
+    (businessCampaign) => businessCampaign.participantCampaignBalances,
+    { nullable: true },
+  )
   businessCampaign: BusinessCampaign;
 
   @Column({ default: 0 })

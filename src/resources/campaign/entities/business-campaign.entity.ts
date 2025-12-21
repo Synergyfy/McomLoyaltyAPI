@@ -7,28 +7,35 @@ import {
   JoinColumn,
   OneToMany,
   Index,
-} from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
-import { Campaign } from './campaign.entity';
-import { Reward } from '../../rewards/entities/reward.entity';
-import { BusinessReward } from '../../rewards/entities/business-reward.entity';
-import { Deal } from '../../deal/entities/deal.entity';
-import { Participant } from '../../participant/entities/participant.entity';
-import { ParticipantCampaignBalance } from '../../participant-campaign-balance/entities/participant-campaign-balance.entity';
-import { PointHistory } from '../../participant-campaign-balance/entities/point-history.entity';
-import { CampaignType, AudienceType, RewardType, CampaignRewardMode } from './campaign-enums';
-import { WishlistAggregate } from '../../wishlist/entities/wishlist-aggregate.entity';
-import { BusinessStampReward } from '../../stamp/entities/business-stamp-reward.entity';
+} from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Business } from "../../business/entities/business.entity";
+import { Campaign } from "./campaign.entity";
+import { Reward } from "../../rewards/entities/reward.entity";
+import { BusinessReward } from "../../rewards/entities/business-reward.entity";
+import { Deal } from "../../deal/entities/deal.entity";
+import { Participant } from "../../participant/entities/participant.entity";
+import { ParticipantCampaignBalance } from "../../participant-campaign-balance/entities/participant-campaign-balance.entity";
+import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
+import {
+  CampaignType,
+  AudienceType,
+  RewardType,
+  CampaignRewardMode,
+} from "./campaign-enums";
+import { WishlistAggregate } from "../../wishlist/entities/wishlist-aggregate.entity";
+import { BusinessStampReward } from "../../stamp/entities/business-stamp-reward.entity";
 
-@Entity('business_campaigns')
+@Entity("business_campaigns")
 export class BusinessCampaign extends AbstractBaseEntity {
   @ManyToOne(() => Business, (business) => business.businessCampaigns)
-  @JoinColumn({ name: 'business_id' })
+  @JoinColumn({ name: "business_id" })
   business: Business;
 
-  @ManyToOne(() => Campaign, (campaign) => campaign.businessCampaigns, { nullable: true })
-  @JoinColumn({ name: 'campaign_id' })
+  @ManyToOne(() => Campaign, (campaign) => campaign.businessCampaigns, {
+    nullable: true,
+  })
+  @JoinColumn({ name: "campaign_id" })
   campaign: Campaign;
 
   @Column({ length: 9, unique: true })
@@ -39,10 +46,10 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @Column()
   name: string;
 
-  @Column({ type: 'enum', enum: CampaignType, default: CampaignType.QR_CODE })
+  @Column({ type: "enum", enum: CampaignType, default: CampaignType.QR_CODE })
   campaign_type: CampaignType;
 
-  @Column('text')
+  @Column("text")
   campaign_message: string;
 
   @Column()
@@ -54,7 +61,7 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @Column()
   quantity: number;
 
-  @Column({ type: 'enum', enum: AudienceType })
+  @Column({ type: "enum", enum: AudienceType })
   audience_type: AudienceType;
 
   @Column()
@@ -91,23 +98,23 @@ export class BusinessCampaign extends AbstractBaseEntity {
   total_points_redeemed: number;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: RewardType,
     default: RewardType.REGULAR,
   })
   reward_type: RewardType;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: CampaignRewardMode,
     default: CampaignRewardMode.POINTS,
   })
   reward_mode: CampaignRewardMode;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   regular_points_threshold: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   matching_points_threshold: number;
 
   @Column({ default: 0 })
@@ -119,19 +126,19 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @Column({ nullable: true })
   earn_point_page_title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   earn_point_page_description: string;
 
   @Column({ nullable: true })
   redeem_reward_page_title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   redeem_reward_page_description: string;
 
   @Column({ nullable: true })
   contact_us_page_title: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   contact_us_page_description: string;
 
   @Column({ nullable: true })
@@ -165,17 +172,20 @@ export class BusinessCampaign extends AbstractBaseEntity {
   )
   participantCampaignBalances: ParticipantCampaignBalance[];
 
-  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.businessCampaign)
+  @OneToMany(
+    () => PointHistory,
+    (pointHistory) => pointHistory.businessCampaign,
+  )
   pointHistories: PointHistory[];
 
   @ManyToOne(() => WishlistAggregate, { nullable: true })
-  @JoinColumn({ name: 'wishlist_aggregate_id' })
+  @JoinColumn({ name: "wishlist_aggregate_id" })
   wishlistAggregate: WishlistAggregate;
 
   @ManyToOne(() => BusinessStampReward, { nullable: true })
-  @JoinColumn({ name: 'business_stamp_reward_id' })
+  @JoinColumn({ name: "business_stamp_reward_id" })
   businessStampReward: BusinessStampReward;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: "int", nullable: true })
   initial_audience_size: number;
 }

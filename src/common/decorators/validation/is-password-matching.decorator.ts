@@ -4,7 +4,7 @@ import {
   ValidationOptions,
   ValidatorConstraint,
   ValidatorConstraintInterface,
-} from 'class-validator';
+} from "class-validator";
 
 export function IsPasswordMatching(
   property: string,
@@ -21,7 +21,7 @@ export function IsPasswordMatching(
   };
 }
 
-@ValidatorConstraint({ name: 'IsPasswordMatching' })
+@ValidatorConstraint({ name: "IsPasswordMatching" })
 export class IsPasswordMatchingConstraint
   implements ValidatorConstraintInterface
 {

@@ -1,15 +1,24 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
-import { nanoid } from 'nanoid';
-import { TransactionCode, TransactionCodeStatus, TransactionType } from '../entities/transaction-code.entity';
-import { GenerateCodeDto } from '../dto/generate-code.dto';
-import { User } from '../../../common/interfaces/user.interface';
-import { Role } from '../../../common/role.enum';
-import { Staff } from '../../staff/entities/staff.entity';
-import { Business } from '../../business/entities/business.entity';
-import { BusinessCampaign } from '../../campaign/entities/business-campaign.entity';
-import { Campaign } from '../../campaign/entities/campaign.entity';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, LessThan } from "typeorm";
+import { nanoid } from "nanoid";
+import {
+  TransactionCode,
+  TransactionCodeStatus,
+  TransactionType,
+} from "../entities/transaction-code.entity";
+import { GenerateCodeDto } from "../dto/generate-code.dto";
+import { User } from "../../../common/interfaces/user.interface";
+import { Role } from "../../../common/role.enum";
+import { Staff } from "../../staff/entities/staff.entity";
+import { Business } from "../../business/entities/business.entity";
+import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
+import { Campaign } from "../../campaign/entities/campaign.entity";
 
 @Injectable()
 export class TransactionCodeService {
@@ -26,13 +35,16 @@ export class TransactionCodeService {
     private readonly campaignRepository: Repository<Campaign>,
   ) {}
 
-  async generateCode(dto: GenerateCodeDto, user: User): Promise<TransactionCode> {
+  async generateCode(
+    dto: GenerateCodeDto,
+    user: User,
+  ): Promise<TransactionCode> {
     if (dto.type === TransactionType.EARN && !dto.points) {
-      throw new BadRequestException('Points are required for EARN type');
+      throw new BadRequestException("Points are required for EARN type");
     }
 
     if (dto.type === TransactionType.REDEEM && !dto.rewardId) {
-      throw new BadRequestException('Reward ID is required for REDEEM type');
+      throw new BadRequestException("Reward ID is required for REDEEM type");
     }
 
     const code = nanoid(9);
@@ -50,7 +62,7 @@ export class TransactionCodeService {
     });
 
     if (!businessCampaign) {
-      throw new BadRequestException('Business campaign not found');
+      throw new BadRequestException("Business campaign not found");
     }
 
     transactionCode.businessCampaign = businessCampaign;
@@ -68,7 +80,11 @@ export class TransactionCodeService {
     return this.transactionCodeRepository.save(transactionCode);
   }
 
-  async getGeneratedCodes(user: User, page: number, limit: number): Promise<{ data: TransactionCode[], total: number }> {
+  async getGeneratedCodes(
+    user: User,
+    page: number,
+    limit: number,
+  ): Promise<{ data: TransactionCode[]; total: number }> {
     const where: any = {};
 
     if (user.role === Role.Business) {
@@ -79,8 +95,8 @@ export class TransactionCodeService {
 
     const [data, total] = await this.transactionCodeRepository.findAndCount({
       where,
-      relations: ['used_by_participant'],
-      order: { created_at: 'DESC' },
+      relations: ["used_by_participant"],
+      order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -90,21 +106,30 @@ export class TransactionCodeService {
 
   async validateDualScanPermission(user: User, code: string): Promise<void> {
     if (user.role === Role.Business) {
-      const business = await this.businessRepository.findOne({ where: { id: user.id } });
+      const business = await this.businessRepository.findOne({
+        where: { id: user.id },
+      });
       if (!business || business.uniqueCode !== code) {
-         throw new ForbiddenException('You can only use your own business unique code.');
+        throw new ForbiddenException(
+          "You can only use your own business unique code.",
+        );
       }
     } else if (user.role === Role.Staff) {
-      const staff = await this.staffRepository.findOne({ where: { id: user.id }, relations: ['business'] });
+      const staff = await this.staffRepository.findOne({
+        where: { id: user.id },
+        relations: ["business"],
+      });
       if (!staff) {
-        throw new NotFoundException('Staff not found');
+        throw new NotFoundException("Staff not found");
       }
       // Staff can use their own code OR their business's code
       if (staff.uniqueCode !== code && staff.business.uniqueCode !== code) {
-        throw new ForbiddenException('You can only use your own staff code or your business code.');
+        throw new ForbiddenException(
+          "You can only use your own staff code or your business code.",
+        );
       }
     } else {
-      throw new ForbiddenException('Unauthorized role for dual scan.');
+      throw new ForbiddenException("Unauthorized role for dual scan.");
     }
   }
 }

@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsController } from './analytics.controller';
-import { AnalyticsService } from './analytics.service';
-import { GeneralAnalyticsDto } from './dto/general-analytics.dto';
-import { ChartResponseDto } from './dto/chart-analytics.dto';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AnalyticsController } from "./analytics.controller";
+import { AnalyticsService } from "./analytics.service";
+import { GeneralAnalyticsDto } from "./dto/general-analytics.dto";
+import { ChartResponseDto } from "./dto/chart-analytics.dto";
 
-describe('AnalyticsController', () => {
+describe("AnalyticsController", () => {
   let controller: AnalyticsController;
   let service: AnalyticsService;
 
@@ -15,8 +15,12 @@ describe('AnalyticsController', () => {
         {
           provide: AnalyticsService,
           useValue: {
-            getGeneralAnalytics: jest.fn().mockResolvedValue({} as GeneralAnalyticsDto),
-            getChartAnalytics: jest.fn().mockResolvedValue({ data: [] } as ChartResponseDto),
+            getGeneralAnalytics: jest
+              .fn()
+              .mockResolvedValue({} as GeneralAnalyticsDto),
+            getChartAnalytics: jest
+              .fn()
+              .mockResolvedValue({ data: [] } as ChartResponseDto),
           },
         },
       ],
@@ -26,7 +30,7 @@ describe('AnalyticsController', () => {
     service = module.get<AnalyticsService>(AnalyticsService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 });

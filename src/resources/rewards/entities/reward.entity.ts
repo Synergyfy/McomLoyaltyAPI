@@ -1,31 +1,33 @@
-import { Entity, Column, ManyToMany, JoinTable } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { RewardType } from '../enums/reward-type.enum';
-import { RewardAudience } from '../enums/reward-audience.enum';
-import { RewardStatus } from '../enums/reward-status.enum';
-import { Sector } from '../../sector/entities/sector.entity';
-import { Tier } from '../../tier/entities/tier.entity';
+import { Entity, Column, ManyToMany, JoinTable } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { RewardType } from "../enums/reward-type.enum";
+import { RewardAudience } from "../enums/reward-audience.enum";
+import { RewardStatus } from "../enums/reward-status.enum";
+import { Sector } from "../../sector/entities/sector.entity";
+import { Tier } from "../../tier/entities/tier.entity";
 
 @Entity()
 export class Reward extends AbstractBaseEntity {
   @Column()
   title: string;
 
-  @Column()
+  @Column({ nullable: true })
   max_points: number;
 
-  @Column({ type: 'enum', enum: RewardType })
+  @Column({ nullable: true })
+  max_stamp_required: number;
+
+  @Column({ type: "enum", enum: RewardType })
   reward_type: RewardType;
 
-
-  @Column({ type: 'enum', enum: RewardAudience })
+  @Column({ type: "enum", enum: RewardAudience })
   audience: RewardAudience;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   expiry_datetime: Date;
 
   @Column({
-    type: 'enum',
+    type: "enum",
     enum: RewardStatus,
     default: RewardStatus.ACTIVE,
   })
@@ -33,28 +35,28 @@ export class Reward extends AbstractBaseEntity {
 
   @ManyToMany(() => Sector)
   @JoinTable({
-    name: 'reward_sectors_sector',
+    name: "reward_sectors_sector",
     joinColumn: {
-      name: 'rewardId',
-      referencedColumnName: 'id',
+      name: "rewardId",
+      referencedColumnName: "id",
     },
     inverseJoinColumn: {
-      name: 'sectorId',
-      referencedColumnName: 'id',
+      name: "sectorId",
+      referencedColumnName: "id",
     },
   })
   sectors: Sector[];
 
   @ManyToMany(() => Tier)
   @JoinTable({
-    name: 'reward_tiers_tier',
+    name: "reward_tiers_tier",
     joinColumn: {
-      name: 'rewardId',
-      referencedColumnName: 'id',
+      name: "rewardId",
+      referencedColumnName: "id",
     },
     inverseJoinColumn: {
-      name: 'tierId',
-      referencedColumnName: 'id',
+      name: "tierId",
+      referencedColumnName: "id",
     },
   })
   tiers: Tier[];
@@ -68,7 +70,7 @@ export class Reward extends AbstractBaseEntity {
   @Column()
   image: string;
 
-  @Column('text', { array: true, nullable: true })
+  @Column("text", { array: true, nullable: true })
   gallery: string[];
 
   @Column({ default: 0 })

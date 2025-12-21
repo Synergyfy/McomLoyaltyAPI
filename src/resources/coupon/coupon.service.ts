@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Coupon } from './entities/coupon.entity';
-import { CreateCouponDto } from './dto/create-coupon.dto';
-import { UpdateCouponDto } from './dto/update-coupon.dto';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Coupon } from "./entities/coupon.entity";
+import { CreateCouponDto } from "./dto/create-coupon.dto";
+import { UpdateCouponDto } from "./dto/update-coupon.dto";
 
 @Injectable()
 export class CouponService {

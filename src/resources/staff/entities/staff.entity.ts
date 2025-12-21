@@ -1,9 +1,9 @@
-import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Business } from '../../business/entities/business.entity';
-import { Role } from '../../../common/role.enum';
+import { Entity, Column, ManyToOne, OneToMany } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Business } from "../../business/entities/business.entity";
+import { Role } from "../../../common/role.enum";
 
-@Entity('staff')
+@Entity("staff")
 export class Staff extends AbstractBaseEntity {
   @Column()
   name: string;
@@ -23,6 +23,6 @@ export class Staff extends AbstractBaseEntity {
   @Column({ unique: true })
   uniqueCode: string;
 
-  @Column({ type: 'enum', enum: Role, default: Role.Staff })
+  @Column({ type: "enum", enum: Role, default: Role.Staff })
   role: Role;
 }

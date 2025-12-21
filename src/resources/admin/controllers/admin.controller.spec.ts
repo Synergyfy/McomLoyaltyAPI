@@ -1,12 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AdminController } from './admin.controller';
-import { AdminService } from '../services/admin.service';
-import { MatchingPointsService } from '../../participant-campaign-balance/services/matching-points.service';
-import { PaginationDto } from '../../../common/dto/pagination.dto';
-import { PageDto } from '../../../common/dto/page.dto';
-import { Business } from '../../business/entities/business.entity';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AdminController } from "./admin.controller";
+import { AdminService } from "../services/admin.service";
+import { MatchingPointsService } from "../../participant-campaign-balance/services/matching-points.service";
+import { PaginationDto } from "../../../common/dto/pagination.dto";
+import { PageDto } from "../../../common/dto/page.dto";
+import { Business } from "../../business/entities/business.entity";
 
-describe('AdminController', () => {
+describe("AdminController", () => {
   let controller: AdminController;
   let adminService: AdminService;
 
@@ -35,12 +35,12 @@ describe('AdminController', () => {
     adminService = module.get<AdminService>(AdminService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getBusinesses', () => {
-    it('should return a paginated list of businesses', async () => {
+  describe("getBusinesses", () => {
+    it("should return a paginated list of businesses", async () => {
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
       const result: PageDto<Business> = {
         data: [],

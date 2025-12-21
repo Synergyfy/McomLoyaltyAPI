@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Admin } from '../resources/admin/entities/admin.entity';
-import { Business } from '../resources/business/entities/business.entity';
-import { Staff } from '../resources/staff/entities/staff.entity';
-import { Participant } from '../resources/participant/entities/participant.entity';
-import { Repository } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Admin } from "../resources/admin/entities/admin.entity";
+import { Business } from "../resources/business/entities/business.entity";
+import { Staff } from "../resources/staff/entities/staff.entity";
+import { Participant } from "../resources/participant/entities/participant.entity";
+import { Repository } from "typeorm";
 
 @Injectable()
 export class UserService {
@@ -23,7 +23,9 @@ export class UserService {
     const admin = await this.adminRepository.findOne({ where: { email } });
     if (admin) return admin;
 
-    const business = await this.businessRepository.findOne({ where: { email } });
+    const business = await this.businessRepository.findOne({
+      where: { email },
+    });
     if (business) return business;
 
     const staff = await this.staffRepository.findOne({ where: { email } });

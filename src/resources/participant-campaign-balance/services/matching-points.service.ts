@@ -1,9 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Participant } from '../../participant/entities/participant.entity';
-import { PointHistory, PointHistoryType } from '../entities/point-history.entity';
-import { AwardMatchingPointsDto } from '../../admin/dto/award-matching-points.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Participant } from "../../participant/entities/participant.entity";
+import {
+  PointHistory,
+  PointHistoryType,
+} from "../entities/point-history.entity";
+import { AwardMatchingPointsDto } from "../../admin/dto/award-matching-points.dto";
 
 @Injectable()
 export class MatchingPointsService {

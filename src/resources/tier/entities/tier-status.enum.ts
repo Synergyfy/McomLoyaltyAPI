@@ -1,5 +1,4 @@
-
 export enum TierStatus {
-  PUBLISHED = 'published',
-  DRAFT = 'draft',
+  PUBLISHED = "published",
+  DRAFT = "draft",
 }

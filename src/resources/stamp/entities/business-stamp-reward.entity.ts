@@ -1,10 +1,10 @@
-import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
-import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { StampRewardTemplate } from './stamp-reward-template.entity';
-import { Business } from '../../business/entities/business.entity';
-import { StampCard } from './stamp-card.entity';
+import { Entity, Column, ManyToOne, OneToMany } from "typeorm";
+import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { StampRewardTemplate } from "./stamp-reward-template.entity";
+import { Business } from "../../business/entities/business.entity";
+import { StampCard } from "./stamp-card.entity";
 
-@Entity('business_stamp_rewards')
+@Entity("business_stamp_rewards")
 export class BusinessStampReward extends AbstractBaseEntity {
   /**
    * The admin template that this reward is based on.

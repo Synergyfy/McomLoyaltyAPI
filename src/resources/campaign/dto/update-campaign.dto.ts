@@ -1,26 +1,26 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateCampaignDto } from './create-campaign.dto';
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsUUID } from 'class-validator';
+import { PartialType } from "@nestjs/swagger";
+import { CreateCampaignDto } from "./create-campaign.dto";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsArray, IsOptional, IsUUID } from "class-validator";
 
 export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   @ApiProperty({
-    description: 'The IDs of the rewards attached to the campaign.',
+    description: "The IDs of the rewards attached to the campaign.",
     type: [String],
     required: false,
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('all', { each: true })
+  @IsUUID("all", { each: true })
   reward_ids?: string[];
 
   @ApiProperty({
-    description: 'The IDs of the business rewards attached to the campaign.',
+    description: "The IDs of the business rewards attached to the campaign.",
     type: [String],
     required: false,
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('all', { each: true })
+  @IsUUID("all", { each: true })
   business_reward_ids?: string[];
 }

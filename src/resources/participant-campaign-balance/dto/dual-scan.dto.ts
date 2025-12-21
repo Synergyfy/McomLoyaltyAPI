@@ -1,21 +1,34 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsString, IsUUID, Min, Length, IsOptional, IsEnum } from 'class-validator';
-import { TransactionType } from '../entities/transaction-code.entity';
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  Min,
+  Length,
+  IsOptional,
+  IsEnum,
+} from "class-validator";
+import { TransactionType } from "../entities/transaction-code.entity";
 
 export class DualScanDto {
-  @ApiProperty({ description: 'The 9-character unique code of the staff or business' })
+  @ApiProperty({
+    description: "The 9-character unique code of the staff or business",
+  })
   @IsString()
   @Length(9, 9)
   @IsNotEmpty()
   staffOrBusinessCode: string;
 
-  @ApiProperty({ description: 'The 9-character unique code of the participant' })
+  @ApiProperty({
+    description: "The 9-character unique code of the participant",
+  })
   @IsString()
   @Length(9, 9)
   @IsNotEmpty()
   participantCode: string;
 
-  @ApiProperty({ description: 'The ID of the campaign' })
+  @ApiProperty({ description: "The ID of the campaign" })
   @IsUUID()
   @IsNotEmpty()
   campaignId: string;
@@ -23,18 +36,27 @@ export class DualScanDto {
   @IsOptional()
   points?: number;
 
-  @ApiProperty({ description: 'The amount of stamps to award (required for STAMP_EARN)', required: false })
+  @ApiProperty({
+    description: "The amount of stamps to award (required for STAMP_EARN)",
+    required: false,
+  })
   @IsInt()
   @Min(1)
   @IsOptional()
   stamps?: number;
 
-  @ApiProperty({ description: 'The ID of the reward (required for REDEEM)', required: false })
+  @ApiProperty({
+    description: "The ID of the reward (required for REDEEM)",
+    required: false,
+  })
   @IsUUID()
   @IsOptional()
   rewardId?: string;
 
-  @ApiProperty({ description: 'The type of transaction (EARN or REDEEM)', enum: TransactionType })
+  @ApiProperty({
+    description: "The type of transaction (EARN or REDEEM)",
+    enum: TransactionType,
+  })
   @IsEnum(TransactionType)
   @IsNotEmpty()
   type: TransactionType;

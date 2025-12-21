@@ -3,10 +3,10 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { isObject, isArray, camelCase } from 'lodash';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
+import { isObject, isArray, camelCase } from "lodash";
 
 @Injectable()
 export class CamelCaseInterceptor implements NestInterceptor {
