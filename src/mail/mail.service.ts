@@ -149,6 +149,7 @@ export class MailService {
     businessName: string,
     campaignName: string,
     newBalance: number,
+    voucherCode?: string,
   ) {
     await this.mailerService.sendMail({
       to: email,
@@ -168,6 +169,17 @@ export class MailService {
               <h3 style="margin: 0 0 10px 0; color: #333;">${rewardName}</h3>
               <span style="display: inline-block; background-color: #ea580c; color: white; padding: 4px 12px; border-radius: 100px; font-size: 14px; font-weight: 600;">-${pointsSpent} Points</span>
             </div>
+
+            ${
+              voucherCode
+                ? `
+            <div style="background-color: #f0fdf4; padding: 15px; border: 1px dashed #16a34a; border-radius: 8px; margin-top: 15px; text-align: center;">
+                <p style="margin: 0; font-size: 14px; color: #166534; font-weight: bold;">Your Reward Code:</p>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-family: monospace; letter-spacing: 2px; color: #15803d;">${voucherCode}</p>
+            </div>
+            `
+                : ""
+            }
 
             <p style="text-align: center; font-size: 18px;">
               Your remaining campaign balance: <strong>${newBalance}</strong>

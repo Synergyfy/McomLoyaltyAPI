@@ -51,6 +51,9 @@ import { StampModule } from "./resources/stamp/stamp.module";
 import { GroupCircleModule } from "./resources/group-circle/group-circle.module";
 import { LibraryAssetsModule } from "./resources/library-assets/library-assets.module";
 
+import { MallIntegrationModule } from "./resources/mall-integration/mall-integration.module";
+import { WalletModule } from "./resources/wallet/wallet.module";
+
 @Module({
   imports: [
     LibraryAssetsModule,
@@ -68,6 +71,8 @@ import { LibraryAssetsModule } from "./resources/library-assets/library-assets.m
     RewardsModule,
     AuthModule,
     UserModule,
+    WalletModule,
+    MallIntegrationModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],

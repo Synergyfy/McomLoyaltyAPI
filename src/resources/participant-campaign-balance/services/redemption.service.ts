@@ -24,6 +24,8 @@ import {
   NotificationType,
   NotificationRecipientType,
 } from "../../notification/enums/notification-type.enum";
+import { WalletService } from "../../wallet/wallet.service";
+import { MallIntegrationService } from "../../mall-integration/mall-integration.service";
 
 @Injectable()
 export class RedemptionService {
@@ -45,6 +47,8 @@ export class RedemptionService {
     private readonly dataSource: DataSource,
     private readonly mailService: MailService,
     private readonly notificationService: NotificationService,
+    private readonly walletService: WalletService,
+    private readonly mallIntegrationService: MallIntegrationService,
   ) {}
 
   // Helper to find performer (Staff or Business)
@@ -81,7 +85,7 @@ export class RedemptionService {
 
   async redeemReward(
     performerId: string,
-    performerType: "Staff" | "Business",
+    performerType: "Staff" | "Business" | "Participant",
     participantId: string,
     rewardId: string,
     campaignId: string,
@@ -90,10 +94,23 @@ export class RedemptionService {
     transactionManager?: any, // EntityManager
   ): Promise<ParticipantCampaignBalance> {
     const execute = async (manager: any) => {
-      const { staff, business } = await this.findPerformer(
-        performerId,
-        performerType,
-      );
+      let staff: Staff | null = null;
+      let business: Business | null = null;
+
+      if (performerType === "Participant") {
+         // If Participant is redeeming, they must be the one initiating it.
+         if (performerId !== participantId) {
+             throw new BadRequestException("You can only redeem rewards for yourself.");
+         }
+         // Business is derived from the campaign later
+      } else {
+          const performer = await this.findPerformer(
+            performerId,
+            performerType as "Staff" | "Business",
+          );
+          staff = performer.staff;
+          business = performer.business;
+      }
 
       const participant = await manager.findOne(Participant, {
         where: { id: participantId },
@@ -114,6 +131,11 @@ export class RedemptionService {
 
       if (!businessCampaign) {
         throw new NotFoundException("Business campaign not found");
+      }
+
+      // If business was not already set (i.e. Participant redemption), set it from campaign
+      if (!business) {
+          business = businessCampaign.business;
       }
 
       if (
@@ -203,6 +225,50 @@ export class RedemptionService {
         await manager.save(businessCampaign.business);
       }
 
+      // --- Mall Integration Logic ---
+      let voucherCode: string | undefined;
+      if (
+        businessReward &&
+        businessReward.is_mall_integrated &&
+        businessReward.mall_reward_value > 0
+      ) {
+        // 1. Deduct from Business Wallet
+        await this.walletService.spend(
+          business.id,
+          businessReward.mall_reward_value,
+          `Reward Redemption: ${reward.title} (Participant: ${participant.name})`
+        );
+
+        // 2. Generate Reward in Mall API
+        try {
+            const payload = {
+                amount: businessReward.mall_reward_value,
+                recipientEmail: participant.email,
+                recipientName: participant.name,
+                message: `Congratulations! You redeemed ${reward.title} from ${business.name}.`,
+                businessName: business.name,
+            };
+
+            let mallResponse: any;
+            if (businessReward.mall_reward_type === "GIFT_CARD") {
+                mallResponse = await this.mallIntegrationService.createGiftCard(payload);
+            } else if (businessReward.mall_reward_type === "COUPON") {
+                mallResponse = await this.mallIntegrationService.createCoupon(payload);
+            } else {
+                // Default to VOUCHER
+                mallResponse = await this.mallIntegrationService.createVoucher(payload);
+            }
+            voucherCode = mallResponse.code;
+        } catch (error) {
+            // If Mall API fails, should we rollback?
+            // Since we are inside a transaction (handled by `execute` wrapper or `manager`), 
+            // throwing here will rollback the wallet spend and point deduction.
+            console.error("Mall Integration Failed:", error);
+            throw new BadRequestException("Failed to generate external voucher. Please contact support or try again.");
+        }
+      }
+      // -----------------------------
+
       const pointHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.REDEEM,
         points: reward.max_points,
@@ -210,7 +276,7 @@ export class RedemptionService {
         reward: reward,
         initiated_by_staff: staff,
         business: business,
-        redemption_code: redemptionCode,
+        redemption_code: voucherCode || redemptionCode, // Store voucher code if available
         description: sourceDescription,
       });
 
@@ -269,6 +335,7 @@ export class RedemptionService {
           business.name,
           businessCampaign.name,
           participantCampaignBalance.campaign_balance,
+          voucherCode, // Pass the voucher code
         );
       } catch (error) {
         console.error(

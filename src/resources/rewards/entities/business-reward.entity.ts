@@ -56,6 +56,20 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column({ default: false })
   disabled: boolean;
 
+  @Column({ default: false })
+  is_mall_integrated: boolean;
+
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  mall_reward_value: number;
+
+  @Column({
+    type: "enum",
+    enum: ["VOUCHER", "GIFT_CARD", "COUPON"],
+    default: "VOUCHER",
+    nullable: true
+  })
+  mall_reward_type: "VOUCHER" | "GIFT_CARD" | "COUPON";
+
   @ManyToOne(() => Business)
   @JoinColumn({ name: "business_id" })
   business: Business;

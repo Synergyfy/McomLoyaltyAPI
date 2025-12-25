@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne, OneToMany, Index } from "typeorm";
+import { Entity, Column, ManyToOne, OneToMany, Index, OneToOne } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude } from "class-transformer";
 import { AbstractBaseEntity } from "../../../database/entities/base.entity";
@@ -14,11 +14,16 @@ import { BusinessCampaign } from "../../campaign/entities/business-campaign.enti
 import { Membership } from "../../membership/entities/membership.entity";
 import { Network } from "../../network/entities/network.entity";
 
+import { BusinessWallet } from "../../wallet/entities/business-wallet.entity";
+
 @Entity("businesses")
 export class Business extends AbstractBaseEntity {
   @ApiProperty({ description: "The name of the business" })
   @Column()
   name: string;
+
+  @OneToOne(() => BusinessWallet, (wallet) => wallet.business, { cascade: true })
+  wallet: BusinessWallet;
 
   @ApiProperty({ description: "The email of the business" })
   @Column({ unique: true })
