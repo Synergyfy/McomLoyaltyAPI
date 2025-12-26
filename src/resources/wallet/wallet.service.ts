@@ -12,6 +12,8 @@ export class WalletService {
     private walletRepository: Repository<BusinessWallet>,
     @InjectRepository(WalletTransaction)
     private transactionRepository: Repository<WalletTransaction>,
+    @InjectRepository(Business)
+    private businessRepository: Repository<Business>,
     private dataSource: DataSource,
   ) {}
 
@@ -29,7 +31,15 @@ export class WalletService {
       where: { business: { id: businessId } },
       relations: ["transactions"],
     });
-    if (!wallet) throw new NotFoundException("Wallet not found");
+    
+    if (!wallet) {
+        // Lazy creation for existing businesses
+        const business = await this.businessRepository.findOne({ where: { id: businessId } });
+        if (!business) {
+            throw new NotFoundException("Business not found");
+        }
+        return this.createWallet(business);
+    }
     return wallet;
   }
 

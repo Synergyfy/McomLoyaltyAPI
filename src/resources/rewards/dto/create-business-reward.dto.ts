@@ -105,4 +105,29 @@ export class CreateBusinessRewardDto {
   @IsBoolean()
   @IsOptional()
   disabled?: boolean;
+
+  @ApiProperty({
+    description: "Whether the reward is integrated with the Mall",
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  is_mall_integrated?: boolean;
+
+  @ApiProperty({
+    description: "The value of the mall reward",
+    example: 10.0,
+  })
+  @IsNumber()
+  @IsOptional()
+  mall_reward_value?: number;
+
+  @ApiProperty({
+    description: "The type of the mall reward",
+    enum: ["VOUCHER", "GIFT_CARD", "COUPON"],
+    example: "VOUCHER",
+  })
+  @IsString()
+  @IsOptional()
+  mall_reward_type?: "VOUCHER" | "GIFT_CARD" | "COUPON";
 }

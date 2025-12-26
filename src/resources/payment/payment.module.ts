@@ -18,6 +18,7 @@ import { PointPackage } from "../point-package/entities/point-package.entity";
 import { BusinessPointPackage } from "../point-package/entities/business-point-package.entity";
 import { StampPackage } from "../stamp/entities/stamp-package.entity";
 import { BusinessStampPackage } from "../stamp/entities/business-stamp-package.entity";
+import { WalletModule } from "../wallet/wallet.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { BusinessStampPackage } from "../stamp/entities/business-stamp-package.e
     QrPlaquesModule,
     forwardRef(() => AuthModule),
     UserModule,
+    WalletModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService, PaypalService],

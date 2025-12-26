@@ -7,10 +7,11 @@ import { WalletCronService } from "./wallet-cron.service";
 import { BusinessWallet } from "./entities/business-wallet.entity";
 import { WalletTransaction } from "./entities/wallet-transaction.entity";
 import { Membership } from "../membership/entities/membership.entity";
+import { Business } from "../business/entities/business.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BusinessWallet, WalletTransaction, Membership]),
+    TypeOrmModule.forFeature([BusinessWallet, WalletTransaction, Membership, Business]),
     ScheduleModule.forRoot(),
   ],
   controllers: [WalletController],

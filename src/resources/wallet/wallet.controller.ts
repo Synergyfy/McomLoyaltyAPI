@@ -16,10 +16,8 @@ export class WalletController {
   @Get("my-balance")
   @Roles(Role.Business)
   async getMyBalance(@Request() req) {
-    // Assuming req.user.businessId exists or we fetch it from user
-    // Depending on Auth strategy, might need to look up business via User
-    // For now assuming req.user.id is linked or we have businessId in payload
-    return this.walletService.getWallet(req.user.businessId);
+    // Assuming req.user.id is the business ID based on JwtStrategy
+    return this.walletService.getWallet(req.user.id);
   }
 
   // Admin endpoint to manually top up (for testing or manual ops)

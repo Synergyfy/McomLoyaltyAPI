@@ -35,6 +35,7 @@ import { In } from "typeorm";
 
 import { MatchingPointService } from "../matching-point/services/matching-point.service";
 import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
+import { WalletService } from "../wallet/wallet.service";
 
 @Injectable()
 export class PaymentService {
@@ -59,6 +60,7 @@ export class PaymentService {
     @InjectRepository(BusinessPointPackage)
     private readonly businessPointPackageRepository: Repository<BusinessPointPackage>,
     private readonly matchingPointService: MatchingPointService,
+    private readonly walletService: WalletService,
   ) {}
 
   async initiateStripePayment(
@@ -1038,6 +1040,111 @@ export class PaymentService {
         packageId: paymentIntent.metadata.packageId,
         packageType: paymentIntent.metadata.packageType,
         amount: paymentIntent.amount / 100,
+        transactionId: paymentIntent.id,
+      };
+    }
+  }
+
+  async initiateWalletTopup(
+    user: any,
+    amount: number,
+    provider: string,
+  ) {
+    if (provider === "paypal") {
+      const order = await this.paypalService.createOrder(
+        amount,
+        "GBP",
+        user.id,
+        `Wallet Topup: ${amount} GBP`
+      );
+      return { orderId: order.result.id };
+    } else {
+      // Stripe
+      const paymentIntent = await this.stripeService.createPaymentIntent(
+        Math.round(amount * 100),
+        "gbp",
+        {
+          businessId: user.id,
+          type: "WALLET_TOPUP",
+        },
+      );
+      return { clientSecret: paymentIntent.client_secret };
+    }
+  }
+
+  async verifyWalletTopup(
+    user: any,
+    transactionId: string,
+    provider: string,
+  ) {
+    if (provider === "paypal") {
+      const capture = await this.paypalService.capturePayment(transactionId);
+      const result = capture.result as any;
+
+      if (result.status !== "COMPLETED") {
+        throw new BadRequestException(
+          `PayPal payment not completed. Status: ${result.status}`,
+        );
+      }
+
+      const purchaseUnit =
+        result.purchaseUnits?.[0] || result.purchase_units?.[0];
+      if (!purchaseUnit) {
+        throw new BadRequestException(
+          "Invalid PayPal response: missing purchase information",
+        );
+      }
+
+      // Verify Business ID
+      const referenceId = purchaseUnit.referenceId || purchaseUnit.reference_id;
+      if (referenceId !== user.id) {
+        throw new BadRequestException(
+          "Payment belongs to a different business",
+        );
+      }
+
+      // Extract Amount
+      let amountValue: string | undefined;
+      if (purchaseUnit.payments?.captures?.length > 0) {
+        amountValue = purchaseUnit.payments.captures[0].amount?.value;
+      } else if (purchaseUnit.amount) {
+        amountValue = purchaseUnit.amount.value;
+      }
+
+      const amount = parseFloat(amountValue || "0");
+      await this.walletService.topUpWallet(user.id, amount, result.id);
+
+      return {
+        status: "succeeded",
+        amount: amount,
+        transactionId: result.id,
+      };
+    } else {
+      // Stripe
+      const paymentIntent =
+        await this.stripeService.verifyPayment(transactionId);
+      if (paymentIntent.status !== "succeeded") {
+        throw new BadRequestException(
+          `Stripe payment not succeeded. Status: ${paymentIntent.status}`,
+        );
+      }
+
+      if (paymentIntent.metadata.type !== "WALLET_TOPUP") {
+        throw new BadRequestException("Invalid payment type");
+      }
+
+      if (paymentIntent.metadata.businessId !== user.id) {
+        throw new BadRequestException(
+          "Payment belongs to a different business",
+        );
+      }
+
+      const amount = paymentIntent.amount / 100;
+      await this.walletService.topUpWallet(user.id, amount, paymentIntent.id);
+
+      return {
+        status: "succeeded",
+        amount: amount,
         transactionId: paymentIntent.id,
       };
     }

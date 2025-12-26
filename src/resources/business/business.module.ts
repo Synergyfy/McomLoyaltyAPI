@@ -20,6 +20,7 @@ import { AffiliateController } from "./controllers/affiliate.controller";
 import { PaymentModule } from "../payment/payment.module";
 import { OtpModule } from "../otp/otp.module";
 import { MailModule } from "src/mail/mail.module";
+import { WalletModule } from "../wallet/wallet.module";
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { MailModule } from "src/mail/mail.module";
     PaymentModule,
     OtpModule,
     MailModule,
+    WalletModule,
   ],
   providers: [BusinessService],
   controllers: [BusinessController, AffiliateController],

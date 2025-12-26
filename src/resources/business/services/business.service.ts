@@ -37,6 +37,7 @@ import { MatchingPointActivityType } from "../../matching-point/entities/matchin
 
 import { OtpService } from "../../otp/otp.service";
 import { MailService } from "../../../mail/mail.service";
+import { WalletService } from "../../wallet/wallet.service";
 
 @Injectable()
 export class BusinessService {
@@ -63,6 +64,7 @@ export class BusinessService {
     private readonly matchingPointService: MatchingPointService,
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
+    private readonly walletService: WalletService,
   ) {}
 
   private async generateAffiliateCode(): Promise<string> {
@@ -109,6 +111,9 @@ export class BusinessService {
       referredBy: referrer,
     });
     const newBusiness = await this.businessRepository.save(business);
+
+    // Create Business Wallet
+    await this.walletService.createWallet(newBusiness);
 
     if (referrer) {
       // Create Business-to-Business Referral

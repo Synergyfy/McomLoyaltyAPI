@@ -11,6 +11,8 @@ import {
 import { PaymentService } from "./payment.service";
 import { InitiatePaymentDto } from "./dto/initiate-payment.dto";
 import { VerifyPaymentDto } from "./dto/verify-payment.dto";
+import { InitiateWalletTopupDto } from "./dto/initiate-wallet-topup.dto";
+import { VerifyWalletTopupDto } from "./dto/verify-wallet-topup.dto";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import {
@@ -183,5 +185,35 @@ export class PaymentController {
     @RawBody() rawBody: Buffer,
   ) {
     return this.paymentService.handleStripeWebhook(signature, rawBody);
+  }
+
+  @Post("wallet/initiate")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Initiate a wallet top-up" })
+  @ApiBody({ type: InitiateWalletTopupDto })
+  @ApiResponse({
+    status: 201,
+    description: "Top-up initiated successfully.",
+  })
+  async initiateWalletTopup(
+    @Body() dto: InitiateWalletTopupDto,
+    @CurrentUser() user,
+  ) {
+    return this.paymentService.initiateWalletTopup(user, dto.amount, dto.provider);
+  }
+
+  @Post("wallet/verify")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Verify a wallet top-up" })
+  @ApiBody({ type: VerifyWalletTopupDto })
+  @ApiResponse({
+    status: 201,
+    description: "Top-up verified successfully.",
+  })
+  async verifyWalletTopup(
+    @Body() dto: VerifyWalletTopupDto,
+    @CurrentUser() user,
+  ) {
+    return this.paymentService.verifyWalletTopup(user, dto.transaction_id, dto.provider);
   }
 }

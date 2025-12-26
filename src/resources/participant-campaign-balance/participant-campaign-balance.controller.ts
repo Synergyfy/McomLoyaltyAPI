@@ -50,7 +50,7 @@ export class ParticipantCampaignBalanceController {
     private readonly pointEarningService: PointEarningService,
     private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
     private readonly transactionCodeService: TransactionCodeService,
-  ) {}
+  ) { }
 
   @Get("my-balance")
   @ApiOperation({
@@ -95,13 +95,13 @@ export class ParticipantCampaignBalanceController {
     );
   }
 
-  @Post("is-joined")
+  @Get("is-joined")
   @ApiOperation({
     summary: "Check if participant has joined a campaign",
     description:
       "Checks if the authenticated participant is part of the specified campaign.",
   })
-  @ApiBody({ type: IsJoinedDto })
+  @ApiQuery({ type: IsJoinedDto })
   @ApiResponse({
     status: 200,
     description: "Returns whether the participant has joined.",
@@ -113,7 +113,7 @@ export class ParticipantCampaignBalanceController {
     },
   })
   @Roles(Role.Participant)
-  async isJoined(@CurrentUser() user: User, @Body() dto: IsJoinedDto) {
+  async isJoined(@CurrentUser() user: User, @Query() dto: IsJoinedDto) {
     return this.participantCampaignBalanceService.isJoined(
       user.id,
       dto.campaignId,
