@@ -15,7 +15,7 @@ export class WalletService {
     @InjectRepository(Business)
     private businessRepository: Repository<Business>,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   async createWallet(business: Business): Promise<BusinessWallet> {
     const wallet = this.walletRepository.create({
@@ -31,21 +31,21 @@ export class WalletService {
       where: { business: { id: businessId } },
       relations: ["transactions"],
     });
-    
+
     if (!wallet) {
-        // Lazy creation for existing businesses
-        const business = await this.businessRepository.findOne({ where: { id: businessId } });
-        if (!business) {
-            throw new NotFoundException("Business not found");
-        }
-        return this.createWallet(business);
+      // Lazy creation for existing businesses
+      const business = await this.businessRepository.findOne({ where: { id: businessId } });
+      if (!business) {
+        throw new NotFoundException("Business not found");
+      }
+      return this.createWallet(business);
     }
     return wallet;
   }
 
   async addTierAllocation(businessId: string, amount: number) {
     const wallet = await this.getWallet(businessId);
-    
+
     // Using a transaction to ensure integrity
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -56,7 +56,7 @@ export class WalletService {
       // But let's assume accumulate for now or simple add. 
       // User said "admin is setting amount... allocated... so they can spend".
       // Usually tier allowances reset. I will just ADD for now, assuming the caller handles the "Reset" logic if needed.
-      
+
       wallet.tier_balance = Number(wallet.tier_balance) + Number(amount);
       await queryRunner.manager.save(wallet);
 
@@ -80,7 +80,7 @@ export class WalletService {
 
   async topUpWallet(businessId: string, amount: number, paymentReference: string) {
     const wallet = await this.getWallet(businessId);
-    
+
     wallet.topup_balance = Number(wallet.topup_balance) + Number(amount);
     await this.walletRepository.save(wallet);
 
@@ -100,8 +100,11 @@ export class WalletService {
     const wallet = await this.getWallet(businessId);
     const cost = Number(amount);
 
+    console.log(wallet, 'wallet');
+    console.log(cost, 'cost')
+
     if (Number(wallet.tier_balance) + Number(wallet.topup_balance) < cost) {
-        throw new BadRequestException("Insufficient funds to create this reward.");
+      throw new BadRequestException("Insufficient funds to create this reward.");
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -117,13 +120,13 @@ export class WalletService {
       if (Number(wallet.tier_balance) > 0) {
         const tierAvailable = Number(wallet.tier_balance);
         if (tierAvailable >= remainingCost) {
-            tierDeduction = remainingCost;
-            wallet.tier_balance = tierAvailable - remainingCost;
-            remainingCost = 0;
+          tierDeduction = remainingCost;
+          wallet.tier_balance = tierAvailable - remainingCost;
+          remainingCost = 0;
         } else {
-            tierDeduction = tierAvailable;
-            wallet.tier_balance = 0;
-            remainingCost = remainingCost - tierAvailable;
+          tierDeduction = tierAvailable;
+          wallet.tier_balance = 0;
+          remainingCost = remainingCost - tierAvailable;
         }
       }
 
@@ -140,20 +143,20 @@ export class WalletService {
       // Record Transactions
       if (tierDeduction > 0) {
         const t1 = this.transactionRepository.create({
-            wallet,
-            amount: -tierDeduction,
-            type: TransactionType.SPEND_TIER,
-            reference,
+          wallet,
+          amount: -tierDeduction,
+          type: TransactionType.SPEND_TIER,
+          reference,
         });
         await queryRunner.manager.save(t1);
       }
 
       if (topupDeduction > 0) {
         const t2 = this.transactionRepository.create({
-            wallet,
-            amount: -topupDeduction,
-            type: TransactionType.SPEND_TOPUP,
-            reference,
+          wallet,
+          amount: -topupDeduction,
+          type: TransactionType.SPEND_TOPUP,
+          reference,
         });
         await queryRunner.manager.save(t2);
       }

@@ -5,6 +5,7 @@ import { RewardsController } from "./controllers/rewards.controller";
 import { RewardsService } from "./services/rewards.service";
 import { BusinessReward } from "./entities/business-reward.entity";
 import { BusinessCampaign } from "../campaign/entities/business-campaign.entity";
+import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
 import { Business } from "../business/entities/business.entity";
 import { Membership } from "../membership/entities/membership.entity";
 import { Sector } from "../sector/entities/sector.entity";
@@ -23,6 +24,7 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
       Sector,
       Tier,
       BusinessCampaign,
+      PointHistory,
     ]),
     forwardRef(() => CapabilityModule),
     forwardRef(() => TierProgressionModule),

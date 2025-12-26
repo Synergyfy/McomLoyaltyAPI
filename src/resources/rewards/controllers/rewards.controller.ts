@@ -239,4 +239,48 @@ export class RewardsController {
       updateBusinessRewardDto,
     );
   }
+
+  @ApiOperation({ summary: "Business: Get mall reward issuance history" })
+  @ApiResponse({
+    status: 200,
+    description: "Return paginated mall reward history for the business.",
+  })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Get("business/mall-reward-history")
+  async getMallRewardHistory(
+    @CurrentUser() user: any,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+  ) {
+    return this.rewardsService.getMallRewardHistory(user.id, page, limit);
+  }
+
+  @ApiOperation({ summary: "Business: Get mall reward statistics" })
+  @ApiResponse({
+    status: 200,
+    description: "Return summary statistics for mall rewards.",
+  })
+  @Roles(Role.Business)
+  @ApiBearerAuth()
+  @Get("business/mall-reward-stats")
+  async getMallRewardStats(@CurrentUser() user: any) {
+    return this.rewardsService.getMallRewardStats(user.id);
+  }
+
+  @ApiOperation({ summary: "Participant: Get my mall reward history" })
+  @ApiResponse({
+    status: 200,
+    description: "Return paginated mall reward history for the participant.",
+  })
+  @Roles(Role.Participant)
+  @ApiBearerAuth()
+  @Get("participant/mall-reward-history")
+  async getParticipantMallRewardHistory(
+    @CurrentUser() user: any,
+    @Query("page") page: number = 1,
+    @Query("limit") limit: number = 10,
+  ) {
+    return this.rewardsService.getParticipantMallRewardHistory(user.id, page, limit);
+  }
 }

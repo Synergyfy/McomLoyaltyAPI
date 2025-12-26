@@ -191,7 +191,13 @@ export class ParticipantCampaignBalanceService {
       order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
-      relations: ["campaign", "businessCampaign", "reward", "business"],
+      relations: [
+        "campaign",
+        "businessCampaign",
+        "reward",
+        "business",
+        "businessReward",
+      ],
     });
 
     return {
