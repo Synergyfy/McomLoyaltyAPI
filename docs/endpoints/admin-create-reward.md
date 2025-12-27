@@ -19,7 +19,8 @@ The request body should be a JSON object with the following fields:
 | Field | Type | Required | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
 | `title` | string | Yes | The title of the reward. | `"Free Coffee"` |
-| `points_required` | number | Yes | The points required to redeem the reward. | `1000` |
+| `max_points` | number | Yes | The maximum points allowed for this reward. | `1000` |
+| `max_stamps_required` | number | No | The maximum stamps required for this reward. | `10` |
 | `value` | number | Yes | The monetary value of the reward. | `5` |
 | `description` | string | Yes | A short description of the reward. | `"A free coffee of your choice"` |
 | `image` | string | Yes | The URL of the reward image. | `"https://example.com/coffee.jpg"` |
@@ -38,7 +39,7 @@ The request body should be a JSON object with the following fields:
 ```json
 {
   "title": "Premium Lounge Access",
-  "points_required": 5000,
+  "max_points": 5000,
   "value": 50,
   "description": "Access to the premium lounge for one day.",
   "image": "https://example.com/lounge.jpg",
@@ -60,7 +61,7 @@ The request body should be a JSON object with the following fields:
 {
   "id": "c5d6e7f8-g9h0-1234-5678-90abcdef1234",
   "title": "Premium Lounge Access",
-  "points_required": 5000,
+  "max_points": 5000,
   "value": 50,
   "description": "Access to the premium lounge for one day.",
   "image": "https://example.com/lounge.jpg",

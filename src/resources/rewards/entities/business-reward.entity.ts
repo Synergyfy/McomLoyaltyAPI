@@ -17,10 +17,10 @@ export class BusinessReward extends AbstractBaseEntity {
   remaining_quantity: number;
 
   @Column({ nullable: true })
-  point_required: number;
+  points_required: number;
 
   @Column({ nullable: true })
-  stamp_required: number;
+  stamps_required: number;
 
   @Column()
   title: string;
@@ -66,7 +66,7 @@ export class BusinessReward extends AbstractBaseEntity {
     type: "enum",
     enum: ["VOUCHER", "GIFT_CARD", "COUPON"],
     default: "VOUCHER",
-    nullable: true
+    nullable: true,
   })
   mall_reward_type: "VOUCHER" | "GIFT_CARD" | "COUPON";
 

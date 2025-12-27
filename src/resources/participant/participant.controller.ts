@@ -121,7 +121,8 @@ export class ParticipantController {
   @ApiOperation({ summary: "Get participant mall reward distribution history" })
   @ApiResponse({
     status: 200,
-    description: "Returns a paginated list of mall rewards the participant has redeemed.",
+    description:
+      "Returns a paginated list of mall rewards the participant has redeemed.",
   })
   @ApiResponse({ status: 401, description: "Unauthorized." })
   @ApiBearerAuth()

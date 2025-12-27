@@ -32,7 +32,8 @@ export class UpdateBusinessRewardDto {
     description: 'The points required to redeem the reward',
     example: 1000,
   })
-  point_required?: number;
+points_required?: number;
+stamps_required?: number;
 
   @ApiProperty({
     description: 'The title of the reward',
@@ -84,7 +85,8 @@ export class UpdateBusinessRewardDto {
 ```json
 {
   "quantity": 50,
-  "point_required": 600,
+    "points_required": 600,
+    "stamps_required": 5,
   "title": "Updated Coffee Reward",
   "status": "INACTIVE"
 }

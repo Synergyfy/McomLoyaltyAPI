@@ -36,7 +36,7 @@ export class ParticipantCampaignBalanceService {
     private readonly redemptionService: RedemptionService,
     private readonly dataSource: DataSource,
     private readonly tierProgressionService: TierProgressionService,
-  ) { }
+  ) {}
 
   async getParticipantBalance(participantId: string) {
     const participant = await this.participantRepository.findOne({
@@ -112,9 +112,10 @@ export class ParticipantCampaignBalanceService {
     campaignId: string,
   ): Promise<{ isJoined: boolean }> {
     // 1. Check balance table first (fastest and handles most cases)
-    const hasBalanceRecord = await this.participantCampaignBalanceRepository.exists({
-      where: this.getCampaignCriteria(participantId, campaignId),
-    });
+    const hasBalanceRecord =
+      await this.participantCampaignBalanceRepository.exists({
+        where: this.getCampaignCriteria(participantId, campaignId),
+      });
 
     if (hasBalanceRecord) {
       return { isJoined: true };
@@ -130,8 +131,8 @@ export class ParticipantCampaignBalanceService {
     if (!participant) return { isJoined: false };
 
     const isJoined =
-      participant.campaigns.some(c => c.id === campaignId) ||
-      participant.businessCampaigns.some(bc => bc.id === campaignId);
+      participant.campaigns.some((c) => c.id === campaignId) ||
+      participant.businessCampaigns.some((bc) => bc.id === campaignId);
 
     return { isJoined };
   }

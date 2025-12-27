@@ -1,0 +1,6 @@
+business_reward.stamp_required: FOUND
+business_reward.stamps_required: NOT_FOUND
+business_reward.point_required: FOUND
+business_reward.points_required: NOT_FOUND
+reward.max_stamp_required: FOUND
+reward.max_stamps_required: NOT_FOUND

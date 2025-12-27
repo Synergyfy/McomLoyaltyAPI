@@ -22,7 +22,9 @@ export class Business extends AbstractBaseEntity {
   @Column()
   name: string;
 
-  @OneToOne(() => BusinessWallet, (wallet) => wallet.business, { cascade: true })
+  @OneToOne(() => BusinessWallet, (wallet) => wallet.business, {
+    cascade: true,
+  })
   wallet: BusinessWallet;
 
   @ApiProperty({ description: "The email of the business" })

@@ -1,8 +1,15 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
 import { BusinessWallet } from "./entities/business-wallet.entity";
-import { WalletTransaction, TransactionType } from "./entities/wallet-transaction.entity";
+import {
+  WalletTransaction,
+  TransactionType,
+} from "./entities/wallet-transaction.entity";
 import { Business } from "../business/entities/business.entity";
 
 @Injectable()
@@ -15,7 +22,7 @@ export class WalletService {
     @InjectRepository(Business)
     private businessRepository: Repository<Business>,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async createWallet(business: Business): Promise<BusinessWallet> {
     const wallet = this.walletRepository.create({
@@ -34,7 +41,9 @@ export class WalletService {
 
     if (!wallet) {
       // Lazy creation for existing businesses
-      const business = await this.businessRepository.findOne({ where: { id: businessId } });
+      const business = await this.businessRepository.findOne({
+        where: { id: businessId },
+      });
       if (!business) {
         throw new NotFoundException("Business not found");
       }
@@ -53,7 +62,7 @@ export class WalletService {
 
     try {
       // Reset logic or Accumulate? Prompt implies "set amount allocated", usually resets monthly.
-      // But let's assume accumulate for now or simple add. 
+      // But let's assume accumulate for now or simple add.
       // User said "admin is setting amount... allocated... so they can spend".
       // Usually tier allowances reset. I will just ADD for now, assuming the caller handles the "Reset" logic if needed.
 
@@ -78,7 +87,11 @@ export class WalletService {
     }
   }
 
-  async topUpWallet(businessId: string, amount: number, paymentReference: string) {
+  async topUpWallet(
+    businessId: string,
+    amount: number,
+    paymentReference: string,
+  ) {
     const wallet = await this.getWallet(businessId);
 
     wallet.topup_balance = Number(wallet.topup_balance) + Number(amount);
@@ -96,15 +109,21 @@ export class WalletService {
   /**
    * Deducts funds for a reward. Prioritizes Tier Balance, then Topup Balance.
    */
-  async spend(businessId: string, amount: number, reference: string): Promise<boolean> {
+  async spend(
+    businessId: string,
+    amount: number,
+    reference: string,
+  ): Promise<boolean> {
     const wallet = await this.getWallet(businessId);
     const cost = Number(amount);
 
-    console.log(wallet, 'wallet');
-    console.log(cost, 'cost')
+    console.log(wallet, "wallet");
+    console.log(cost, "cost");
 
     if (Number(wallet.tier_balance) + Number(wallet.topup_balance) < cost) {
-      throw new BadRequestException("Insufficient funds to create this reward.");
+      throw new BadRequestException(
+        "Insufficient funds to create this reward.",
+      );
     }
 
     const queryRunner = this.dataSource.createQueryRunner();

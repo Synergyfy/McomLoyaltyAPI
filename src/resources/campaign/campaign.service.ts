@@ -89,7 +89,7 @@ export class CampaignService {
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly matchingPointService: MatchingPointService,
-  ) { }
+  ) {}
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -1147,7 +1147,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-        100
+          100
         : 0;
 
     return {

@@ -11,7 +11,12 @@ import { Business } from "../business/entities/business.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BusinessWallet, WalletTransaction, Membership, Business]),
+    TypeOrmModule.forFeature([
+      BusinessWallet,
+      WalletTransaction,
+      Membership,
+      Business,
+    ]),
     ScheduleModule.forRoot(),
   ],
   controllers: [WalletController],

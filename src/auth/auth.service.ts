@@ -64,7 +64,7 @@ export class AuthService {
       role: user.role,
       isEmailVerified: user.isEmailVerified,
     };
-    
+
     // Default response structure
     const response: any = {
       user: {
@@ -85,10 +85,10 @@ export class AuthService {
       const business = await this.businessService.findById(user.id, ["sector"]);
       // Graceful fallback if business record is missing but auth user exists (e.g. inconsistency)
       if (business) {
-          response.user.isOnboarded = !!business.sector;
+        response.user.isOnboarded = !!business.sector;
       } else {
-          response.user.isOnboarded = false; 
-          // Log inconsistency? console.warn(`Business record missing for user ${user.id}`);
+        response.user.isOnboarded = false;
+        // Log inconsistency? console.warn(`Business record missing for user ${user.id}`);
       }
 
       const membership = await this.membershipRepository.findOne({

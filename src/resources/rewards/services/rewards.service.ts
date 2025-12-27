@@ -12,7 +12,10 @@ import { Repository } from "typeorm";
 import { Reward } from "../entities/reward.entity";
 import { CreateRewardDto } from "../dto/create-reward.dto";
 import { BusinessReward } from "../entities/business-reward.entity";
-import { PointHistory, PointHistoryType } from "../../participant-campaign-balance/entities/point-history.entity";
+import {
+  PointHistory,
+  PointHistoryType,
+} from "../../participant-campaign-balance/entities/point-history.entity";
 import { CreateBusinessRewardDto } from "../dto/create-business-reward.dto";
 import { UpdateBusinessRewardDto } from "../dto/update-business-reward.dto";
 import { UpdateRewardDto } from "../dto/update-reward.dto";
@@ -61,13 +64,13 @@ export class RewardsService {
       sector_ids,
       tier_ids,
       max_points,
-      max_stamp_required,
+      max_stamps_required,
       ...rewardData
     } = createRewardDto;
 
-    if (!max_points && !max_stamp_required) {
+    if (!max_points && !max_stamps_required) {
       throw new ForbiddenException(
-        "Either max points or max stamp required must be provided",
+        "Either max points or max stamps required must be provided",
       );
     }
 
@@ -90,7 +93,7 @@ export class RewardsService {
     const reward = this.rewardRepository.create({
       ...rewardData,
       max_points,
-      max_stamp_required,
+      max_stamps_required,
       sectors: sectors,
       tiers: tiers,
     });
@@ -235,14 +238,14 @@ export class RewardsService {
     }
 
     const pointRequired =
-      addRewardToBusinessDto.point_required ?? reward.max_points;
-    const stampRequired =
-      addRewardToBusinessDto.stamp_required ?? reward.max_stamp_required;
+      addRewardToBusinessDto.points_required ?? reward.max_points;
+    const stampsRequired =
+      addRewardToBusinessDto.stamps_required ?? reward.max_stamps_required;
     const quantity = addRewardToBusinessDto.quantity ?? reward.quantity;
 
-    if (!pointRequired && !stampRequired) {
+    if (!pointRequired && !stampsRequired) {
       throw new ForbiddenException(
-        "At least one of point required or stamp required must be set",
+        "At least one of point required or stamps required must be set",
       );
     }
 
@@ -257,12 +260,12 @@ export class RewardsService {
     }
 
     if (
-      stampRequired &&
-      reward.max_stamp_required &&
-      stampRequired > reward.max_stamp_required
+      stampsRequired &&
+      reward.max_stamps_required &&
+      stampsRequired > reward.max_stamps_required
     ) {
       throw new ForbiddenException(
-        `Stamps required cannot exceed the maximum stamps set by admin (${reward.max_stamp_required})`,
+        `Stamps required cannot exceed the maximum stamps set by admin (${reward.max_stamps_required})`,
       );
     }
 
@@ -315,8 +318,8 @@ export class RewardsService {
       description: reward.description,
       image: reward.image,
       disabled: reward.disabled,
-      point_required: pointRequired,
-      stamp_required: stampRequired,
+      points_required: pointRequired,
+      stamps_required: stampsRequired,
       quantity: quantity,
       remaining_quantity: quantity,
       mall_reward_value: mallRewardValue,
@@ -352,11 +355,11 @@ export class RewardsService {
     }
 
     if (
-      !createBusinessRewardDto.point_required &&
-      !createBusinessRewardDto.stamp_required
+      !createBusinessRewardDto.points_required &&
+      !createBusinessRewardDto.stamps_required
     ) {
       throw new ForbiddenException(
-        "At least one of point required or stamp required must be set",
+        "At least one of point required or stamps required must be set",
       );
     }
 
@@ -611,10 +614,39 @@ export class RewardsService {
   ): Promise<BusinessReward> {
     const businessReward = await this.businessRewardRepository.findOne({
       where: { id, business: { id: userId } },
+      relations: ["reward"],
     });
 
     if (!businessReward) {
       throw new NotFoundException("Business reward not found.");
+    }
+
+    if (
+      updateBusinessRewardDto.points_required &&
+      businessReward.reward?.max_points
+    ) {
+      if (
+        updateBusinessRewardDto.points_required >
+        businessReward.reward.max_points
+      ) {
+        throw new ForbiddenException(
+          `Points required cannot exceed the maximum points set by admin (${businessReward.reward.max_points})`,
+        );
+      }
+    }
+
+    if (
+      updateBusinessRewardDto.stamps_required &&
+      businessReward.reward?.max_stamps_required
+    ) {
+      if (
+        updateBusinessRewardDto.stamps_required >
+        businessReward.reward.max_stamps_required
+      ) {
+        throw new ForbiddenException(
+          `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamps_required})`,
+        );
+      }
     }
 
     Object.assign(businessReward, updateBusinessRewardDto);

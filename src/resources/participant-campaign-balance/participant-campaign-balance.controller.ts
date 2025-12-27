@@ -50,7 +50,7 @@ export class ParticipantCampaignBalanceController {
     private readonly pointEarningService: PointEarningService,
     private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
     private readonly transactionCodeService: TransactionCodeService,
-  ) { }
+  ) {}
 
   @Get("my-balance")
   @ApiOperation({
@@ -275,7 +275,7 @@ export class ParticipantCampaignBalanceController {
       dto.rewardId,
       dto.campaignId,
       null,
-      "Self Redemption"
+      "Self Redemption",
     );
   }
 

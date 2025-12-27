@@ -1045,17 +1045,13 @@ export class PaymentService {
     }
   }
 
-  async initiateWalletTopup(
-    user: any,
-    amount: number,
-    provider: string,
-  ) {
+  async initiateWalletTopup(user: any, amount: number, provider: string) {
     if (provider === "paypal") {
       const order = await this.paypalService.createOrder(
         amount,
         "GBP",
         user.id,
-        `Wallet Topup: ${amount} GBP`
+        `Wallet Topup: ${amount} GBP`,
       );
       return { orderId: order.result.id };
     } else {
@@ -1072,11 +1068,7 @@ export class PaymentService {
     }
   }
 
-  async verifyWalletTopup(
-    user: any,
-    transactionId: string,
-    provider: string,
-  ) {
+  async verifyWalletTopup(user: any, transactionId: string, provider: string) {
     if (provider === "paypal") {
       const capture = await this.paypalService.capturePayment(transactionId);
       const result = capture.result as any;

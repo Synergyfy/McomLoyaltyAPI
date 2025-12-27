@@ -44,7 +44,7 @@ export class ParticipantService {
     private readonly otpService: OtpService,
     private readonly progressionService: ParticipantProgressionService,
     private readonly referralService: ReferralService,
-  ) { }
+  ) {}
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =

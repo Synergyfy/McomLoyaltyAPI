@@ -6,7 +6,10 @@ import { ApiProperty } from "@nestjs/swagger";
 
 @Entity()
 export class BusinessWallet extends AbstractBaseEntity {
-  @ApiProperty({ description: "Balance allocated from the Tier subscription (resets monthly)" })
+  @ApiProperty({
+    description:
+      "Balance allocated from the Tier subscription (resets monthly)",
+  })
   @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
   tier_balance: number;
 

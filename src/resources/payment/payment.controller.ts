@@ -199,7 +199,11 @@ export class PaymentController {
     @Body() dto: InitiateWalletTopupDto,
     @CurrentUser() user,
   ) {
-    return this.paymentService.initiateWalletTopup(user, dto.amount, dto.provider);
+    return this.paymentService.initiateWalletTopup(
+      user,
+      dto.amount,
+      dto.provider,
+    );
   }
 
   @Post("wallet/verify")
@@ -214,6 +218,10 @@ export class PaymentController {
     @Body() dto: VerifyWalletTopupDto,
     @CurrentUser() user,
   ) {
-    return this.paymentService.verifyWalletTopup(user, dto.transaction_id, dto.provider);
+    return this.paymentService.verifyWalletTopup(
+      user,
+      dto.transaction_id,
+      dto.provider,
+    );
   }
 }

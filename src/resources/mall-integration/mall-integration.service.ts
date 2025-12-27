@@ -10,10 +10,12 @@ export class MallIntegrationService {
 
   constructor(
     private httpService: HttpService,
-    private configService: ConfigService
+    private configService: ConfigService,
   ) {
-    this.mallApiUrl = this.configService.get<string>("MALL_API_URL") || "http://localhost:3001"; // Default fallback
-    this.apiKey = this.configService.get<string>("MALL_API_KEY") || "secret-system-key";
+    this.mallApiUrl =
+      this.configService.get<string>("MALL_API_URL") || "http://localhost:3001"; // Default fallback
+    this.apiKey =
+      this.configService.get<string>("MALL_API_KEY") || "secret-system-key";
   }
 
   async createVoucher(payload: {
@@ -49,20 +51,21 @@ export class MallIntegrationService {
   private async postToSystem(endpoint: string, payload: any) {
     try {
       const response = await lastValueFrom(
-        this.httpService.post(
-          `${this.mallApiUrl}${endpoint}`,
-          payload,
-          {
-            headers: {
-              "x-system-api-key": this.apiKey,
-            },
-          }
-        )
+        this.httpService.post(`${this.mallApiUrl}${endpoint}`, payload, {
+          headers: {
+            "x-system-api-key": this.apiKey,
+          },
+        }),
       );
       return response.data;
     } catch (error) {
-      console.error(`Error calling Mall API (${endpoint}):`, error.response?.data || error.message);
-      throw new InternalServerErrorException("Failed to generate external reward in Mall API");
+      console.error(
+        `Error calling Mall API (${endpoint}):`,
+        error.response?.data || error.message,
+      );
+      throw new InternalServerErrorException(
+        "Failed to generate external reward in Mall API",
+      );
     }
   }
 }
