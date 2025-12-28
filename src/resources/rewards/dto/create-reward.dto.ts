@@ -35,7 +35,7 @@ export class CreateRewardDto {
   })
   @IsNumber()
   @IsOptional()
-  max_stamp_required?: number;
+  max_stamps_required?: number;
 
   @ApiProperty({
     description: "The monetary value of the reward",

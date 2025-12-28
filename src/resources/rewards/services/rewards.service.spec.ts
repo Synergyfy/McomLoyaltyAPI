@@ -201,7 +201,7 @@ describe("RewardsService", () => {
       const dto = {
         ...createRewardDto,
         max_points: undefined,
-        max_stamp_required: undefined,
+        max_stamps_required: undefined,
       };
       await expect(service.createReward(dto)).rejects.toThrow(
         ForbiddenException,
@@ -254,7 +254,7 @@ describe("RewardsService", () => {
     });
 
     it("should throw ForbiddenException if stamps requested exceed admin max", async () => {
-      const reward = { max_stamp_required: 10 } as Reward;
+      const reward = { max_stamps_required: 10 } as Reward;
       const br = {
         id: rewardId,
         business: { id: businessId },
@@ -264,7 +264,7 @@ describe("RewardsService", () => {
 
       await expect(
         service.updateBusinessReward(businessId, rewardId, {
-          stamp_required: 11,
+          stamps_required: 11,
         }),
       ).rejects.toThrow(ForbiddenException);
     });

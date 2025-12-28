@@ -836,7 +836,7 @@ export class CampaignService {
     // Find BusinessCampaigns where the participant has a balance
     const qb = this.businessCampaignRepository
       .createQueryBuilder("bc")
-      .leftJoinAndSelect("bc.rewards", "rewards")
+      .leftJoinAndSelect("bc.businessRewards", "businessRewards")
       .leftJoinAndSelect("bc.business", "business")
       .innerJoin(
         "bc.participantCampaignBalances",

@@ -177,25 +177,28 @@ export class ParticipantService {
         this.progressionService.triggerAction(participant.id, "CAMPAIGN_JOIN");
       }
 
-      if (businessCampaign.signUpPoint) {
-        let participantCampaignBalance =
-          await this.participantCampaignBalanceRepository.findOne({
-            where: {
-              participant: { id: participant.id },
-              businessCampaign: { id: businessCampaign.id },
-            },
+      let participantCampaignBalance =
+        await this.participantCampaignBalanceRepository.findOne({
+          where: {
+            participant: { id: participant.id },
+            businessCampaign: { id: businessCampaign.id },
+          },
+        });
+
+      if (!participantCampaignBalance) {
+        participantCampaignBalance =
+          this.participantCampaignBalanceRepository.create({
+            participant,
+            businessCampaign,
+            campaign: businessCampaign.campaign,
+            campaign_balance: 0,
           });
+        await this.participantCampaignBalanceRepository.save(
+          participantCampaignBalance,
+        );
+      }
 
-        if (!participantCampaignBalance) {
-          participantCampaignBalance =
-            this.participantCampaignBalanceRepository.create({
-              participant,
-              businessCampaign,
-              campaign: businessCampaign.campaign,
-              campaign_balance: 0,
-            });
-        }
-
+      if (businessCampaign.signUpPoint) {
         participantCampaignBalance.campaign_balance +=
           businessCampaign.signUpPoint;
         participant.global_total_points += businessCampaign.signUpPoint;
@@ -259,24 +262,27 @@ export class ParticipantService {
       this.progressionService.triggerAction(participant.id, "CAMPAIGN_JOIN");
     }
 
-    if (campaign.signUpPoint) {
-      let participantCampaignBalance =
-        await this.participantCampaignBalanceRepository.findOne({
-          where: {
-            participant: { id: participant.id },
-            campaign: { id: campaign.id },
-          },
+    let participantCampaignBalance =
+      await this.participantCampaignBalanceRepository.findOne({
+        where: {
+          participant: { id: participant.id },
+          campaign: { id: campaign.id },
+        },
+      });
+
+    if (!participantCampaignBalance) {
+      participantCampaignBalance =
+        this.participantCampaignBalanceRepository.create({
+          participant,
+          campaign,
+          campaign_balance: 0,
         });
+      await this.participantCampaignBalanceRepository.save(
+        participantCampaignBalance,
+      );
+    }
 
-      if (!participantCampaignBalance) {
-        participantCampaignBalance =
-          this.participantCampaignBalanceRepository.create({
-            participant,
-            campaign,
-            campaign_balance: 0,
-          });
-      }
-
+    if (campaign.signUpPoint) {
       participantCampaignBalance.campaign_balance += campaign.signUpPoint;
       participant.global_total_points += campaign.signUpPoint;
       campaign.total_points_earned += campaign.signUpPoint;

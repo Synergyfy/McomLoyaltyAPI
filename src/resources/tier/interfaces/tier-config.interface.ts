@@ -4,6 +4,7 @@ export interface TierQuotas {
   maxRewardsPerCampaign: number;
   monthlyPointsAllowance: number;
   monthlyStampsAllowance: number;
+  monthlyRewardBudget: number; // GBP Amount allocated to the business per month
   maxTeamMembers: number; // -1 for unlimited
 }
 

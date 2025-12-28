@@ -13,6 +13,7 @@ import { MailModule } from "../../mail/mail.module";
 import { OtpModule } from "../otp/otp.module";
 import { ParticipantProgressionModule } from "../participant-progression/participant-progression.module";
 import { ReferralModule } from "../referral/referral.module";
+import { RewardsModule } from "../rewards/rewards.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ReferralModule } from "../referral/referral.module";
     OtpModule,
     ParticipantProgressionModule,
     ReferralModule,
+    RewardsModule,
   ],
   controllers: [ParticipantController, AdminParticipantController],
   providers: [ParticipantService],

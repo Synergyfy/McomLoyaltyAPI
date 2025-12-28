@@ -58,20 +58,21 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = {
+    const payload: any = {
       username: user.email,
       sub: user.id,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
     };
+
+    // Default response structure
     const response: any = {
       user: {
         name: user.name,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
       },
-      access_token: this.jwtService.sign(payload, { expiresIn: "1h" }),
-      refresh_token: this.jwtService.sign(payload, { expiresIn: "7d" }),
+      // Tokens will be signed after payload finalization
     };
 
     if (user.role === Role.Participant) {
@@ -82,7 +83,13 @@ export class AuthService {
 
     if (user.role === Role.Business) {
       const business = await this.businessService.findById(user.id, ["sector"]);
-      response.user.isOnboarded = !!business.sector;
+      // Graceful fallback if business record is missing but auth user exists (e.g. inconsistency)
+      if (business) {
+        response.user.isOnboarded = !!business.sector;
+      } else {
+        response.user.isOnboarded = false;
+        // Log inconsistency? console.warn(`Business record missing for user ${user.id}`);
+      }
 
       const membership = await this.membershipRepository.findOne({
         where: { business: { id: user.id } },
@@ -103,15 +110,13 @@ export class AuthService {
         isTrial: membership ? membership.is_trial : false,
       };
 
-      // Update payload
-      const newPayload = { ...payload, hasActiveSubscription };
-      response.access_token = this.jwtService.sign(newPayload, {
-        expiresIn: "1h",
-      });
-      response.refresh_token = this.jwtService.sign(newPayload, {
-        expiresIn: "7d",
-      });
+      // Add subscription status to payload for Business users
+      payload.hasActiveSubscription = hasActiveSubscription;
     }
+
+    // Sign tokens once with the final payload
+    response.access_token = this.jwtService.sign(payload, { expiresIn: "1h" });
+    response.refresh_token = this.jwtService.sign(payload, { expiresIn: "7d" });
 
     return response;
   }
@@ -331,5 +336,22 @@ export class AuthService {
 
     console.log(user);
     return { uniqueCode: user.uniqueCode };
+  }
+
+  async getSsoToken(user: any) {
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      role: user.role,
+      name: user.name,
+      iss: "mcom-loyalty",
+      aud: "mcom-mall",
+    };
+    // In production, use a separate secret for SSO
+    const secret = process.env.SSO_SECRET || "shared-sso-secret";
+    return {
+      sso_token: this.jwtService.sign(payload, { secret, expiresIn: "5m" }),
+      redirect_url: `${process.env.MALL_APP_URL || "http://localhost:3001"}/sso/callback`,
+    };
   }
 }

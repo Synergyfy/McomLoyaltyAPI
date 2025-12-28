@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
   Inject,
   forwardRef,
 } from "@nestjs/common";
@@ -11,12 +12,17 @@ import { Repository } from "typeorm";
 import { Reward } from "../entities/reward.entity";
 import { CreateRewardDto } from "../dto/create-reward.dto";
 import { BusinessReward } from "../entities/business-reward.entity";
+import {
+  PointHistory,
+  PointHistoryType,
+} from "../../participant-campaign-balance/entities/point-history.entity";
 import { CreateBusinessRewardDto } from "../dto/create-business-reward.dto";
 import { UpdateBusinessRewardDto } from "../dto/update-business-reward.dto";
 import { UpdateRewardDto } from "../dto/update-reward.dto";
 import { Business } from "../../business/entities/business.entity";
 import { RewardStatus } from "../enums/reward-status.enum";
 import { RewardAudience } from "../enums/reward-audience.enum";
+import { RewardType } from "../enums/reward-type.enum";
 import { Membership } from "../../membership/entities/membership.entity";
 import { Sector } from "../../sector/entities/sector.entity";
 import { Tier } from "../../tier/entities/tier.entity";
@@ -46,9 +52,11 @@ export class RewardsService {
     private readonly tierRepository: Repository<Tier>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
-  ) {}
+  ) { }
 
   // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
@@ -56,13 +64,13 @@ export class RewardsService {
       sector_ids,
       tier_ids,
       max_points,
-      max_stamp_required,
+      max_stamps_required,
       ...rewardData
     } = createRewardDto;
 
-    if (!max_points && !max_stamp_required) {
+    if (!max_points && !max_stamps_required) {
       throw new ForbiddenException(
-        "Either max points or max stamp required must be provided",
+        "Either max points or max stamps required must be provided",
       );
     }
 
@@ -85,7 +93,7 @@ export class RewardsService {
     const reward = this.rewardRepository.create({
       ...rewardData,
       max_points,
-      max_stamp_required,
+      max_stamps_required,
       sectors: sectors,
       tiers: tiers,
     });
@@ -230,14 +238,14 @@ export class RewardsService {
     }
 
     const pointRequired =
-      addRewardToBusinessDto.point_required ?? reward.max_points;
-    const stampRequired =
-      addRewardToBusinessDto.stamp_required ?? reward.max_stamp_required;
+      addRewardToBusinessDto.points_required ?? reward.max_points;
+    const stampsRequired =
+      addRewardToBusinessDto.stamps_required ?? reward.max_stamps_required;
     const quantity = addRewardToBusinessDto.quantity ?? reward.quantity;
 
-    if (!pointRequired && !stampRequired) {
+    if (!pointRequired && !stampsRequired) {
       throw new ForbiddenException(
-        "At least one of point required or stamp required must be set",
+        "At least one of point required or stamps required must be set",
       );
     }
 
@@ -252,13 +260,50 @@ export class RewardsService {
     }
 
     if (
-      stampRequired &&
-      reward.max_stamp_required &&
-      stampRequired > reward.max_stamp_required
+      stampsRequired &&
+      reward.max_stamps_required &&
+      stampsRequired > reward.max_stamps_required
     ) {
       throw new ForbiddenException(
-        `Stamps required cannot exceed the maximum stamps set by admin (${reward.max_stamp_required})`,
+        `Stamps required cannot exceed the maximum stamps set by admin (${reward.max_stamps_required})`,
       );
+    }
+
+    const isMallReward = [
+      RewardType.VOUCHER,
+      RewardType.GIFT_CARD,
+      RewardType.COUPON,
+    ].includes(reward.reward_type);
+
+    let mallRewardValue = 0;
+    let isMallIntegrated = false;
+    let mallRewardType = null;
+
+    if (isMallReward) {
+      if (
+        !addRewardToBusinessDto.mall_reward_value ||
+        addRewardToBusinessDto.mall_reward_value <= 0
+      ) {
+        throw new BadRequestException(
+          "Value is required for Gift Cards, Vouchers, and Coupons when adding to business.",
+        );
+      }
+      mallRewardValue = addRewardToBusinessDto.mall_reward_value;
+      isMallIntegrated = true;
+
+      if (reward.reward_type === RewardType.VOUCHER) {
+        mallRewardType = "VOUCHER";
+      } else if (reward.reward_type === RewardType.GIFT_CARD) {
+        mallRewardType = "GIFT_CARD";
+      } else if (reward.reward_type === RewardType.COUPON) {
+        mallRewardType = "COUPON";
+      }
+    } else {
+      if (addRewardToBusinessDto.mall_reward_value) {
+        throw new BadRequestException(
+          "Value cannot be set for this reward type.",
+        );
+      }
     }
 
     const businessReward = this.businessRewardRepository.create({
@@ -273,10 +318,13 @@ export class RewardsService {
       description: reward.description,
       image: reward.image,
       disabled: reward.disabled,
-      point_required: pointRequired,
-      stamp_required: stampRequired,
+      points_required: pointRequired,
+      stamps_required: stampsRequired,
       quantity: quantity,
       remaining_quantity: quantity,
+      mall_reward_value: mallRewardValue,
+      is_mall_integrated: isMallIntegrated,
+      mall_reward_type: mallRewardType,
     });
 
     return this.businessRewardRepository.save(businessReward);
@@ -307,12 +355,47 @@ export class RewardsService {
     }
 
     if (
-      !createBusinessRewardDto.point_required &&
-      !createBusinessRewardDto.stamp_required
+      !createBusinessRewardDto.points_required &&
+      !createBusinessRewardDto.stamps_required
     ) {
       throw new ForbiddenException(
-        "At least one of point required or stamp required must be set",
+        "At least one of point required or stamps required must be set",
       );
+    }
+
+    const isMallReward = [
+      RewardType.VOUCHER,
+      RewardType.GIFT_CARD,
+      RewardType.COUPON,
+    ].includes(createBusinessRewardDto.reward_type);
+
+    if (isMallReward) {
+      if (
+        !createBusinessRewardDto.mall_reward_value ||
+        createBusinessRewardDto.mall_reward_value <= 0
+      ) {
+        throw new BadRequestException(
+          "Value is required for Gift Cards, Vouchers, and Coupons.",
+        );
+      }
+      createBusinessRewardDto.is_mall_integrated = true;
+      // Map reward type to mall reward type
+      if (createBusinessRewardDto.reward_type === RewardType.VOUCHER) {
+        createBusinessRewardDto.mall_reward_type = "VOUCHER";
+      } else if (createBusinessRewardDto.reward_type === RewardType.GIFT_CARD) {
+        createBusinessRewardDto.mall_reward_type = "GIFT_CARD";
+      } else if (createBusinessRewardDto.reward_type === RewardType.COUPON) {
+        createBusinessRewardDto.mall_reward_type = "COUPON";
+      }
+    } else {
+      if (createBusinessRewardDto.mall_reward_value) {
+        throw new BadRequestException(
+          "Value cannot be set for this reward type.",
+        );
+      }
+      createBusinessRewardDto.is_mall_integrated = false;
+      createBusinessRewardDto.mall_reward_value = 0;
+      createBusinessRewardDto.mall_reward_type = null;
     }
 
     const businessReward = this.businessRewardRepository.create({
@@ -518,33 +601,33 @@ export class RewardsService {
     });
   }
 
+  async countTotalRewards(businessId: string): Promise<number> {
+    return this.businessRewardRepository.count({
+      where: { business: { id: businessId } },
+    });
+  }
+
   async updateBusinessReward(
-    businessId: string,
-    rewardId: string,
+    userId: string,
+    id: string,
     updateBusinessRewardDto: UpdateBusinessRewardDto,
   ): Promise<BusinessReward> {
     const businessReward = await this.businessRewardRepository.findOne({
-      where: {
-        id: rewardId,
-        business: { id: businessId },
-      },
+      where: { id, business: { id: userId } },
       relations: ["reward"],
     });
 
     if (!businessReward) {
-      throw new NotFoundException(
-        "Reward not found or does not belong to this business",
-      );
+      throw new NotFoundException("Business reward not found.");
     }
 
     if (
-      updateBusinessRewardDto.point_required !== undefined &&
-      businessReward.reward
+      updateBusinessRewardDto.points_required &&
+      businessReward.reward?.max_points
     ) {
       if (
-        businessReward.reward.max_points !== null &&
-        updateBusinessRewardDto.point_required >
-          businessReward.reward.max_points
+        updateBusinessRewardDto.points_required >
+        businessReward.reward.max_points
       ) {
         throw new ForbiddenException(
           `Points required cannot exceed the maximum points set by admin (${businessReward.reward.max_points})`,
@@ -553,27 +636,137 @@ export class RewardsService {
     }
 
     if (
-      updateBusinessRewardDto.stamp_required !== undefined &&
-      businessReward.reward
+      updateBusinessRewardDto.stamps_required &&
+      businessReward.reward?.max_stamps_required
     ) {
       if (
-        businessReward.reward.max_stamp_required !== null &&
-        updateBusinessRewardDto.stamp_required >
-          businessReward.reward.max_stamp_required
+        updateBusinessRewardDto.stamps_required >
+        businessReward.reward.max_stamps_required
       ) {
         throw new ForbiddenException(
-          `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamp_required})`,
+          `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamps_required})`,
         );
       }
     }
 
     Object.assign(businessReward, updateBusinessRewardDto);
+
     return this.businessRewardRepository.save(businessReward);
   }
 
-  async countTotalRewards(userId: string): Promise<number> {
-    return await this.businessRewardRepository.count({
-      where: { business: { id: userId } },
+  async getMallRewardHistory(
+    businessId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginationResult<PointHistory>> {
+    const queryBuilder = this.pointHistoryRepository.createQueryBuilder("ph");
+
+    queryBuilder
+      .leftJoinAndSelect("ph.participant", "participant")
+      .leftJoinAndSelect("ph.businessReward", "businessReward")
+      .leftJoinAndSelect("businessReward.reward", "reward")
+      .where("ph.business_id = :businessId", { businessId })
+      .andWhere("ph.type = :type", { type: PointHistoryType.REDEEM })
+      .andWhere("businessReward.is_mall_integrated = :isMallIntegrated", {
+        isMallIntegrated: true,
+      })
+      .orderBy("ph.created_at", "DESC")
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
+  }
+
+  async getMallRewardStats(businessId: string) {
+    const queryBuilder = this.pointHistoryRepository.createQueryBuilder("ph");
+
+    queryBuilder
+      .leftJoinAndSelect("ph.businessReward", "businessReward")
+      .where("ph.business_id = :businessId", { businessId })
+      .andWhere("ph.type = :type", { type: PointHistoryType.REDEEM })
+      .andWhere("businessReward.is_mall_integrated = :isMallIntegrated", {
+        isMallIntegrated: true,
+      });
+
+    const history = await queryBuilder.getMany();
+
+    const stats = history.reduce(
+      (acc, item) => {
+        const value = Number(item.businessReward.mall_reward_value || 0);
+        acc.totalValue += value;
+        acc.totalCount += 1;
+
+        if (item.businessReward.mall_reward_type === "GIFT_CARD") {
+          acc.giftCardsCount += 1;
+          acc.giftCardsValue += value;
+        } else if (item.businessReward.mall_reward_type === "VOUCHER") {
+          acc.vouchersCount += 1;
+          acc.vouchersValue += value;
+        } else if (item.businessReward.mall_reward_type === "COUPON") {
+          acc.couponsCount += 1;
+          acc.couponsValue += value;
+        }
+
+        return acc;
+      },
+      {
+        totalValue: 0,
+        totalCount: 0,
+        giftCardsCount: 0,
+        giftCardsValue: 0,
+        vouchersCount: 0,
+        vouchersValue: 0,
+        couponsCount: 0,
+        couponsValue: 0,
+      },
+    );
+
+    return stats;
+  }
+
+  async getParticipantMallRewardHistory(
+    participantId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginationResult<PointHistory>> {
+    const [data, total] = await this.pointHistoryRepository.findAndCount({
+      where: {
+        participant: { id: participantId },
+        type: PointHistoryType.REDEEM,
+        businessReward: { is_mall_integrated: true },
+      },
+      relations: ["business", "businessReward", "businessReward.reward"],
+      order: { created_at: "DESC" },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 }

@@ -347,7 +347,7 @@ export class SeederService {
           await this.businessRewardRepository.save({
             business: business,
             reward: reward,
-            point_required: reward.max_points,
+            points_required: reward.max_points,
           });
         }
 

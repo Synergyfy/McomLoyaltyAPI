@@ -21,11 +21,15 @@ import {
 import { Public } from "src/common/decorators/public.decorator";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { Participant } from "./entities/participant.entity";
+import { RewardsService } from "../rewards/services/rewards.service";
 
 @ApiTags("Participant")
 @Controller("participant")
 export class ParticipantController {
-  constructor(private readonly participantService: ParticipantService) {}
+  constructor(
+    private readonly participantService: ParticipantService,
+    private readonly rewardsService: RewardsService,
+  ) {}
 
   @Public()
   @Post("signup")
@@ -106,6 +110,30 @@ export class ParticipantController {
     @Query("limit") limit = 10,
   ) {
     return this.participantService.getParticipatingCampaigns(
+      participant.id,
+      +page,
+      +limit,
+    );
+  }
+
+  @Get("mall-reward-history")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Get participant mall reward distribution history" })
+  @ApiResponse({
+    status: 200,
+    description:
+      "Returns a paginated list of mall rewards the participant has redeemed.",
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized." })
+  @ApiBearerAuth()
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  getMallRewardHistory(
+    @CurrentUser() participant: Participant,
+    @Query("page") page = 1,
+    @Query("limit") limit = 10,
+  ) {
+    return this.rewardsService.getParticipantMallRewardHistory(
       participant.id,
       +page,
       +limit,

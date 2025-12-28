@@ -12,6 +12,7 @@ import {
   TransactionCodeStatus,
   TransactionType,
 } from "../entities/transaction-code.entity";
+import { FindOptionsWhere } from "typeorm";
 import { PointEarningService } from "./point-earning.service";
 import { RedemptionService } from "./redemption.service";
 import { PointHistory } from "../entities/point-history.entity";
@@ -82,13 +83,7 @@ export class ParticipantCampaignBalanceService {
 
     const campaignBalance =
       await this.participantCampaignBalanceRepository.findOne({
-        where: [
-          { participant: { id: participantId }, campaign: { id: campaignId } },
-          {
-            participant: { id: participantId },
-            businessCampaign: { id: campaignId },
-          },
-        ],
+        where: this.getCampaignCriteria(participantId, campaignId),
         relations: ["campaign", "businessCampaign"],
       });
 
@@ -116,20 +111,43 @@ export class ParticipantCampaignBalanceService {
     participantId: string,
     campaignId: string,
   ): Promise<{ isJoined: boolean }> {
-    const count = await this.participantCampaignBalanceRepository.count({
-      where: [
-        {
-          participant: { id: participantId },
-          campaign: { id: campaignId },
-        },
-        {
-          participant: { id: participantId },
-          businessCampaign: { id: campaignId },
-        },
-      ],
+    // 1. Check balance table first (fastest and handles most cases)
+    const hasBalanceRecord =
+      await this.participantCampaignBalanceRepository.exists({
+        where: this.getCampaignCriteria(participantId, campaignId),
+      });
+
+    if (hasBalanceRecord) {
+      return { isJoined: true };
+    }
+
+    // 2. Fallback: Check ManyToMany relationships on Participant
+    // This handles cases where a user joined a 0-point campaign before the fix
+    const participant = await this.participantRepository.findOne({
+      where: { id: participantId },
+      relations: ["campaigns", "businessCampaigns"],
     });
 
-    return { isJoined: count > 0 };
+    if (!participant) return { isJoined: false };
+
+    const isJoined =
+      participant.campaigns.some((c) => c.id === campaignId) ||
+      participant.businessCampaigns.some((bc) => bc.id === campaignId);
+
+    return { isJoined };
+  }
+
+  private getCampaignCriteria(
+    participantId: string,
+    campaignId: string,
+  ): FindOptionsWhere<ParticipantCampaignBalance>[] {
+    return [
+      { participant: { id: participantId }, campaign: { id: campaignId } },
+      {
+        participant: { id: participantId },
+        businessCampaign: { id: campaignId },
+      },
+    ];
   }
 
   async getHistoryForCampaign(
@@ -147,16 +165,7 @@ export class ParticipantCampaignBalanceService {
     }
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({
-      where: [
-        {
-          participant: { id: participantId },
-          campaign: { id: campaignId },
-        },
-        {
-          participant: { id: participantId },
-          businessCampaign: { id: campaignId },
-        },
-      ],
+      where: this.getCampaignCriteria(participantId, campaignId),
       order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
@@ -183,7 +192,13 @@ export class ParticipantCampaignBalanceService {
       order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
-      relations: ["campaign", "businessCampaign", "reward", "business"],
+      relations: [
+        "campaign",
+        "businessCampaign",
+        "reward",
+        "business",
+        "businessReward",
+      ],
     });
 
     return {

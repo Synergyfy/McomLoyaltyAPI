@@ -18,6 +18,7 @@ import { IsJoinedDto } from "./dto/is-joined.dto";
 import { AwardPointsDto } from "./dto/award-points.dto";
 import { AwardStampsDto } from "./dto/award-stamps.dto";
 import { RedeemRewardDto } from "./dto/redeem-reward.dto";
+import { RedeemRewardSelfDto } from "./dto/redeem-reward-self.dto";
 import {
   ApiTags,
   ApiOperation,
@@ -94,13 +95,13 @@ export class ParticipantCampaignBalanceController {
     );
   }
 
-  @Post("is-joined")
+  @Get("is-joined")
   @ApiOperation({
     summary: "Check if participant has joined a campaign",
     description:
       "Checks if the authenticated participant is part of the specified campaign.",
   })
-  @ApiBody({ type: IsJoinedDto })
+  @ApiQuery({ type: IsJoinedDto })
   @ApiResponse({
     status: 200,
     description: "Returns whether the participant has joined.",
@@ -112,7 +113,7 @@ export class ParticipantCampaignBalanceController {
     },
   })
   @Roles(Role.Participant)
-  async isJoined(@CurrentUser() user: User, @Body() dto: IsJoinedDto) {
+  async isJoined(@CurrentUser() user: User, @Query() dto: IsJoinedDto) {
     return this.participantCampaignBalanceService.isJoined(
       user.id,
       dto.campaignId,
@@ -246,6 +247,35 @@ export class ParticipantCampaignBalanceController {
       redeemRewardDto.rewardId,
       redeemRewardDto.campaignId,
       redeemRewardDto.redemptionCode,
+    );
+  }
+
+  @Post("redeem-self")
+  @ApiOperation({
+    summary: "Participant redempts a reward for themselves",
+    description:
+      "Allows a participant to redeem a reward directly (e.g., for digital vouchers).",
+  })
+  @ApiBody({ type: RedeemRewardSelfDto })
+  @ApiResponse({
+    status: 201,
+    description: "The reward has been successfully redeemed.",
+    type: ParticipantCampaignBalance,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Bad Request. For example, not enough points.",
+  })
+  @Roles(Role.Participant)
+  redeemSelf(@CurrentUser() user: User, @Body() dto: RedeemRewardSelfDto) {
+    return this.redemptionService.redeemReward(
+      user.id,
+      "Participant",
+      user.id,
+      dto.rewardId,
+      dto.campaignId,
+      null,
+      "Self Redemption",
     );
   }
 

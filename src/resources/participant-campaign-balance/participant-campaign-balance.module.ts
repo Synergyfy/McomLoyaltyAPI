@@ -21,6 +21,8 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
 import { MembershipModule } from "../membership/membership.module";
 import { PointPackageModule } from "../point-package/point-package.module";
 import { StampModule } from "../stamp/stamp.module";
+import { WalletModule } from "../wallet/wallet.module";
+import { MallIntegrationModule } from "../mall-integration/mall-integration.module";
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { StampModule } from "../stamp/stamp.module";
     PointPackageModule,
     NotificationModule,
     forwardRef(() => StampModule),
+    WalletModule,
+    MallIntegrationModule,
   ],
   providers: [
     RedemptionService,

@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNumber, IsOptional } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 
 export class AddRewardToBusinessDto {
   @ApiProperty({
@@ -13,10 +13,11 @@ export class AddRewardToBusinessDto {
   @ApiProperty({
     description: "The points required to redeem the reward",
     example: 1000,
+    required: false,
   })
   @IsNumber()
   @IsOptional()
-  point_required?: number;
+  points_required?: number;
 
   @ApiProperty({
     description: "The stamps required to redeem the reward",
@@ -25,5 +26,22 @@ export class AddRewardToBusinessDto {
   })
   @IsNumber()
   @IsOptional()
-  stamp_required?: number;
+  stamps_required?: number;
+
+  @ApiProperty({
+    description: "The value of the mall reward",
+    example: 10.0,
+  })
+  @IsNumber()
+  @IsOptional()
+  mall_reward_value?: number;
+
+  @ApiProperty({
+    description: "The type of the mall reward",
+    enum: ["VOUCHER", "GIFT_CARD", "COUPON"],
+    example: "VOUCHER",
+  })
+  @IsString()
+  @IsOptional()
+  mall_reward_type?: "VOUCHER" | "GIFT_CARD" | "COUPON";
 }
