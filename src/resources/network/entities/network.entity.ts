@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, Index, ManyToMany } from "typeorm";
 import { AbstractBaseEntity } from "../../../database/entities/base.entity";
 import { Business } from "../../business/entities/business.entity";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 import {
   NetworkLocationTag,
@@ -82,4 +82,28 @@ export class Network extends AbstractBaseEntity {
   })
   @Column({ nullable: true })
   onboardedPartnerId: string;
+
+  @ApiPropertyOptional({
+    description: "Location tag for the network contact",
+    enum: NetworkLocationTag,
+    required: false,
+  })
+  @Column({
+    type: "enum",
+    enum: NetworkLocationTag,
+    nullable: true,
+  })
+  locationTag: NetworkLocationTag;
+
+  @ApiPropertyOptional({
+    description: "Relationship tag for the network contact",
+    enum: NetworkRelationshipTag,
+    required: false,
+  })
+  @Column({
+    type: "enum",
+    enum: NetworkRelationshipTag,
+    nullable: true,
+  })
+  relationshipTag: NetworkRelationshipTag;
 }
