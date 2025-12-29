@@ -13,6 +13,10 @@ import { Campaign } from "../../campaign/entities/campaign.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 import { Membership } from "../../membership/entities/membership.entity";
 import { Network } from "../../network/entities/network.entity";
+import {
+  NetworkLocationTag,
+  NetworkRelationshipTag,
+} from "../../../common/enums/network-tags.enum";
 
 import { BusinessWallet } from "../../wallet/entities/business-wallet.entity";
 
@@ -220,6 +224,14 @@ export class Business extends AbstractBaseEntity {
   })
   @Column({ default: false })
   isEmailVerified: boolean;
+
+  @ApiProperty({ enum: NetworkLocationTag, description: "Location tag", required: false })
+  @Column({ type: "enum", enum: NetworkLocationTag, nullable: true })
+  locationTag: NetworkLocationTag;
+
+  @ApiProperty({ enum: NetworkRelationshipTag, description: "Relationship tag", required: false })
+  @Column({ type: "enum", enum: NetworkRelationshipTag, nullable: true })
+  relationshipTag: NetworkRelationshipTag;
 
   @OneToMany(() => Network, (network) => network.business)
   network: Network[];

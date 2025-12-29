@@ -3,8 +3,8 @@ import { IsEnum, IsOptional, IsString, IsIn } from "class-validator";
 import {
   NetworkLocationTag,
   NetworkRelationshipTag,
-  NetworkStatus,
-} from "../entities/network.entity";
+} from "../../../common/enums/network-tags.enum";
+import { NetworkStatus } from "../entities/network.entity";
 import { PaginationDto } from "../../../common/dto/pagination.dto";
 
 export class GetNetworkDto extends PaginationDto {
@@ -20,15 +20,6 @@ export class GetNetworkDto extends PaginationDto {
   @IsString()
   businessId?: string;
 
-  @ApiPropertyOptional({ enum: NetworkLocationTag })
-  @IsOptional()
-  @IsEnum(NetworkLocationTag)
-  locationTag?: NetworkLocationTag;
-
-  @ApiPropertyOptional({ enum: NetworkRelationshipTag })
-  @IsOptional()
-  @IsEnum(NetworkRelationshipTag)
-  relationshipTag?: NetworkRelationshipTag;
 
   @ApiPropertyOptional({ enum: NetworkStatus })
   @IsOptional()

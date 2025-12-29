@@ -18,6 +18,11 @@ import {
   NetworkOnboardingDto,
   OnboardingType,
 } from "./dto/network-onboarding.dto";
+import { TagNetworkDto } from "./dto/tag-network.dto";
+import {
+  NetworkLocationTag,
+  NetworkRelationshipTag,
+} from "../../common/enums/network-tags.enum";
 import { HashService } from "../../common/hash/hash.service";
 import { Partner } from "../partner/entities/partner.entity";
 import { Sector } from "../sector/entities/sector.entity";
@@ -52,7 +57,7 @@ export class NetworkService {
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
     private readonly hashService: HashService,
-  ) {}
+  ) { }
 
   async getOnboardingDetails(id: string) {
     const network = await this.networkRepository.findOne({ where: { id } });
@@ -301,8 +306,6 @@ export class NetworkService {
       page,
       limit,
       search,
-      locationTag,
-      relationshipTag,
       status,
       sortBy,
       sortOrder,
@@ -322,16 +325,6 @@ export class NetworkService {
         "(network.fullName ILIKE :search OR network.email ILIKE :search OR network.phone ILIKE :search OR network.businessName ILIKE :search)",
         { search: `%${search}%` },
       );
-    }
-
-    if (locationTag) {
-      qb.andWhere("network.locationTag = :locationTag", { locationTag });
-    }
-
-    if (relationshipTag) {
-      qb.andWhere("network.relationshipTag = :relationshipTag", {
-        relationshipTag,
-      });
     }
 
     if (status) {
@@ -398,5 +391,27 @@ export class NetworkService {
     }
 
     return network;
+  }
+
+  async tagReferredBusiness(
+    referredBusinessId: string,
+    tagNetworkDto: TagNetworkDto,
+    referrer: Business,
+  ) {
+    const business = await this.businessRepository.findOne({
+      where: {
+        id: referredBusinessId,
+        referredBy: { id: referrer.id },
+      },
+    });
+
+    if (!business) {
+      throw new NotFoundException(
+        `No referred business found with ID ${referredBusinessId}`,
+      );
+    }
+
+    Object.assign(business, tagNetworkDto);
+    return await this.businessRepository.save(business);
   }
 }
