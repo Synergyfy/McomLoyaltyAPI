@@ -65,12 +65,26 @@ export class RewardsService {
       tier_ids,
       max_points,
       max_stamps_required,
+      is_points_enabled = true,
+      is_stamps_enabled = false,
       ...rewardData
     } = createRewardDto;
 
-    if (!max_points && !max_stamps_required) {
+    if (!is_points_enabled && !is_stamps_enabled) {
       throw new ForbiddenException(
-        "Either max points or max stamps required must be provided",
+        "At least one of points or stamps must be enabled",
+      );
+    }
+
+    if (is_points_enabled && !max_points) {
+      throw new ForbiddenException(
+        "Max points must be provided when points are enabled",
+      );
+    }
+
+    if (is_stamps_enabled && !max_stamps_required) {
+      throw new ForbiddenException(
+        "Max stamps required must be provided when stamps are enabled",
       );
     }
 
@@ -94,6 +108,8 @@ export class RewardsService {
       ...rewardData,
       max_points,
       max_stamps_required,
+      is_points_enabled,
+      is_stamps_enabled,
       sectors: sectors,
       tiers: tiers,
     });
@@ -237,15 +253,48 @@ export class RewardsService {
       throw new ConflictException("Business already has this reward");
     }
 
-    const pointRequired =
-      addRewardToBusinessDto.points_required ?? reward.max_points;
-    const stampsRequired =
-      addRewardToBusinessDto.stamps_required ?? reward.max_stamps_required;
+    const isPointsEnabled =
+      addRewardToBusinessDto.is_points_enabled ?? reward.is_points_enabled;
+    const isStampsEnabled =
+      addRewardToBusinessDto.is_stamps_enabled ?? reward.is_stamps_enabled;
+    const stampEmoji =
+      addRewardToBusinessDto.stamp_emoji ?? reward.stamp_emoji;
+
+    if (!isPointsEnabled && !isStampsEnabled) {
+      throw new ForbiddenException(
+        "At least one of points or stamps must be enabled",
+      );
+    }
+
+    if (isPointsEnabled && !reward.is_points_enabled) {
+      throw new ForbiddenException(
+        "Cannot enable points because it is disabled by the admin for this reward",
+      );
+    }
+
+    if (isStampsEnabled && !reward.is_stamps_enabled) {
+      throw new ForbiddenException(
+        "Cannot enable stamps because it is disabled by the admin for this reward",
+      );
+    }
+
+    const pointRequired = isPointsEnabled
+      ? (addRewardToBusinessDto.points_required ?? reward.max_points)
+      : null;
+    const stampsRequired = isStampsEnabled
+      ? (addRewardToBusinessDto.stamps_required ?? reward.max_stamps_required)
+      : null;
     const quantity = addRewardToBusinessDto.quantity ?? reward.quantity;
 
-    if (!pointRequired && !stampsRequired) {
+    if (isPointsEnabled && !pointRequired) {
       throw new ForbiddenException(
-        "At least one of point required or stamps required must be set",
+        "Points required must be set when points are enabled",
+      );
+    }
+
+    if (isStampsEnabled && !stampsRequired) {
+      throw new ForbiddenException(
+        "Stamps required must be set when stamps are enabled",
       );
     }
 
@@ -318,6 +367,9 @@ export class RewardsService {
       description: reward.description,
       image: reward.image,
       disabled: reward.disabled,
+      is_points_enabled: isPointsEnabled,
+      is_stamps_enabled: isStampsEnabled,
+      stamp_emoji: stampEmoji,
       points_required: pointRequired,
       stamps_required: stampsRequired,
       quantity: quantity,
@@ -354,12 +406,28 @@ export class RewardsService {
       );
     }
 
-    if (
-      !createBusinessRewardDto.points_required &&
-      !createBusinessRewardDto.stamps_required
-    ) {
+    const {
+      is_points_enabled = true,
+      is_stamps_enabled = false,
+      points_required,
+      stamps_required,
+    } = createBusinessRewardDto;
+
+    if (!is_points_enabled && !is_stamps_enabled) {
       throw new ForbiddenException(
-        "At least one of point required or stamps required must be set",
+        "At least one of points or stamps must be enabled",
+      );
+    }
+
+    if (is_points_enabled && !points_required) {
+      throw new ForbiddenException(
+        "Points required must be set when points are enabled",
+      );
+    }
+
+    if (is_stamps_enabled && !stamps_required) {
+      throw new ForbiddenException(
+        "Stamps required must be set when stamps are enabled",
       );
     }
 
@@ -621,11 +689,40 @@ export class RewardsService {
       throw new NotFoundException("Business reward not found.");
     }
 
-    if (
-      updateBusinessRewardDto.points_required &&
-      businessReward.reward?.max_points
-    ) {
+    const isPointsEnabled =
+      updateBusinessRewardDto.is_points_enabled ??
+      businessReward.is_points_enabled;
+    const isStampsEnabled =
+      updateBusinessRewardDto.is_stamps_enabled ??
+      businessReward.is_stamps_enabled;
+
+    if (!isPointsEnabled && !isStampsEnabled) {
+      throw new ForbiddenException(
+        "At least one of points or stamps must be enabled",
+      );
+    }
+
+    if (businessReward.reward) {
       if (
+        updateBusinessRewardDto.is_points_enabled === true &&
+        !businessReward.reward.is_points_enabled
+      ) {
+        throw new ForbiddenException(
+          "Cannot enable points because it is disabled by the admin for this reward",
+        );
+      }
+      if (
+        updateBusinessRewardDto.is_stamps_enabled === true &&
+        !businessReward.reward.is_stamps_enabled
+      ) {
+        throw new ForbiddenException(
+          "Cannot enable stamps because it is disabled by the admin for this reward",
+        );
+      }
+
+      if (
+        updateBusinessRewardDto.points_required &&
+        businessReward.reward.max_points &&
         updateBusinessRewardDto.points_required >
         businessReward.reward.max_points
       ) {
@@ -633,13 +730,10 @@ export class RewardsService {
           `Points required cannot exceed the maximum points set by admin (${businessReward.reward.max_points})`,
         );
       }
-    }
 
-    if (
-      updateBusinessRewardDto.stamps_required &&
-      businessReward.reward?.max_stamps_required
-    ) {
       if (
+        updateBusinessRewardDto.stamps_required &&
+        businessReward.reward.max_stamps_required &&
         updateBusinessRewardDto.stamps_required >
         businessReward.reward.max_stamps_required
       ) {
@@ -649,7 +743,34 @@ export class RewardsService {
       }
     }
 
+    if (
+      isPointsEnabled &&
+      !updateBusinessRewardDto.points_required &&
+      !businessReward.points_required
+    ) {
+      throw new ForbiddenException(
+        "Points required must be set when points are enabled",
+      );
+    }
+
+    if (
+      isStampsEnabled &&
+      !updateBusinessRewardDto.stamps_required &&
+      !businessReward.stamps_required
+    ) {
+      throw new ForbiddenException(
+        "Stamps required must be set when stamps are enabled",
+      );
+    }
+
     Object.assign(businessReward, updateBusinessRewardDto);
+
+    if (!businessReward.is_points_enabled) {
+      businessReward.points_required = null;
+    }
+    if (!businessReward.is_stamps_enabled) {
+      businessReward.stamps_required = null;
+    }
 
     return this.businessRewardRepository.save(businessReward);
   }

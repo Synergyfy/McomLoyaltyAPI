@@ -53,6 +53,15 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column("text", { array: true, nullable: true })
   gallery: string[];
 
+  @Column({ default: true })
+  is_points_enabled: boolean;
+
+  @Column({ default: false })
+  is_stamps_enabled: boolean;
+
+  @Column({ nullable: true })
+  stamp_emoji: string;
+
   @Column({ default: false })
   disabled: boolean;
 
