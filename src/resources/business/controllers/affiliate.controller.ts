@@ -44,11 +44,19 @@ export class AffiliateController {
     @CurrentUser() user: User,
     @Query("page") page: number = 1,
     @Query("limit") limit: number = 10,
+    @Query("search") search?: string,
+    @Query("status") status?: string,
+    @Query("startDate") startDate?: Date,
+    @Query("endDate") endDate?: Date,
   ): Promise<ReferralAnalyticsDto> {
     return this.referralService.getBusinessReferralAnalytics(
       user.id,
       page,
       limit,
+      search,
+      status,
+      startDate,
+      endDate,
     );
   }
 }

@@ -7,11 +7,12 @@ import { Partner } from "../partner/entities/partner.entity";
 import { Business } from "../business/entities/business.entity";
 
 import { Network } from "../network/entities/network.entity";
+import { Referral } from "../referral/entities/referral.entity";
 import { MailModule } from "../../mail/mail.module";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([QrPlaque, Partner, Business, Network]),
+    TypeOrmModule.forFeature([QrPlaque, Partner, Business, Network, Referral]),
     MailModule,
   ],
   controllers: [QrPlaquesController],
