@@ -31,11 +31,12 @@ import { CheckPermission } from "../../capability/decorators/check-permission.de
 import { UseGuards } from "@nestjs/common";
 
 import { AddRewardToBusinessDto } from "../dto/add-reward-to-business.dto";
+import { GetRewardsFilterDto } from "../dto/get-rewards-filter.dto";
 
 @ApiTags("rewards")
 @Controller("rewards")
 export class RewardsController {
-  constructor(private readonly rewardsService: RewardsService) {}
+  constructor(private readonly rewardsService: RewardsService) { }
 
   // Admin endpoints
   @ApiOperation({ summary: "Admin: Create a new reward" })
@@ -51,15 +52,45 @@ export class RewardsController {
   }
 
   @ApiOperation({ summary: "Admin: Get all rewards" })
-  @ApiResponse({ status: 200, description: "Return all rewards." })
+  @ApiResponse({
+    status: 200,
+    description: "Return filtered rewards.",
+    schema: {
+      example: {
+        data: [
+          {
+            id: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+            title: "Free Coffee",
+            max_points: 1000,
+            max_stamps_required: 10,
+            reward_type: "Voucher",
+            audience: "all business",
+            is_points_enabled: true,
+            is_stamps_enabled: true,
+            stamp_emoji: "☕",
+            status: "active",
+            description: "A free coffee of your choice",
+            image: "https://example.com/coffee.jpg",
+            quantity: 100,
+            disabled: false,
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+        next: null,
+        previous: null,
+      },
+    },
+  })
   @Roles(Role.Admin)
   @ApiBearerAuth()
   @Get("admin/rewards")
-  async getRewards(
-    @Query("page") page: number = 1,
-    @Query("limit") limit: number = 10,
-  ) {
-    return this.rewardsService.getRewards(page, limit);
+  async getRewards(@Query() filterDto: GetRewardsFilterDto) {
+    return this.rewardsService.getRewards(filterDto);
   }
 
   @ApiOperation({ summary: "Admin: Update a reward" })
@@ -123,7 +154,7 @@ export class RewardsController {
     @Query("page") page: number = 1,
     @Query("limit") limit: number = 10,
   ) {
-    return this.rewardsService.getRewards(page, limit);
+    return this.rewardsService.getRewards({ page, limit });
   }
 
   @ApiOperation({ summary: "Business: Get all rewards added to a business" })

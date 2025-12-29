@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsArray,
   IsDateString,
+  IsBoolean,
 } from "class-validator";
 import { RewardType } from "../enums/reward-type.enum";
 import { RewardAudience } from "../enums/reward-audience.enum";
@@ -128,4 +129,33 @@ export class CreateRewardDto {
   @IsArray()
   @IsOptional()
   tier_ids?: string[];
+
+  @ApiProperty({
+    description: "Whether points are enabled for this reward",
+    example: true,
+    required: false,
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  is_points_enabled?: boolean;
+
+  @ApiProperty({
+    description: "Whether stamps are enabled for this reward",
+    example: false,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  is_stamps_enabled?: boolean;
+
+  @ApiProperty({
+    description: "The emoji to use for stamps",
+    example: "☕",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  stamp_emoji?: string;
 }

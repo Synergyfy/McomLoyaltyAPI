@@ -64,8 +64,6 @@ export class DealController {
 
   @Public()
   @Get()
-  @Roles(Role.Admin, Role.Business)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Get all deals" })
   @ApiResponse({ status: 200, description: "Return a list of deals." })
   findAll(
