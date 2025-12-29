@@ -3,18 +3,10 @@ import { AbstractBaseEntity } from "../../../database/entities/base.entity";
 import { Business } from "../../business/entities/business.entity";
 import { ApiProperty } from "@nestjs/swagger";
 
-export enum NetworkLocationTag {
-  NEARBY = "nearby",
-  HYPERLOCAL = "hyperlocal",
-  NATIONAL = "national",
-}
-
-export enum NetworkRelationshipTag {
-  PARTNER = "partner",
-  CUSTOMER = "customer",
-  SUPPLIER = "supplier",
-  AFFILIATE = "affiliate",
-}
+import {
+  NetworkLocationTag,
+  NetworkRelationshipTag,
+} from "../../../common/enums/network-tags.enum";
 
 export enum NetworkStatus {
   PENDING = "pending",
@@ -47,17 +39,6 @@ export class Network extends AbstractBaseEntity {
   @ApiProperty({ description: "Phone number" })
   @Column()
   phone: string;
-
-  @ApiProperty({ enum: NetworkLocationTag, description: "Location tag" })
-  @Column({ type: "enum", enum: NetworkLocationTag })
-  locationTag: NetworkLocationTag;
-
-  @ApiProperty({
-    enum: NetworkRelationshipTag,
-    description: "Relationship tag",
-  })
-  @Column({ type: "enum", enum: NetworkRelationshipTag })
-  relationshipTag: NetworkRelationshipTag;
 
   @ApiProperty({
     description: "Status of the network invitation",

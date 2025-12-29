@@ -30,13 +30,14 @@ import {
 } from "@nestjs/swagger";
 import { Public } from "../../common/decorators/public.decorator";
 import { NetworkOnboardingDto } from "./dto/network-onboarding.dto";
+import { TagNetworkDto } from "./dto/tag-network.dto";
 
 @ApiTags("Network")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("network")
 export class NetworkController {
-  constructor(private readonly networkService: NetworkService) {}
+  constructor(private readonly networkService: NetworkService) { }
 
   @Public()
   @Get("onboarding-details/:id")
@@ -119,5 +120,22 @@ export class NetworkController {
   @ApiResponse({ status: 404, description: "Contact not found." })
   remove(@Param("id") id: string, @CurrentUser() business: Business) {
     return this.networkService.remove(id, business);
+  }
+
+  @Patch("tag/:referredBusinessId")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Tag a referred business in the network" })
+  @ApiResponse({ status: 200, description: "Business tagged successfully." })
+  @ApiResponse({ status: 404, description: "Network record not found." })
+  tagReferredBusiness(
+    @Param("referredBusinessId") referredBusinessId: string,
+    @Body() tagNetworkDto: TagNetworkDto,
+    @CurrentUser() business: Business,
+  ) {
+    return this.networkService.tagReferredBusiness(
+      referredBusinessId,
+      tagNetworkDto,
+      business,
+    );
   }
 }
