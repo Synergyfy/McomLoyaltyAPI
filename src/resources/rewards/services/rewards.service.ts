@@ -34,6 +34,7 @@ import { MembershipStatus } from "../../membership/entities/membership.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 
 import { AddRewardToBusinessDto } from "../dto/add-reward-to-business.dto";
+import { GetRewardsFilterDto, SortBy } from "../dto/get-rewards-filter.dto";
 
 @Injectable()
 export class RewardsService {
@@ -117,14 +118,89 @@ export class RewardsService {
   }
 
   async getRewards(
-    page: number,
-    limit: number,
+    filterDto: GetRewardsFilterDto,
   ): Promise<PaginationResult<Reward>> {
-    const [data, total] = await this.rewardRepository.findAndCount({
-      order: { created_at: "DESC" },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const {
+      page = 1,
+      limit = 10,
+      is_stamps_enabled,
+      is_points_enabled,
+      sortBy = SortBy.NEWEST,
+      min_points,
+      max_points,
+      min_stamps,
+      max_stamps,
+      search,
+      reward_type,
+      audience,
+      status,
+    } = filterDto;
+
+    const queryBuilder = this.rewardRepository.createQueryBuilder("reward");
+
+    if (is_stamps_enabled !== undefined) {
+      queryBuilder.andWhere("reward.is_stamps_enabled = :is_stamps_enabled", {
+        is_stamps_enabled,
+      });
+    }
+
+    if (is_points_enabled !== undefined) {
+      queryBuilder.andWhere("reward.is_points_enabled = :is_points_enabled", {
+        is_points_enabled,
+      });
+    }
+
+    if (min_points !== undefined) {
+      queryBuilder.andWhere("reward.max_points >= :min_points", { min_points });
+    }
+
+    if (max_points !== undefined) {
+      queryBuilder.andWhere("reward.max_points <= :max_points", { max_points });
+    }
+
+    if (min_stamps !== undefined) {
+      queryBuilder.andWhere("reward.max_stamps_required >= :min_stamps", {
+        min_stamps,
+      });
+    }
+
+    if (max_stamps !== undefined) {
+      queryBuilder.andWhere("reward.max_stamps_required <= :max_stamps", {
+        max_stamps,
+      });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where("reward.title ILIKE :search", { search: `%${search}%` })
+            .orWhere("reward.description ILIKE :search", {
+              search: `%${search}%`,
+            });
+        }),
+      );
+    }
+
+    if (reward_type) {
+      queryBuilder.andWhere("reward.reward_type = :reward_type", {
+        reward_type,
+      });
+    }
+
+    if (audience) {
+      queryBuilder.andWhere("reward.audience = :audience", { audience });
+    }
+
+    if (status) {
+      queryBuilder.andWhere("reward.status = :status", { status });
+    }
+
+    const order = sortBy === SortBy.OLDEST ? "ASC" : "DESC";
+    queryBuilder.orderBy("reward.created_at", order);
+
+    queryBuilder.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
 
     const totalPages = Math.ceil(total / limit);
     const next = page < totalPages ? Number(page) + 1 : null;
