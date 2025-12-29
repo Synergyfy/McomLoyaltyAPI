@@ -27,7 +27,7 @@ export class DealService {
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
-  ) {}
+  ) { }
 
   async create(createDealDto: CreateDealDto, user: User) {
     const { categoryId, ...rest } = createDealDto;
@@ -49,7 +49,7 @@ export class DealService {
     return this.dealRepository.save(deal);
   }
 
-  async findAll(filterDealDto: FilterDealDto, user: User) {
+  async findAll(filterDealDto: FilterDealDto, user?: User) {
     const {
       limit,
       page,
@@ -63,12 +63,21 @@ export class DealService {
     } = filterDealDto;
     const query = this.dealRepository.createQueryBuilder("deal");
 
-    if (user.role === Role.Business) {
-      query.where("deal.businessId = :businessId", { businessId: user.id });
-    }
+    if (user) {
+      if (user.role === Role.Business) {
+        query.where("deal.businessId = :businessId", { businessId: user.id });
+      }
 
-    if (status) {
-      query.andWhere("deal.status = :status", { status });
+      if (status) {
+        query.andWhere("deal.status = :status", { status });
+      }
+    } else {
+      // Logic for public users: only show active, approved, public deals
+      query.where("deal.isActive = :isActive", { isActive: true });
+      query.andWhere("deal.isApproved = :isApproved", { isApproved: true });
+      query.andWhere("deal.visibility = :visibility", {
+        visibility: DealVisibility.PUBLIC,
+      });
     }
 
     if (categoryId) {
