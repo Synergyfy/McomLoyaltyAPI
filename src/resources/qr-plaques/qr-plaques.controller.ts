@@ -85,7 +85,7 @@ export class QrPlaquesController {
     ) {
       throw new UnauthorizedException("You do not own this plaque");
     }
-    return this.qrPlaquesService.update(id, updateDto);
+    return this.qrPlaquesService.update(id, updateDto, req.user.id);
   }
 
   // Admin Endpoints

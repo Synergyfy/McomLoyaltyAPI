@@ -162,65 +162,60 @@ export class ReferralService {
     businessId: string,
     page: number = 1,
     limit: number = 10,
+    search?: string,
+    status?: string,
+    startDate?: Date,
+    endDate?: Date,
   ): Promise<ReferralAnalyticsDto> {
-    // 1. Calculate Total Points Earned from MatchingPointHistory
-    // We query the history directly to get the accurate sum of points actually awarded.
-    // Assuming we need to sum points where activity_type is REFERRAL (which we need to import or string match)
-    // Since we don't have the repository injected directly, we can use a raw query or better, inject MatchingPointHistory repository.
-    // For now, let's rely on the `pointsEarned` field we just added to the Referral entity for the list,
-    // AND for the TOTAL, we really should query the history table or sum the referral table?
-    // The user request said: "total points should be based the total matching point a business earned from referring people"
-    // Querying the Referral table for ALL successful referrals `pointsEarned` sum is probably safer if we trust our new recording mechanism,
-    // BUT we have previous data that might not have `pointsEarned` populated.
-    // Ideally we should query MatchingPointHistory.
-    // However, I don't have MatchingPointHistoryRepository injected here.
-    // Let's modify the constructor to inject it or use a service method if available.
-    // Wait, I can't easily change the constructor without updating the module.
-    // Let's check if `MatchingPointService` has a method to get total points by type.
-    // It has `getHistory` but that returns paginated data.
-    // Checking `MatchingPointService`... it doesn't have a `sumPoints` method.
-
-    // Alternative: Sum `pointsEarned` from the Referral table for THIS business.
-    // AND for older records where `pointsEarned` is 0/null, we might miss them.
-    // But the prompt implied we should check the "matching point based on admin config".
-    // Actually, the safest bet without changing module imports heavily is to query `Referral` table.
-    // But wait, the previous implementation I wrote used `referral.pointsEarned` which I just added.
-
-    // Let's calculate stats based on the Referral table which now holds the truth.
-    // Get counts
-    const totalInvites = await this.referralRepository.count({
-      where: { referrerBusiness: { id: businessId } },
-    });
-
-    const totalSuccessfulReferrals = await this.referralRepository.count({
-      where: {
-        referrerBusiness: { id: businessId },
-        status: ReferralStatus.SUCCESSFUL,
-      },
-    });
-
-    // Calculate total points
-    const { sum } = await this.referralRepository
+    const qb = this.referralRepository
       .createQueryBuilder("referral")
-      .select("SUM(referral.pointsEarned)", "sum")
-      .where("referral.referrer_business_id = :businessId", { businessId })
+      .leftJoinAndSelect("referral.refereeBusiness", "referee")
+      .where("referral.referrer_business_id = :businessId", { businessId });
+
+    if (search) {
+      qb.andWhere(
+        "(referee.name ILIKE :search OR referral.refereeEmail ILIKE :search)",
+        { search: `%${search}%` },
+      );
+    }
+
+    if (status) {
+      qb.andWhere("referral.status = :status", { status });
+    }
+
+    if (startDate) {
+      qb.andWhere("referral.created_at >= :startDate", { startDate });
+    }
+
+    if (endDate) {
+      qb.andWhere("referral.created_at <= :endDate", { endDate });
+    }
+
+    // Get Total Points separately (ignoring pagination but respecting filters? usually total points means ALL time total)
+    // The requirement says "total points should be based the total matching point a business earned from referring people"
+    // Usually this is a global stat, not filtered. Let's keep global stats global, and only filter the list.
+    const globalStatsQb = this.referralRepository
+      .createQueryBuilder("referral")
+      .where("referral.referrer_business_id = :businessId", { businessId });
+
+    const totalInvites = await globalStatsQb.getCount();
+    const totalSuccessfulReferrals = await globalStatsQb
       .andWhere("referral.status = :status", {
         status: ReferralStatus.SUCCESSFUL,
       })
-      .getRawOne();
+      .getCount();
 
+    const { sum } = await globalStatsQb
+      .select("SUM(referral.pointsEarned)", "sum")
+      .getRawOne();
     const totalPointsEarned = Number(sum) || 0;
 
-    // Get Paginated Data
-    const skip = (page - 1) * limit;
-    const [referrals, total] = await this.referralRepository.findAndCount({
-      where: { referrerBusiness: { id: businessId } },
-      relations: ["refereeBusiness"],
-      order: { created_at: "DESC" },
-      skip,
-      take: limit,
-    });
+    // Apply Sorting and Pagination to the list query
+    qb.orderBy("referral.created_at", "DESC")
+      .skip((page - 1) * limit)
+      .take(limit);
 
+    const [referrals, total] = await qb.getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
     const referredBusinesses = referrals.map((referral) => ({

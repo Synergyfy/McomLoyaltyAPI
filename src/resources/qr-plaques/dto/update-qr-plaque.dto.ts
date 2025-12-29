@@ -64,4 +64,12 @@ export class UpdateQrPlaqueDto extends PartialType(CreateQrPlaqueDto) {
   @IsOptional()
   @IsUUID()
   networkContactId?: string;
+
+  @ApiProperty({
+    description: "ID of a referred business to assign the plaque to (without transferring ownership)",
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  assignToReferredBusinessId?: string;
 }
