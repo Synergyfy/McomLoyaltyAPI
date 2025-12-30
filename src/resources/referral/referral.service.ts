@@ -12,6 +12,9 @@ import { InviteFriendDto } from "./dto/invite-friend.dto";
 import { MailService } from "../../mail/mail.service";
 import { ParticipantProgressionService } from "../participant-progression/participant-progression.service";
 import { ReferralAnalyticsDto } from "./dto/referral-analytics.dto";
+import { Business } from "../business/entities/business.entity";
+import { MatchingPointService } from "../matching-point/services/matching-point.service";
+import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
 
 @Injectable()
 export class ReferralService {
@@ -22,9 +25,12 @@ export class ReferralService {
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
     private readonly mailService: MailService,
     private readonly progressionService: ParticipantProgressionService,
-  ) {}
+    private readonly matchingPointService: MatchingPointService,
+  ) { }
 
   async inviteFriend(participantId: string, dto: InviteFriendDto) {
     const referrer = await this.participantRepository.findOne({
@@ -120,6 +126,37 @@ export class ReferralService {
       referrer.id,
       "REFERRAL_SUCCESS",
     );
+  }
+
+  async completeBusinessReferral(business: Business): Promise<void> {
+    const referral = await this.referralRepository.findOne({
+      where: { refereeBusiness: { id: business.id } },
+      relations: ["referrerBusiness"],
+    });
+
+    if (referral && referral.status === ReferralStatus.PENDING) {
+      referral.status = ReferralStatus.SUCCESSFUL;
+      await this.referralRepository.save(referral);
+
+      const referrer = referral.referrerBusiness;
+      if (referrer) {
+        referrer.referralPoints = (Number(referrer.referralPoints) || 0) + 100;
+        await this.businessRepository.save(referrer);
+
+        // Award matching points
+        const matchingPoints = await this.matchingPointService.addPoints(
+          referrer.id,
+          MatchingPointActivityType.REFERRAL,
+          `Referral Completed: ${business.name}`,
+        );
+
+        // Update referral with points earned
+        if (matchingPoints > 0) {
+          referral.pointsEarned = matchingPoints;
+          await this.referralRepository.save(referral);
+        }
+      }
+    }
   }
 
   async getReferralAnalytics(

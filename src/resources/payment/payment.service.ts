@@ -36,6 +36,7 @@ import { In } from "typeorm";
 import { MatchingPointService } from "../matching-point/services/matching-point.service";
 import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
 import { WalletService } from "../wallet/wallet.service";
+import { ReferralService } from "../referral/referral.service";
 
 @Injectable()
 export class PaymentService {
@@ -61,7 +62,8 @@ export class PaymentService {
     private readonly businessPointPackageRepository: Repository<BusinessPointPackage>,
     private readonly matchingPointService: MatchingPointService,
     private readonly walletService: WalletService,
-  ) {}
+    private readonly referralService: ReferralService,
+  ) { }
 
   async initiateStripePayment(
     initiatePaymentDto: InitiatePaymentDto,
@@ -743,6 +745,16 @@ export class PaymentService {
           MatchingPointActivityType.MEMBERSHIP_PAYMENT,
           `Membership Payment: ${tier.name} (${planType})`,
         );
+
+        // Complete business referral if applicable
+        const business = await this.businessRepository.findOne({
+          where: { id: user.id },
+          relations: ["referredBy"],
+        });
+
+        if (business && business.referredBy) {
+          await this.referralService.completeBusinessReferral(business);
+        }
       }
     }
   }

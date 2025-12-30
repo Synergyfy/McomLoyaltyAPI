@@ -13,6 +13,7 @@ import { Business } from "../business/entities/business.entity";
 import { QrPlaquesModule } from "../qr-plaques/qr-plaques.module";
 import { AuthModule } from "../../auth/auth.module";
 import { UserModule } from "../../user/user.module";
+import { ReferralModule } from "../referral/referral.module";
 
 import { PointPackage } from "../point-package/entities/point-package.entity";
 import { BusinessPointPackage } from "../point-package/entities/business-point-package.entity";
@@ -38,9 +39,10 @@ import { WalletModule } from "../wallet/wallet.module";
     forwardRef(() => AuthModule),
     UserModule,
     WalletModule,
+    ReferralModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService, StripeService, PaypalService],
   exports: [PaymentService, StripeService, PaypalService],
 })
-export class PaymentModule {}
+export class PaymentModule { }
