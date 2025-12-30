@@ -153,11 +153,11 @@ export class BusinessCampaign extends AbstractBaseEntity {
   // Relations
   @ManyToMany(() => Reward)
   @JoinTable()
-  rewards: Reward[];
+  rewards?: Reward[];
 
   @ManyToMany(() => BusinessReward)
   @JoinTable()
-  businessRewards: BusinessReward[];
+  businessRewards?: BusinessReward[];
 
   @ManyToMany(() => Deal, (deal) => deal.businessCampaigns)
   @JoinTable()

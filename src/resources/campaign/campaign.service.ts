@@ -89,19 +89,18 @@ export class CampaignService {
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly matchingPointService: MatchingPointService,
-  ) {}
+  ) { }
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
     currentUser: Business | Admin,
   ): Promise<Campaign | BusinessCampaign> {
-    const campaignData = { ...createCampaignDto };
-    let rewards: Reward[] = [];
-
     if (currentUser.role === Role.Admin) {
-      const campaign = this.campaignRepository.create(campaignData);
-      const { business_id, reward_ids, target_tier_id } =
+      const { business_id, reward_ids, target_tier_id, ...campaignData } =
         createCampaignDto as CreateCampaignAdminDto;
+      const campaign = this.campaignRepository.create(campaignData);
+      let rewards: Reward[] = [];
+
       if (business_id) {
         const business = await this.businessRepository.findOneBy({
           id: business_id,
@@ -112,7 +111,7 @@ export class CampaignService {
         campaign.business = business;
       }
 
-      if (reward_ids) {
+      if (reward_ids && reward_ids.length > 0) {
         rewards = await this.rewardRepository.findBy({
           id: In(reward_ids),
         });
@@ -141,13 +140,13 @@ export class CampaignService {
       campaign.rewards = rewards;
       return this.campaignRepository.save(campaign);
     } else {
+      const { business_reward_ids, business_stamp_reward_id, ...campaignData } =
+        createCampaignDto as CreateCampaignDto;
       // Business creating a campaign -> BusinessCampaign
       const businessCampaign =
         this.businessCampaignRepository.create(campaignData);
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
-      const { business_reward_ids, business_stamp_reward_id } =
-        createCampaignDto as CreateCampaignDto;
 
       if (business_stamp_reward_id) {
         const stampReward = await this.businessStampRewardRepository.findOne({
@@ -1147,7 +1146,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-          100
+        100
         : 0;
 
     return {

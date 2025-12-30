@@ -64,7 +64,7 @@ export class Campaign extends AbstractBaseEntity {
 
   @ManyToMany(() => Reward)
   @JoinTable()
-  rewards: Reward[];
+  rewards?: Reward[];
 
   @ManyToMany(() => Deal, (deal) => deal.campaigns)
   @JoinTable()
