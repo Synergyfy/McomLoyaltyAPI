@@ -30,7 +30,7 @@ export class QrPlaquesService {
     @InjectRepository(Referral)
     private readonly referralRepository: Repository<Referral>,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   private generateUniqueCode(): string {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -58,6 +58,9 @@ export class QrPlaquesService {
       assignedBusinessId,
       assignedPartnerId,
       networkContactId,
+      assignToReferredBusinessId,
+      locationTag,
+      relationshipTag,
       status,
       ...rest
     } = createQrPlaqueDto;
@@ -68,7 +71,7 @@ export class QrPlaquesService {
       status: status || QrPlaqueStatus.PENDING,
     });
 
-    // Determine Business Assignment
+    // Determine Business Assignment (Ownership)
     const targetBusinessId = ownerBusinessId || assignedBusinessId;
     if (targetBusinessId) {
       const business = await this.businessRepository.findOne({
@@ -94,8 +97,70 @@ export class QrPlaquesService {
       plaque.assignedPartner = partner;
     }
 
-    // Determine Network Assignment
-    if (networkContactId) {
+    // Handle Assignment to Referred Business
+    if (assignToReferredBusinessId) {
+      const requesterId = ownerBusinessId; // For create, ownerBusinessId is the requester
+      if (!requesterId) {
+        throw new BadRequestException(
+          "Requester ID (ownerBusinessId) required for referred business assignment",
+        );
+      }
+
+      const referral = await this.referralRepository.findOne({
+        where: {
+          referrerBusiness: { id: requesterId },
+          refereeBusiness: { id: assignToReferredBusinessId },
+        },
+        relations: ["refereeBusiness"],
+      });
+
+      if (!referral) {
+        throw new BadRequestException(
+          "Cannot assign to this business. Only referred businesses allowed.",
+        );
+      }
+
+      let network = await this.networkRepository.findOne({
+        where: {
+          business: { id: requesterId },
+          onboardedBusinessId: assignToReferredBusinessId,
+        },
+      });
+
+      if (!network) {
+        const refereeBusiness = referral.refereeBusiness;
+        network = this.networkRepository.create({
+          business: { id: requesterId },
+          fullName: refereeBusiness.name,
+          businessName: refereeBusiness.name,
+          email: refereeBusiness.email,
+          phone: refereeBusiness.phone || "N/A",
+          isOnboarded: true,
+          onboardedType: "business",
+          onboardedBusinessId: refereeBusiness.id,
+          status: NetworkStatus.ACCEPTED,
+          locationTag,
+          relationshipTag,
+        });
+        await this.networkRepository.save(network);
+      } else {
+        // Update tags if they don't exist
+        let needsUpdate = false;
+        if (!network.locationTag && locationTag) {
+          network.locationTag = locationTag;
+          needsUpdate = true;
+        }
+        if (!network.relationshipTag && relationshipTag) {
+          network.relationshipTag = relationshipTag;
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
+          await this.networkRepository.save(network);
+        }
+      }
+      plaque.networkContact = network;
+    } else if (networkContactId) {
+      // Determine Network Assignment (Direct)
       const network = await this.networkRepository.findOne({
         where: { id: networkContactId },
       });
@@ -103,8 +168,6 @@ export class QrPlaquesService {
         throw new NotFoundException("Network contact not found");
       }
       plaque.networkContact = network;
-      // If assigning to network, maybe set status if not provided?
-      // We'll trust DTO or default.
     }
 
     return this.qrPlaqueRepository.save(plaque);
@@ -209,6 +272,8 @@ export class QrPlaquesService {
       assignedBusinessId,
       networkContactId,
       assignToReferredBusinessId,
+      locationTag,
+      relationshipTag,
       qrCodeUrl,
       ...rest
     } = updateQrPlaqueDto;
@@ -231,6 +296,7 @@ export class QrPlaquesService {
       if (!requesterId) {
         throw new BadRequestException("Requester ID required for this operation");
       }
+
 
       // 1. Verify Referral
       const referral = await this.referralRepository.findOne({
@@ -268,8 +334,24 @@ export class QrPlaquesService {
           onboardedType: "business",
           onboardedBusinessId: refereeBusiness.id,
           status: NetworkStatus.ACCEPTED, // Auto-accepted as they are already a business
+          locationTag,
+          relationshipTag,
         });
         await this.networkRepository.save(network);
+      } else {
+        // Update tags if they don't exist but are provided
+        let needsUpdate = false;
+        if (!network.locationTag && locationTag) {
+          network.locationTag = locationTag;
+          needsUpdate = true;
+        }
+        if (!network.relationshipTag && relationshipTag) {
+          network.relationshipTag = relationshipTag;
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
+          await this.networkRepository.save(network);
+        }
       }
 
       plaque.networkContact = network;
