@@ -338,6 +338,26 @@ export class AuthService {
     return { uniqueCode: user.uniqueCode };
   }
 
+  async ssoLogin(token: string) {
+    try {
+      const secret = process.env.SSO_SECRET || "shared-sso-secret-key-123";
+      const payload = this.jwtService.verify(token, { secret });
+
+      if (payload.iss !== "mcom-loyalty" || payload.aud !== "mcom-mall") {
+        throw new UnauthorizedException("Invalid SSO Token Issuer/Audience");
+      }
+
+      const user = await this.userService.findOne(payload.email);
+      if (!user) {
+        throw new UnauthorizedException("User not found");
+      }
+
+      return this.login(user);
+    } catch (error) {
+      throw new UnauthorizedException("SSO Failed: " + error.message);
+    }
+  }
+
   async getSsoToken(user: any) {
     const payload = {
       email: user.email,

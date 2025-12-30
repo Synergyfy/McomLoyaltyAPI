@@ -175,4 +175,13 @@ export class AuthController {
     }
     return this.authService.resendVerificationOtp(user.email);
   }
+
+  @Public()
+  @Post("sso")
+  @ApiOperation({ summary: "Login via SSO token" })
+  @ApiResponse({ status: 200, description: "Login successful" })
+  @ApiResponse({ status: 401, description: "SSO failed" })
+  async ssoLogin(@Body("token") token: string) {
+    return this.authService.ssoLogin(token);
+  }
 }
