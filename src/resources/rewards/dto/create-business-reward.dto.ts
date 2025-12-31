@@ -10,6 +10,7 @@ import {
 } from "class-validator";
 import { RewardStatus } from "../enums/reward-status.enum";
 import { RewardType } from "../enums/reward-type.enum";
+import { ImageSourceType } from "../enums/image-source-type.enum";
 
 export class CreateBusinessRewardDto {
   @ApiProperty({
@@ -159,4 +160,32 @@ export class CreateBusinessRewardDto {
   @IsString()
   @IsOptional()
   stamp_emoji?: string;
+
+  @ApiProperty({
+    description: "The source type of the image",
+    enum: ImageSourceType,
+    example: ImageSourceType.CUSTOM_URL,
+    required: false,
+  })
+  @IsEnum(ImageSourceType)
+  @IsOptional()
+  image_source_type?: ImageSourceType;
+
+  @ApiProperty({
+    description: "The ID of the library asset if source is LIBRARY_ASSET",
+    example: "uuid",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  library_asset_id?: string;
+
+  @ApiProperty({
+    description: "The emoji to use if source is EMOJI",
+    example: "🚀",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  emoji?: string;
 }

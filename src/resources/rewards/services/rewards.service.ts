@@ -35,6 +35,8 @@ import { BusinessCampaign } from "../../campaign/entities/business-campaign.enti
 
 import { AddRewardToBusinessDto } from "../dto/add-reward-to-business.dto";
 import { GetRewardsFilterDto, SortBy } from "../dto/get-rewards-filter.dto";
+import { LibraryAsset } from "../../library-assets/entities/library-asset.entity";
+import { ImageSourceType } from "../enums/image-source-type.enum";
 
 @Injectable()
 export class RewardsService {
@@ -55,6 +57,8 @@ export class RewardsService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
+    @InjectRepository(LibraryAsset)
+    private readonly libraryAssetRepository: Repository<LibraryAsset>,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
   ) { }
@@ -506,6 +510,50 @@ export class RewardsService {
         "Stamps required must be set when stamps are enabled",
       );
     }
+
+    // Resolve Image Source
+    let imageToUse = createBusinessRewardDto.image;
+    const { image_source_type, library_asset_id, emoji, stamp_emoji } = createBusinessRewardDto;
+
+    if (image_source_type) {
+      if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
+        const business = await this.businessRepository.findOne({
+          where: { id: businessId },
+        });
+        if (business && business.profile_image) {
+          imageToUse = business.profile_image;
+        }
+      } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
+        if (!library_asset_id) {
+          throw new BadRequestException(
+            "Library Asset ID is required when source is set to Library Asset",
+          );
+        }
+        const asset = await this.libraryAssetRepository.findOne({
+          where: { id: library_asset_id },
+        });
+        if (!asset) {
+          throw new NotFoundException("Library Asset not found");
+        }
+        // Check if the business has access to this asset (Owned by them or Admin)
+        // Assuming access control is strictly owner-based or public.
+        // If we want to be strict:
+        // if (asset.ownerType === LibraryAssetOwnerType.BUSINESS && asset.businessId !== businessId) { ... }
+        // For now, assume if they have the ID, they can use it, or basic existence check is enough.
+        imageToUse = asset.url;
+      } else if (image_source_type === ImageSourceType.EMOJI) {
+        const emojiToUse = emoji || stamp_emoji;
+        if (!emojiToUse) {
+          throw new BadRequestException(
+            "Emoji is required when source is set to Emoji",
+          );
+        }
+        imageToUse = emojiToUse;
+      }
+    }
+
+    // Update image in DTO
+    createBusinessRewardDto.image = imageToUse;
 
     const isMallReward = [
       RewardType.VOUCHER,

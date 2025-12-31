@@ -13,6 +13,7 @@ import { Tier } from "../tier/entities/tier.entity";
 import { CapabilityModule } from "../capability/capability.module";
 import { forwardRef } from "@nestjs/common";
 import { TierProgressionModule } from "../tier-progression/tier-progression.module";
+import { LibraryAsset } from "../library-assets/entities/library-asset.entity";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
       Tier,
       BusinessCampaign,
       PointHistory,
+      LibraryAsset,
     ]),
     forwardRef(() => CapabilityModule),
     forwardRef(() => TierProgressionModule),
@@ -33,4 +35,4 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
   providers: [RewardsService],
   exports: [RewardsService],
 })
-export class RewardsModule {}
+export class RewardsModule { }
