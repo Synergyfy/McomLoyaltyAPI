@@ -1,14 +1,36 @@
 import { ApiProperty } from "@nestjs/swagger";
+import {
+  NetworkLocationTag,
+  NetworkRelationshipTag,
+} from "../../../common/enums/network-tags.enum";
+import { ReferralStatus } from "../entities/referral.entity";
 
 class ReferredBusinessDto {
+  @ApiProperty({ description: "The ID of the business." })
+  businessId?: string;
+
   @ApiProperty({ description: "The name of the referred business." })
+  name: string;
+
   @ApiProperty({
     description: "The email of the referred business if not fully signed up.",
   })
   email?: string;
 
+  @ApiProperty({ description: "The date when the referral was created." })
+  referredAt: Date;
+
+  @ApiProperty({ description: "The status of the referral.", enum: ReferralStatus })
+  status: ReferralStatus;
+
   @ApiProperty({ description: "The points earned from this referral." })
   pointsEarned: number;
+
+  @ApiProperty({ description: "The location tag of the business.", enum: NetworkLocationTag, required: false })
+  locationTag?: NetworkLocationTag;
+
+  @ApiProperty({ description: "The relationship tag of the business.", enum: NetworkRelationshipTag, required: false })
+  relationshipTag?: NetworkRelationshipTag;
 }
 
 export class ReferralAnalyticsDto {

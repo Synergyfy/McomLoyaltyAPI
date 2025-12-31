@@ -176,11 +176,14 @@ export class ReferralService {
     const totalPointsEarned = totalSuccessfulReferrals * 100;
 
     const referredBusinesses = referrals.map((referral) => ({
+      businessId: null,
       name: referral.referee ? referral.referee.name : "Unknown",
       email: referral.referee?.email || referral.refereeEmail,
       referredAt: referral.created_at,
       status: referral.status,
-      pointsEarned: 100, // Participant referrals are currently hardcoded to 100 usually, or we can fetch if stored
+      pointsEarned: 100,
+      locationTag: null,
+      relationshipTag: null,
     }));
 
     return {
@@ -256,6 +259,7 @@ export class ReferralService {
     const totalPages = Math.ceil(total / limit);
 
     const referredBusinesses = referrals.map((referral) => ({
+      businessId: referral.refereeBusiness?.id,
       name: referral.refereeBusiness
         ? referral.refereeBusiness.name
         : "Pending Setup",
@@ -263,6 +267,8 @@ export class ReferralService {
       referredAt: referral.created_at,
       status: referral.status,
       pointsEarned: referral.pointsEarned || 0,
+      locationTag: referral.refereeBusiness?.locationTag,
+      relationshipTag: referral.refereeBusiness?.relationshipTag,
     }));
 
     return {
