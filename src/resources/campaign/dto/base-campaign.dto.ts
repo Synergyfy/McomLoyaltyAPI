@@ -38,16 +38,6 @@ export class BaseCampaignDto {
   @IsNotEmpty()
   campaign_message: string;
 
-  @ApiProperty({ description: "The start date of the campaign." })
-  @Type(() => Date)
-  @IsDate()
-  start_date: Date;
-
-  @ApiProperty({ description: "The end date of the campaign." })
-  @Type(() => Date)
-  @IsDate()
-  end_date: Date;
-
   @ApiProperty({ description: "The quantity of rewards available." })
   @IsInt()
   quantity: number;

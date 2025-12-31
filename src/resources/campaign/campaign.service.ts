@@ -96,7 +96,7 @@ export class CampaignService {
     currentUser: Business | Admin,
   ): Promise<Campaign | BusinessCampaign> {
     if (currentUser.role === Role.Admin) {
-      const { business_id, reward_ids, target_tier_id, ...campaignData } =
+      const { business_id, reward_ids, target_tier_ids, ...campaignData } =
         createCampaignDto as CreateCampaignAdminDto;
       const campaign = this.campaignRepository.create(campaignData);
       let rewards: Reward[] = [];
@@ -117,24 +117,37 @@ export class CampaignService {
         });
       }
 
-      if (target_tier_id) {
-        const tier = await this.tierRepository.findOneBy({
-          id: target_tier_id,
+      if (target_tier_ids && target_tier_ids.length > 0) {
+        const tiers = await this.tierRepository.findBy({
+          id: In(target_tier_ids),
         });
-        if (!tier) {
-          throw new NotFoundException("Target tier not found");
+
+        if (tiers.length !== target_tier_ids.length) {
+          throw new NotFoundException("One or more target tiers not found");
         }
 
-        const maxRewards = tier.configuration?.quotas?.maxRewardsPerCampaign;
-        // If maxRewards is -1, it's unlimited. If it's defined and not -1, check limit.
-        if (maxRewards !== undefined && maxRewards !== -1) {
-          if (rewards.length > maxRewards) {
-            throw new BadRequestException(
-              `Target tier '${tier.name}' allows a maximum of ${maxRewards} rewards per campaign. You selected ${rewards.length}.`,
-            );
+        // Validate that all tiers are of the same type
+        const firstType = tiers[0].type;
+        const allSameType = tiers.every((t) => t.type === firstType);
+        if (!allSameType) {
+          throw new BadRequestException(
+            "All selected target tiers must be of the same type (Standard or Seasonal).",
+          );
+        }
+
+        // Validate reward limits for each tier
+        for (const tier of tiers) {
+          const maxRewards = tier.configuration?.quotas?.maxRewardsPerCampaign;
+          if (maxRewards !== undefined && maxRewards !== -1) {
+            if (rewards.length > maxRewards) {
+              throw new BadRequestException(
+                `Target tier '${tier.name}' allows a maximum of ${maxRewards} rewards per campaign. You selected ${rewards.length}.`,
+              );
+            }
           }
         }
-        campaign.targetTier = tier;
+
+        campaign.targetTiers = tiers;
       }
 
       campaign.rewards = rewards;
@@ -358,7 +371,7 @@ export class CampaignService {
       };
     } else {
       const [data, total] = await this.campaignRepository.findAndCount({
-        relations: ["business", "rewards"],
+        relations: ["business", "rewards", "targetTiers"],
         skip,
         take: limit,
       });
@@ -452,7 +465,7 @@ export class CampaignService {
 
     const [data, total] = await this.campaignRepository.findAndCount({
       where: { business: IsNull() },
-      relations: ["business", "rewards"],
+      relations: ["business", "rewards", "targetTiers"],
       skip,
       take: limit,
     });
@@ -483,7 +496,7 @@ export class CampaignService {
       where: {
         business: IsNull(),
       },
-      relations: ["business", "rewards"],
+      relations: ["business", "rewards", "targetTiers"],
       order: { created_at: "DESC" },
       skip,
       take: limit,
@@ -547,7 +560,7 @@ export class CampaignService {
 
     const campaign = await this.campaignRepository.findOne({
       where: { id },
-      relations: ["business", "rewards"],
+      relations: ["business", "rewards", "targetTiers"],
     });
 
     if (!campaign) {
@@ -580,6 +593,7 @@ export class CampaignService {
       reward_ids,
       business_reward_ids,
       business_stamp_reward_id,
+      target_tier_ids,
       ...campaignData
     } = updateCampaignDto;
     let rewards: Reward[] = [];
@@ -592,6 +606,47 @@ export class CampaignService {
             id: In(reward_ids),
           });
           campaign.rewards = rewards;
+        }
+
+        if (target_tier_ids) {
+          if (target_tier_ids.length > 0) {
+            const tiers = await this.tierRepository.findBy({
+              id: In(target_tier_ids),
+            });
+
+            if (tiers.length !== target_tier_ids.length) {
+              throw new NotFoundException("One or more target tiers not found");
+            }
+
+            // Validate that all tiers are of the same type
+            const firstType = tiers[0].type;
+            const allSameType = tiers.every((t) => t.type === firstType);
+            if (!allSameType) {
+              throw new BadRequestException(
+                "All selected target tiers must be of the same type (Standard or Seasonal).",
+              );
+            }
+             // Validate reward limits for each tier (optional but good consistency)
+             // If rewards are not being updated, we use existing rewards?
+             // Accessing campaign.rewards might need ensuring they are loaded.
+             // findOne loads relations: ["business", "rewards"]. So they are loaded.
+             const currentRewards = rewards.length > 0 ? rewards : campaign.rewards;
+
+            for (const tier of tiers) {
+              const maxRewards = tier.configuration?.quotas?.maxRewardsPerCampaign;
+              if (maxRewards !== undefined && maxRewards !== -1) {
+                if (currentRewards && currentRewards.length > maxRewards) {
+                  throw new BadRequestException(
+                    `Target tier '${tier.name}' allows a maximum of ${maxRewards} rewards per campaign. You selected ${currentRewards.length}.`,
+                  );
+                }
+              }
+            }
+
+            campaign.targetTiers = tiers;
+          } else {
+             campaign.targetTiers = [];
+          }
         }
       }
     } else {
@@ -978,6 +1033,8 @@ export class CampaignService {
     businessId: string,
     campaignId: string,
     businessRewardIds: string[],
+    startDate: Date,
+    endDate: Date,
   ): Promise<BusinessCampaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
@@ -1040,8 +1097,8 @@ export class CampaignService {
       name: campaign.name,
       campaign_type: campaign.campaign_type,
       campaign_message: campaign.campaign_message,
-      start_date: campaign.start_date,
-      end_date: campaign.end_date,
+      start_date: startDate,
+      end_date: endDate,
       quantity: campaign.quantity,
       audience_type: campaign.audience_type,
       banner_url: campaign.banner_url,
@@ -1313,9 +1370,6 @@ export class CampaignService {
     }
 
     if (campaign) {
-      const now = new Date();
-      if (campaign.end_date < now)
-        throw new BadRequestException("Campaign has expired");
       if (campaign.disabled)
         throw new BadRequestException("Campaign is disabled");
       return campaign;

@@ -234,10 +234,6 @@ export class ParticipantService {
       throw new NotFoundException("Campaign not found");
     }
 
-    if (campaign.end_date < new Date()) {
-      throw new BadRequestException("Campaign has expired");
-    }
-
     const alreadyJoinedCampaign = participant.campaigns.some(
       (c) => c.id === campaign.id,
     );
