@@ -4,6 +4,8 @@ import { AbstractBaseEntity } from "../../../database/entities/base.entity";
 import { TierStatus } from "./tier-status.enum";
 import { TierConfig } from "../interfaces/tier-config.interface";
 import { TierType } from "./tier-type.enum";
+import { Season } from "../../season/entities/season.entity";
+import { JoinColumn, ManyToOne } from "typeorm";
 
 @Entity()
 export class Tier extends AbstractBaseEntity {
@@ -193,4 +195,16 @@ export class Tier extends AbstractBaseEntity {
   })
   @Column({ type: "jsonb", nullable: true })
   configuration: TierConfig;
+
+  @ApiProperty({
+    description: "The season this tier is associated with",
+    required: false,
+    type: () => Season,
+  })
+  @ManyToOne(() => Season, { nullable: true, onDelete: "SET NULL" })
+  @JoinColumn({ name: "season_id" })
+  season: Season;
+
+  @Column({ name: "season_id", nullable: true })
+  season_id: string;
 }

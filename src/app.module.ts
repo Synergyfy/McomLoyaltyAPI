@@ -45,6 +45,7 @@ import { SetupModule } from "./resources/setup/setup.module";
 import { MatchingPointModule } from "./resources/matching-point/matching-point.module";
 import { ParticipantProgressionModule } from "./resources/participant-progression/participant-progression.module";
 import { ReferralModule } from "./resources/referral/referral.module";
+import { SeasonModule } from "./resources/season/season.module";
 
 import { NetworkModule } from "./resources/network/network.module";
 import { StampModule } from "./resources/stamp/stamp.module";
@@ -105,6 +106,7 @@ import { WalletModule } from "./resources/wallet/wallet.module";
     SetupModule,
     MatchingPointModule,
     ReferralModule,
+    SeasonModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
