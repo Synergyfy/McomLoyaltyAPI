@@ -33,25 +33,6 @@ export class CreateTierDto {
   @IsEnum(TierType)
   type: TierType;
 
-  @ApiProperty({
-    description: "Start date for seasonal tier",
-    example: "2025-06-01T00:00:00Z",
-    required: false,
-  })
-  @ValidateIf((o) => o.type === TierType.SEASONAL && !o.season_id)
-  @IsNotEmpty()
-  @IsDateString()
-  start_date: Date;
-
-  @ApiProperty({
-    description: "End date for seasonal tier",
-    example: "2025-08-31T00:00:00Z",
-    required: false,
-  })
-  @ValidateIf((o) => o.type === TierType.SEASONAL && !o.season_id)
-  @IsNotEmpty()
-  @IsDateString()
-  end_date: Date;
 
   @ApiProperty({
     description: "Color code for the tier",
@@ -184,7 +165,8 @@ export class CreateTierDto {
     example: "uuid-of-season",
     required: false,
   })
-  @IsOptional()
+  @ValidateIf((o) => o.type === TierType.SEASONAL)
+  @IsNotEmpty()
   @IsString()
   season_id?: string;
 

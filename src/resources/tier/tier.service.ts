@@ -48,32 +48,27 @@ export class TierService {
 
     const tier = this.tierRepository.create(createTierDto);
 
-    if (createTierDto.type === TierType.SEASONAL && createTierDto.season_id) {
-      const season = await this.seasonRepository.findOne({
-        where: { id: createTierDto.season_id } as any,
-      });
-      if (season) {
-        tier.start_date = season.startDate;
-        tier.end_date = season.endDate;
-      }
-    }
-
     const savedTier = await this.tierRepository.save(tier);
     await this.createHistory(savedTier, admin);
     return savedTier;
   }
 
   async findAll(type?: string) {
+    const where: any = {};
     if (type && type !== "all") {
-      return await this.tierRepository.find({
-        where: { type: type as TierType },
-      });
+      where.type = type as TierType;
     }
-    return await this.tierRepository.find();
+    return await this.tierRepository.find({
+      where,
+      relations: ["season"],
+    });
   }
 
   async findOne(id: string) {
-    return await this.tierRepository.findOne({ where: { id } });
+    return await this.tierRepository.findOne({
+      where: { id },
+      relations: ["season"],
+    });
   }
 
   async update(id: string, updateTierDto: UpdateTierDto, admin: Admin) {
@@ -82,23 +77,7 @@ export class TierService {
       throw new NotFoundException("Tier not found");
     }
 
-    const updatedData = { ...updateTierDto };
-
-    if (
-      (updateTierDto.type === TierType.SEASONAL ||
-        tier.type === TierType.SEASONAL) &&
-      updateTierDto.season_id
-    ) {
-      const season = await this.seasonRepository.findOne({
-        where: { id: updateTierDto.season_id } as any,
-      });
-      if (season) {
-        updatedData.start_date = season.startDate;
-        updatedData.end_date = season.endDate;
-      }
-    }
-
-    await this.tierRepository.update(id, updatedData);
+    await this.tierRepository.update(id, updateTierDto);
     const updatedTier = await this.findOne(id);
     await this.createHistory(updatedTier, admin);
     return updatedTier;

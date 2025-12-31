@@ -71,12 +71,13 @@ export class PaymentService {
   ) {
     const tier = await this.tierRepository.findOne({
       where: { id: initiatePaymentDto.tier_id },
+      relations: ["season"],
     });
     if (!tier) {
       throw new NotFoundException("Tier not found");
     }
     if (tier.type === TierType.SEASONAL) {
-      if (!tier.start_date || !tier.end_date) {
+      if (!tier.season?.startDate || !tier.season?.endDate) {
         throw new BadRequestException(
           "Seasonal tier configuration error: missing dates",
         );
@@ -89,14 +90,14 @@ export class PaymentService {
           status: MembershipStatus.ACTIVE,
           tier: { type: TierType.SEASONAL },
         },
-        relations: ["tier"], // Ensure tier relation is loaded
+        relations: ["tier", "tier.season"], // Ensure tier relation is loaded
       });
 
       const overlap = activeSeasonal.some((m) => {
         // Fallback to tier dates if membership dates are missing (shouldn't happen for valid seasonal)
-        const mStart = m.starts_at || m.tier.start_date;
-        const mEnd = m.expires_at || m.tier.end_date;
-        return tier.start_date <= mEnd && tier.end_date >= mStart;
+        const mStart = m.starts_at || m.tier.season?.startDate;
+        const mEnd = m.expires_at || m.tier.season?.endDate;
+        return tier.season?.startDate <= mEnd && tier.season?.endDate >= mStart;
       });
 
       if (overlap) {
@@ -174,6 +175,7 @@ export class PaymentService {
     if (paymentIntent.status === "succeeded") {
       const tier = await this.tierRepository.findOne({
         where: { id: paymentIntent.metadata.tier_id },
+        relations: ["season"],
       });
       const expiresAt = new Date();
       const planType = paymentIntent.metadata.plan_type as PlanType;
@@ -210,12 +212,13 @@ export class PaymentService {
   ) {
     const tier = await this.tierRepository.findOne({
       where: { id: initiatePaymentDto.tier_id },
+      relations: ["season"],
     });
     if (!tier) {
       throw new NotFoundException("Tier not found");
     }
     if (tier.type === TierType.SEASONAL) {
-      if (!tier.start_date || !tier.end_date) {
+      if (!tier.season?.startDate || !tier.season?.endDate) {
         throw new BadRequestException(
           "Seasonal tier configuration error: missing dates",
         );
@@ -227,13 +230,13 @@ export class PaymentService {
           status: MembershipStatus.ACTIVE,
           tier: { type: TierType.SEASONAL },
         },
-        relations: ["tier"],
+        relations: ["tier", "tier.season"],
       });
 
       const overlap = activeSeasonal.some((m) => {
-        const mStart = m.starts_at || m.tier.start_date;
-        const mEnd = m.expires_at || m.tier.end_date;
-        return tier.start_date <= mEnd && tier.end_date >= mStart;
+        const mStart = m.starts_at || m.tier.season?.startDate;
+        const mEnd = m.expires_at || m.tier.season?.endDate;
+        return tier.season?.startDate <= mEnd && tier.season?.endDate >= mStart;
       });
 
       if (overlap) {
@@ -411,6 +414,7 @@ export class PaymentService {
           { paypal_quarterly_plan_id: planId },
           { paypal_annual_plan_id: planId },
         ],
+        relations: ["season"],
       });
 
       if (!tier) {
@@ -475,6 +479,7 @@ export class PaymentService {
   async subscribe(subscribeDto: SubscribeDto, business: Business) {
     const tier = await this.tierRepository.findOne({
       where: { id: subscribeDto.tier_id },
+      relations: ["season"],
     });
     if (!tier) {
       throw new NotFoundException("Tier not found");
@@ -651,14 +656,14 @@ export class PaymentService {
   ) {
     let membership: Membership | null = null;
     const startsAt =
-      tier.type === TierType.SEASONAL && tier.start_date
-        ? tier.start_date
+      tier.type === TierType.SEASONAL && tier.season?.startDate
+        ? tier.season.startDate
         : new Date();
     // For Seasonal, expiresAt passed might be calculated from Annual logic if planType was defaulted.
     // We should ensure it matches tier info if Seasonal.
     const effectiveExpiresAt =
-      tier.type === TierType.SEASONAL && tier.end_date
-        ? tier.end_date
+      tier.type === TierType.SEASONAL && tier.season?.endDate
+        ? tier.season.endDate
         : expiresAt;
 
     if (tier.type === TierType.SEASONAL) {

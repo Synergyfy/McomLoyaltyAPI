@@ -23,13 +23,13 @@ export class MembershipService {
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
     private readonly paymentService: PaymentService,
-  ) {}
+  ) { }
 
   async findOneByBusinessId(businessId: string) {
     // Prefer Standard tier if multiple exist, otherwise just one
     const memberships = await this.membershipRepository.find({
       where: { business: { id: businessId } },
-      relations: ["tier"],
+      relations: ["tier", "tier.season"],
     });
     // Return standard if exists, else first one
     const standard = memberships.find(
@@ -44,7 +44,7 @@ export class MembershipService {
         business: { id: businessId },
         status: MembershipStatus.ACTIVE,
       },
-      relations: ["tier"],
+      relations: ["tier", "tier.season"],
     });
   }
 
@@ -59,7 +59,7 @@ export class MembershipService {
         status: MembershipStatus.ACTIVE,
         tier: { type: TierType.SEASONAL },
       },
-      relations: ["tier"],
+      relations: ["tier", "tier.season"],
     });
 
     for (const membership of activeSeasonal) {
@@ -78,7 +78,7 @@ export class MembershipService {
   async getMyMembership(user: any) {
     return await this.membershipRepository.findOne({
       where: { business: { id: user.id } },
-      relations: ["tier"],
+      relations: ["tier", "tier.season"],
     });
   }
 

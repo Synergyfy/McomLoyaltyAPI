@@ -55,7 +55,7 @@ export class CapabilityService {
     private readonly stampEventRepository: Repository<StampEvent>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
-  ) {}
+  ) { }
 
   async checkPermission(
     userId: string,
@@ -75,8 +75,8 @@ export class CapabilityService {
       if (!m.tier || m.tier.type !== TierType.SEASONAL) return false;
       const now = new Date();
       // Use membership dates as primary truth, fallback to tier dates
-      const start = m.starts_at || m.tier.start_date;
-      const end = m.expires_at || m.tier.end_date;
+      const start = m.starts_at || m.tier.season?.startDate;
+      const end = m.expires_at || m.tier.season?.endDate;
       // Check if NOW is within [start, end]
       return (!start || now >= start) && (!end || now <= end);
     });

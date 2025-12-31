@@ -25,21 +25,6 @@ export class Tier extends AbstractBaseEntity {
   })
   type: TierType;
 
-  @ApiProperty({
-    description: "Start date for seasonal tier",
-    required: false,
-    example: "2025-06-01T00:00:00Z",
-  })
-  @Column({ type: "timestamp", nullable: true })
-  start_date: Date;
-
-  @ApiProperty({
-    description: "End date for seasonal tier",
-    required: false,
-    example: "2025-08-31T00:00:00Z",
-  })
-  @Column({ type: "timestamp", nullable: true })
-  end_date: Date;
 
   @ApiProperty({
     description: "Color code",
