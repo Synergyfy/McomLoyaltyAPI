@@ -90,4 +90,7 @@ export class BusinessReward extends AbstractBaseEntity {
   @ManyToOne(() => Campaign)
   @JoinColumn({ name: "campaign_id" })
   campaign: Campaign;
+
+  total_redemptions?: number;
+  total_points_redeemed?: number;
 }
