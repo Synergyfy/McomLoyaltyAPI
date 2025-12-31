@@ -376,7 +376,7 @@ export class CampaignService {
       };
     } else {
       const [data, total] = await this.campaignRepository.findAndCount({
-        relations: ["business", "rewards", "targetTiers"],
+        relations: ["business", "rewards", "targetTiers", "targetTiers.season"],
         skip,
         take: limit,
       });
@@ -470,7 +470,7 @@ export class CampaignService {
 
     const [data, total] = await this.campaignRepository.findAndCount({
       where: { business: IsNull() },
-      relations: ["business", "rewards", "targetTiers"],
+      relations: ["business", "rewards", "targetTiers", "targetTiers.season"],
       skip,
       take: limit,
     });
@@ -501,7 +501,7 @@ export class CampaignService {
       where: {
         business: IsNull(),
       },
-      relations: ["business", "rewards", "targetTiers"],
+      relations: ["business", "rewards", "targetTiers", "targetTiers.season"],
       order: { created_at: "DESC" },
       skip,
       take: limit,
@@ -565,7 +565,7 @@ export class CampaignService {
 
     const campaign = await this.campaignRepository.findOne({
       where: { id },
-      relations: ["business", "rewards", "targetTiers"],
+      relations: ["business", "rewards", "targetTiers", "targetTiers.season"],
     });
 
     if (!campaign) {
