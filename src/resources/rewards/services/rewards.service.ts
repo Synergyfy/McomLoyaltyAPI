@@ -572,6 +572,29 @@ export class RewardsService {
       take: limit,
     });
 
+    if (data.length > 0) {
+      const rewardIds = data.map((r) => r.id);
+      const stats = await this.pointHistoryRepository
+        .createQueryBuilder("ph")
+        .select("ph.businessReward", "id")
+        .addSelect("COUNT(ph.id)", "total_redemptions")
+        .addSelect("SUM(ph.points)", "total_points_redeemed")
+        .where("ph.businessReward IN (:...rewardIds)", { rewardIds })
+        .andWhere("ph.type = :type", { type: PointHistoryType.REDEEM })
+        .groupBy("ph.businessReward")
+        .getRawMany();
+
+      const statsMap = new Map(stats.map((s) => [s.id, s]));
+
+      data.forEach((reward) => {
+        const stat = statsMap.get(reward.id);
+        reward.total_redemptions = stat ? Number(stat.total_redemptions) : 0;
+        reward.total_points_redeemed = stat
+          ? Number(stat.total_points_redeemed)
+          : 0;
+      });
+    }
+
     const totalPages = Math.ceil(total / limit);
     const next = page < totalPages ? Number(page) + 1 : null;
     const previous = page > 1 ? Number(page) - 1 : null;
