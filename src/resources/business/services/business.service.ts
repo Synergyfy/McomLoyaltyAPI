@@ -15,7 +15,13 @@ import {
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 import { BusinessReward } from "../../rewards/entities/business-reward.entity";
 import { Staff } from "../../staff/entities/staff.entity";
+import { Network } from "../../network/entities/network.entity";
+import {
+  NetworkLocationTag,
+  NetworkRelationshipTag,
+} from "../../../common/enums/network-tags.enum";
 import { RewardStatus } from "../../rewards/enums/reward-status.enum";
+import { ReferralService } from "../../referral/referral.service";
 import { CreateBusinessDto } from "../dto/create-business.dto";
 import { UpdateBusinessDto } from "../dto/update-business.dto";
 import { UpdateBusinessProfileDto } from "../dto/update-business-profile.dto";
@@ -60,12 +66,15 @@ export class BusinessService {
     private readonly businessRewardRepository: Repository<BusinessReward>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(Network)
+    private readonly networkRepository: Repository<Network>,
     private readonly paymentService: PaymentService,
     private readonly matchingPointService: MatchingPointService,
+    private readonly referralService: ReferralService,
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly walletService: WalletService,
-  ) {}
+  ) { }
 
   private async generateAffiliateCode(): Promise<string> {
     let affiliateCode: string;
@@ -109,6 +118,7 @@ export class BusinessService {
       uniqueCode,
       affiliateCode,
       referredBy: referrer,
+      relationshipTag: referrer ? NetworkRelationshipTag.AFFILIATE : null,
     });
     const newBusiness = await this.businessRepository.save(business);
 
@@ -126,6 +136,22 @@ export class BusinessService {
         refereeEmail: newBusiness.email,
       });
       await this.referralRepository.save(referral);
+
+      // Search for an existing Network contact under the referrer with the same email
+      const existingNetworkContact = await this.networkRepository.findOne({
+        where: {
+          business: { id: referrer.id },
+          email: newBusiness.email,
+        },
+      });
+
+      if (existingNetworkContact) {
+        existingNetworkContact.relationshipTag = NetworkRelationshipTag.AFFILIATE;
+        existingNetworkContact.onboardedBusinessId = newBusiness.id;
+        existingNetworkContact.isOnboarded = true;
+        existingNetworkContact.onboardedType = "business";
+        await this.networkRepository.save(existingNetworkContact);
+      }
     }
 
     // Send OTP
@@ -195,42 +221,7 @@ export class BusinessService {
 
     const savedBusiness = await this.businessRepository.save(updatedBusiness);
 
-    if (savedBusiness.referredBy) {
-      await this.completeReferral(savedBusiness);
-    }
-
     return savedBusiness;
-  }
-
-  private async completeReferral(business: Business): Promise<void> {
-    const referral = await this.referralRepository.findOne({
-      where: { refereeBusiness: { id: business.id } },
-      relations: ["referrerBusiness"],
-    });
-
-    if (referral && referral.status === ReferralStatus.PENDING) {
-      referral.status = ReferralStatus.SUCCESSFUL;
-      await this.referralRepository.save(referral);
-
-      const referrer = referral.referrerBusiness;
-      if (referrer) {
-        referrer.referralPoints = (Number(referrer.referralPoints) || 0) + 100;
-        await this.businessRepository.save(referrer);
-
-        // Award matching points
-        const matchingPoints = await this.matchingPointService.addPoints(
-          referrer.id,
-          MatchingPointActivityType.REFERRAL,
-          `Referral Completed: ${business.name}`,
-        );
-
-        // Update referral with points earned
-        if (matchingPoints > 0) {
-          referral.pointsEarned = matchingPoints;
-          await this.referralRepository.save(referral);
-        }
-      }
-    }
   }
 
   async findByEmail(email: string): Promise<Business | undefined> {

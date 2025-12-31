@@ -4,13 +4,14 @@ import { Referral } from "./entities/referral.entity";
 import { ReferralService } from "./referral.service";
 import { ReferralController } from "./referral.controller";
 import { Participant } from "../participant/entities/participant.entity";
+import { Business } from "../business/entities/business.entity";
 import { Campaign } from "../campaign/entities/campaign.entity";
 import { MailModule } from "../../mail/mail.module";
 import { ParticipantProgressionModule } from "../participant-progression/participant-progression.module";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Referral, Participant, Campaign]),
+    TypeOrmModule.forFeature([Referral, Participant, Campaign, Business]),
     MailModule,
     ParticipantProgressionModule,
   ],
@@ -18,4 +19,4 @@ import { ParticipantProgressionModule } from "../participant-progression/partici
   providers: [ReferralService],
   exports: [ReferralService],
 })
-export class ReferralModule {}
+export class ReferralModule { }

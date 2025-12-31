@@ -9,8 +9,12 @@ import {
   Min,
   IsUUID,
 } from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { QrPlaqueStatus } from "../entities/qr-plaque.entity";
+import {
+  NetworkLocationTag,
+  NetworkRelationshipTag,
+} from "../../../common/enums/network-tags.enum";
 
 export class CreateQrPlaqueDto {
   @ApiProperty({
@@ -100,4 +104,30 @@ export class CreateQrPlaqueDto {
   @IsOptional()
   @IsUUID()
   networkContactId?: string;
+
+  @ApiPropertyOptional({
+    description: "Location tag for the network contact",
+    enum: NetworkLocationTag,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(NetworkLocationTag)
+  locationTag?: NetworkLocationTag;
+
+  @ApiPropertyOptional({
+    description: "Relationship tag for the network contact",
+    enum: NetworkRelationshipTag,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(NetworkRelationshipTag)
+  relationshipTag?: NetworkRelationshipTag;
+
+  @ApiProperty({
+    description: "ID of a referred business to assign the plaque to (without transferring ownership)",
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  assignToReferredBusinessId?: string;
 }

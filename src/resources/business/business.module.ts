@@ -6,6 +6,7 @@ import { PointHistory } from "../participant-campaign-balance/entities/point-his
 import { BusinessCampaign } from "../campaign/entities/business-campaign.entity";
 import { BusinessReward } from "../rewards/entities/business-reward.entity";
 import { Staff } from "../staff/entities/staff.entity";
+import { Network } from "../network/entities/network.entity";
 import { HashModule } from "../../common/hash/hash.module";
 import { SectorModule } from "../sector/sector.module";
 import { CategoryModule } from "../category/category.module";
@@ -31,6 +32,7 @@ import { WalletModule } from "../wallet/wallet.module";
       BusinessCampaign,
       BusinessReward,
       Staff,
+      Network,
     ]),
     HashModule,
     SectorModule,
@@ -49,4 +51,4 @@ import { WalletModule } from "../wallet/wallet.module";
   controllers: [BusinessController, AffiliateController],
   exports: [BusinessService],
 })
-export class BusinessModule {}
+export class BusinessModule { }
