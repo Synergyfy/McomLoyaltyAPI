@@ -43,11 +43,12 @@ import {
 } from "../capability/capability.service";
 import { CapabilitiesGuard } from "../capability/guards/capabilities.guard";
 import { CheckPermission } from "../capability/decorators/check-permission.decorator";
+import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
 
 @ApiTags("Campaigns")
 @Controller("campaigns")
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
 
   @Post()
   @ApiBearerAuth()
@@ -312,6 +313,27 @@ export class CampaignController {
     @Query() query: CampaignAnalyticsQueryDto,
   ) {
     return this.campaignService.getAnalytics(currentUser, query);
+  }
+
+  @Get(":id/analytics/tiers")
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(Role.Admin)
+  @ApiOperation({
+    summary: "Get tier-wise analytics for a campaign template",
+    description: "Accessible by Admins.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns analytics grouped by tier.",
+    type: TierAnalyticsResponseDto,
+  })
+  @ApiResponse({ status: 404, description: "Campaign not found." })
+  @ApiResponse({ status: 401, description: "Unauthorized." })
+  getTierAnalytics(
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.campaignService.getTierAnalytics(id);
   }
 
   @Get(":id")
