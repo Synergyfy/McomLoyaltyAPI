@@ -36,12 +36,6 @@ export class Campaign extends AbstractBaseEntity {
   campaign_message: string;
 
   @Column()
-  start_date: Date;
-
-  @Column()
-  end_date: Date;
-
-  @Column()
   quantity: number;
 
   @Column({ type: "enum", enum: AudienceType })
@@ -173,7 +167,7 @@ export class Campaign extends AbstractBaseEntity {
   @Column({ type: "int", nullable: true })
   initial_audience_size: number;
 
-  @ManyToOne(() => Tier, { nullable: true })
-  @JoinColumn({ name: "target_tier_id" })
-  targetTier: Tier;
+  @ManyToMany(() => Tier)
+  @JoinTable({ name: "campaign_target_tiers" })
+  targetTiers: Tier[];
 }

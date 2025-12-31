@@ -1,7 +1,18 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ArrayMinSize, IsArray, IsUUID } from "class-validator";
+import { ArrayMinSize, IsArray, IsUUID, IsDate } from "class-validator";
+import { Type } from "class-transformer";
 
 export class ClaimCampaignDto {
+  @ApiProperty({ description: "The start date of the campaign." })
+  @Type(() => Date)
+  @IsDate()
+  start_date: Date;
+
+  @ApiProperty({ description: "The end date of the campaign." })
+  @Type(() => Date)
+  @IsDate()
+  end_date: Date;
+
   @ApiProperty({
     description:
       "List of Business Reward IDs to be associated with the campaign",

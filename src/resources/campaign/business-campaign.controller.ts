@@ -79,6 +79,8 @@ export class BusinessCampaignController {
       business.id,
       campaignId,
       claimCampaignDto.business_reward_ids,
+      claimCampaignDto.start_date,
+      claimCampaignDto.end_date,
     );
   }
 

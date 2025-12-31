@@ -23,4 +23,14 @@ export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   @IsArray()
   @IsUUID("all", { each: true })
   business_reward_ids?: string[];
+
+  @ApiProperty({
+    description: "The IDs of the target tiers for this campaign.",
+    type: [String],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID("all", { each: true })
+  target_tier_ids?: string[];
 }
