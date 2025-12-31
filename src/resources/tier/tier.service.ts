@@ -9,6 +9,7 @@ import { Tier } from "./entities/tier.entity";
 import { TierType } from "./entities/tier-type.enum";
 import { CreateTierDto } from "./dto/create-tier.dto";
 import { UpdateTierDto } from "./dto/update-tier.dto";
+import { Season } from "../season/entities/season.entity";
 import { UpdateTierProgressionDto } from "./dto/update-tier-progression.dto";
 import { TierHistory } from "./entities/tier-history.entity";
 import { Admin } from "../admin/entities/admin.entity";
@@ -24,7 +25,9 @@ export class TierService {
     private readonly tierHistoryRepository: Repository<TierHistory>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
-  ) {}
+    @InjectRepository(Season)
+    private readonly seasonRepository: Repository<Season>,
+  ) { }
 
   private async createHistory(tier: Tier, admin: Admin) {
     const history = this.tierHistoryRepository.create({
@@ -44,25 +47,36 @@ export class TierService {
     }
 
     const tier = this.tierRepository.create(createTierDto);
+
     const savedTier = await this.tierRepository.save(tier);
     await this.createHistory(savedTier, admin);
     return savedTier;
   }
 
   async findAll(type?: string) {
+    const where: any = {};
     if (type && type !== "all") {
-      return await this.tierRepository.find({
-        where: { type: type as TierType },
-      });
+      where.type = type as TierType;
     }
-    return await this.tierRepository.find();
+    return await this.tierRepository.find({
+      where,
+      relations: ["season"],
+    });
   }
 
   async findOne(id: string) {
-    return await this.tierRepository.findOne({ where: { id } });
+    return await this.tierRepository.findOne({
+      where: { id },
+      relations: ["season"],
+    });
   }
 
   async update(id: string, updateTierDto: UpdateTierDto, admin: Admin) {
+    const tier = await this.findOne(id);
+    if (!tier) {
+      throw new NotFoundException("Tier not found");
+    }
+
     await this.tierRepository.update(id, updateTierDto);
     const updatedTier = await this.findOne(id);
     await this.createHistory(updatedTier, admin);

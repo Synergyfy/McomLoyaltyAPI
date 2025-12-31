@@ -304,3 +304,114 @@ The system calculates the **Effective Limit** dynamically whenever a user attemp
 *   **Result**: The user has **8** campaigns allowed.
 
 If the user tries to exceed their effective limit, the API will return a `403 Forbidden` error with a message explaining the limit.
+
+---
+
+## Seasons Management
+
+The **Seasons** feature allows Admins to define time-bound periods (e.g., "Summer 2025") with specific visual themes and date ranges. These seasons can be linked to **Seasonal Tiers** to automatically manage their active dates and styling.
+
+### 1. Create a Season
+**Endpoint**: `POST /season`
+**Role**: Admin
+**Description**: Create a new season with dates and visual configuration.
+
+**Payload**:
+```json
+{
+  "name": "Summer 2025",
+  "startDate": "2025-06-01T00:00:00Z",
+  "endDate": "2025-08-31T23:59:59Z",
+  "description": "Hot summer deals",
+  "textColor": "#FFFFFF",
+  "bgColor": "#FF5733",
+  "borderColor": "#C70039"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "e303920c-8343-4ce4-8622-677103e65977",
+  "name": "Summer 2025",
+  "startDate": "2025-06-01T00:00:00.000Z",
+  "endDate": "2025-08-31T23:59:59.000Z",
+  "description": "Hot summer deals",
+  "textColor": "#FFFFFF",
+  "bgColor": "#FF5733",
+  "borderColor": "#C70039",
+  "created_at": "2024-12-31T10:00:00.000Z",
+  "updated_at": "2024-12-31T10:00:00.000Z"
+}
+```
+
+### 2. Update a Season
+**Endpoint**: `PATCH /season/:id`
+**Role**: Admin
+**Description**: Update an existing season's details.
+
+**Payload** (Partial Updates Allowed):
+```json
+{
+  "description": "Updated description for summer 2025",
+  "textColor": "#FAFAFA"
+}
+```
+
+### 3. List Seasons
+**Endpoint**: `GET /season`
+**Role**: Public
+**Description**: Retrieve a list of all configured seasons.
+
+**Response**:
+```json
+[
+  {
+    "id": "e303920c-8343-4ce4-8622-677103e65977",
+    "name": "Summer 2025",
+    "startDate": "2025-06-01T00:00:00.000Z",
+    "endDate": "2025-08-31T23:59:59.000Z",
+    ...
+  }
+]
+```
+
+### 4. Delete a Season
+**Endpoint**: `DELETE /season/:id`
+**Role**: Admin
+**Description**: Delete a season. **Note**: This may fail if tiers are linked to it.
+
+---
+
+## Seasonal Tier Integration
+
+When creating a tier of type `SEASONAL`, you **must** link it to an existing Season using the `season_id` field.
+
+**Key Logic**:
+1.  **Date Inheritance**: The tier does not store `start_date` or `end_date` itself. Instead, it dynamically inherits these dates from the linked Season. If the Season's dates change, the Tier's effective dates update automatically.
+2.  **Styling**: The frontend can use the Season's `bgColor`, `textColor`, and `borderColor` to style the tier display.
+
+### Creating a Seasonal Tier
+**Endpoint**: `POST /tier`
+**Role**: Admin
+
+**Payload**:
+```json
+{
+  "name": "Summer VIP Pass",
+  "type": "SEASONAL",
+  "price": 99.99,
+  "season_id": "e303920c-8343-4ce4-8622-677103e65977", // <--- REQUIRED: UUID of the Season
+  "configuration": {
+    "quotas": {
+      "maxActiveCampaigns": 10,
+      "monthlyPointsAllowance": 2000
+    },
+    // ... other config
+  }
+}
+```
+
+> **IMPORTANT**: 
+> *   Do **not** include `start_date` or `end_date` in the tier payload. These fields have been removed from the Tier entity.
+> *   If you attempt to create a `SEASONAL` tier without a `season_id`, the request will fail validation.
