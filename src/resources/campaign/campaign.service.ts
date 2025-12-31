@@ -55,6 +55,9 @@ import {
   CapabilityService,
   ActionType,
 } from "../capability/capability.service";
+import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
+import { MembershipStatus } from "../membership/entities/membership.entity";
+import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
 
 @Injectable()
 export class CampaignService {
@@ -83,6 +86,8 @@ export class CampaignService {
     private readonly wishlistItemRepository: Repository<WishlistItem>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    @InjectRepository(ParticipantCampaignBalance)
+    private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
     private readonly mailService: MailService,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
@@ -626,11 +631,11 @@ export class CampaignService {
                 "All selected target tiers must be of the same type (Standard or Seasonal).",
               );
             }
-             // Validate reward limits for each tier (optional but good consistency)
-             // If rewards are not being updated, we use existing rewards?
-             // Accessing campaign.rewards might need ensuring they are loaded.
-             // findOne loads relations: ["business", "rewards"]. So they are loaded.
-             const currentRewards = rewards.length > 0 ? rewards : campaign.rewards;
+            // Validate reward limits for each tier (optional but good consistency)
+            // If rewards are not being updated, we use existing rewards?
+            // Accessing campaign.rewards might need ensuring they are loaded.
+            // findOne loads relations: ["business", "rewards"]. So they are loaded.
+            const currentRewards = rewards.length > 0 ? rewards : campaign.rewards;
 
             for (const tier of tiers) {
               const maxRewards = tier.configuration?.quotas?.maxRewardsPerCampaign;
@@ -645,7 +650,7 @@ export class CampaignService {
 
             campaign.targetTiers = tiers;
           } else {
-             campaign.targetTiers = [];
+            campaign.targetTiers = [];
           }
         }
       }
@@ -1410,5 +1415,56 @@ export class CampaignService {
       .getRawOne();
 
     return parseInt(result.count, 10) || 0;
+  }
+  async getTierAnalytics(campaignId: string): Promise<TierAnalyticsResponseDto> {
+    const campaignStats = await this.businessCampaignRepository
+      .createQueryBuilder("bc")
+      .innerJoin("bc.business", "b")
+      .innerJoin("b.memberships", "m")
+      .innerJoin("m.tier", "t")
+      .where("bc.campaign_id = :campaignId", { campaignId })
+      .andWhere("m.status = :status", { status: MembershipStatus.ACTIVE })
+      .select([
+        't.id AS "tierId"',
+        't.name AS "tierName"',
+        'COUNT(bc.id) AS "claimsCount"',
+        'SUM(bc.total_points_earned) AS "totalPointsEarned"',
+        'SUM(bc.total_points_redeemed) AS "totalPointsRedeemed"',
+      ])
+      .groupBy("t.id")
+      .addGroupBy("t.name")
+      .getRawMany();
+
+    const participantStats = await this.participantCampaignBalanceRepository
+      .createQueryBuilder("pcb")
+      .innerJoin("pcb.businessCampaign", "bc")
+      .innerJoin("bc.business", "b")
+      .innerJoin("b.memberships", "m")
+      .innerJoin("m.tier", "t")
+      .where("bc.campaign_id = :campaignId", { campaignId })
+      .andWhere("m.status = :status", { status: MembershipStatus.ACTIVE })
+      .select([
+        't.id AS "tierId"',
+        'COUNT(pcb.id) AS "totalParticipants"',
+      ])
+      .groupBy("t.id")
+      .getRawMany();
+
+    // Map stats by tierId for easy lookup
+    const participantsMap = new Map<string, number>();
+    participantStats.forEach((stat) => {
+      participantsMap.set(stat.tierId, Number(stat.totalParticipants));
+    });
+
+    const data = campaignStats.map((row) => ({
+      tierId: row.tierId,
+      tierName: row.tierName,
+      claimsCount: Number(row.claimsCount),
+      totalParticipants: participantsMap.get(row.tierId) || 0,
+      totalPointsEarned: Number(row.totalPointsEarned),
+      totalPointsRedeemed: Number(row.totalPointsRedeemed),
+    }));
+
+    return { data };
   }
 }
