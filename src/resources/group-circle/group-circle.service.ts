@@ -24,7 +24,7 @@ import { SwapDrawDatesDto } from "./dto/swap-draw-dates.dto";
 import { RecordContributionDto } from "./dto/record-contribution.dto";
 import { InitiateContributionDto } from "./dto/initiate-contribution.dto";
 import { VerifyContributionDto } from "./dto/verify-contribution.dto";
-import { Network } from "../network/entities/network.entity";
+import { Network, NetworkStatus } from "../network/entities/network.entity";
 import { Business } from "../business/entities/business.entity";
 import {
   GroupCircleType,
@@ -83,6 +83,18 @@ export class GroupCircleService {
 
     return await this.circleRepo.manager.transaction(
       async (manager: EntityManager) => {
+        // Ensure owner is included
+        const ownerNetwork = await this.getOrCreateOwnerNetwork(
+          business,
+          manager,
+        );
+        
+        // Add owner to networks if not already present
+        const isOwnerPresent = networks.some((n) => n.id === ownerNetwork.id);
+        if (!isOwnerPresent) {
+          networks.push(ownerNetwork);
+        }
+
         if (createDto.type === GroupCircleType.SMART_MONEY) {
           await this.validateSmartMoneyRules(createDto, business, manager);
 
@@ -129,7 +141,10 @@ export class GroupCircleService {
           const member = manager.create(GroupCircleMember, {
             groupCircle: savedCircle,
             network: net,
-            role: GroupCircleRole.PERIPHERAL,
+            role:
+              net.id === ownerNetwork.id
+                ? GroupCircleRole.CORE
+                : GroupCircleRole.PERIPHERAL, // Owner is CORE
           });
 
           if (createDto.type === GroupCircleType.SMART_MONEY) {
@@ -148,9 +163,50 @@ export class GroupCircleService {
           manager,
         );
 
+        savedCircle.members = members;
         return savedCircle;
       },
     );
+  }
+
+  private async getOrCreateOwnerNetwork(
+    business: Business,
+    manager: EntityManager,
+  ): Promise<Network> {
+    let ownerNetwork = await manager.findOne(Network, {
+      where: {
+        business: { id: business.id },
+        email: business.email,
+      },
+    });
+
+    if (!ownerNetwork) {
+      let name = business.name;
+      let phone = business.phone;
+
+      if (!name) {
+        const fullBusiness = await manager.findOne(Business, {
+          where: { id: business.id },
+        });
+        if (fullBusiness) {
+          name = fullBusiness.name;
+          phone = fullBusiness.phone;
+        }
+      }
+
+      ownerNetwork = manager.create(Network, {
+        business: business,
+        fullName: name || "Business Owner",
+        email: business.email,
+        phone: phone || "N/A", // Fallback if phone is missing
+        status: NetworkStatus.ACCEPTED,
+        isOnboarded: true,
+        onboardedType: "business",
+        onboardedBusinessId: business.id,
+      });
+      await manager.save(Network, ownerNetwork);
+    }
+    return ownerNetwork;
   }
 
   private async getSmartMoneyLimits(membership: Membership) {
@@ -630,6 +686,13 @@ export class GroupCircleService {
     let senderName = business.name;
     const senderId = dto.senderId || business.id;
 
+    if (!senderName && senderId === business.id) {
+      const fullBusiness = await this.circleRepo.manager.findOne(Business, {
+        where: { id: business.id },
+      });
+      senderName = fullBusiness?.name || "Business Owner";
+    }
+
     if (dto.senderId && dto.senderId !== business.id) {
       const senderMember = await this.memberRepo.findOne({
         where: { groupCircle: { id }, network: { id: dto.senderId } },
@@ -650,7 +713,10 @@ export class GroupCircleService {
 
     if (dto.recipientId) {
       const recipientMember = await this.memberRepo.findOne({
-        where: { groupCircle: { id }, network: { id: dto.recipientId } },
+        where: { 
+          groupCircle: { id }, 
+          network: { id: dto.recipientId } 
+        },
         relations: ["network"],
       });
 

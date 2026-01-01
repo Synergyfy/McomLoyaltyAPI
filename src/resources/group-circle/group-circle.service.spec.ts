@@ -6,7 +6,7 @@ import { GroupCircleMember } from "./entities/group-circle-member.entity";
 import { GroupMessage } from "./entities/group-message.entity";
 import { GroupActivity } from "./entities/group-activity.entity";
 import { GroupCircleContribution } from "./entities/group-circle-contribution.entity";
-import { NetworkList } from "../network/entities/network-list.entity";
+
 import { Network } from "../network/entities/network.entity";
 import { StripeService } from "../payment/stripe.service";
 import { PaypalService } from "../payment/paypal.service";
@@ -24,6 +24,7 @@ describe("GroupCircleService", () => {
   const mockRepo = {
     find: jest.fn(),
     findOne: jest.fn(),
+    findAndCount: jest.fn().mockResolvedValue([[], 0]),
     create: jest.fn(),
     save: jest.fn(),
     manager: {
@@ -55,7 +56,6 @@ describe("GroupCircleService", () => {
           provide: getRepositoryToken(GroupCircleContribution),
           useValue: mockRepo,
         },
-        { provide: getRepositoryToken(NetworkList), useValue: mockRepo },
         { provide: getRepositoryToken(Network), useValue: mockRepo },
         { provide: StripeService, useValue: mockStripeService },
         { provide: PaypalService, useValue: mockPaypalService },
@@ -109,6 +109,33 @@ describe("GroupCircleService", () => {
       expect(result).toBeDefined();
     });
 
+    it("should send a group message even if business name is missing in context", async () => {
+      const dto: SendMessageDto = { content: "Hello Group" };
+      const business = { id: "bus1" } as Business; // No name
+      const circleId = "circle1";
+
+      jest
+        .spyOn(circleRepo, "findOne")
+        .mockResolvedValue({ id: circleId, business } as any);
+      
+      // Mock manager.findOne to return full business with name
+      jest.spyOn(circleRepo.manager, 'findOne').mockResolvedValue({ id: 'bus1', name: 'Fetched Business Name' } as any);
+
+      jest.spyOn(messageRepo, "create").mockImplementation((args) => args as any);
+      jest.spyOn(messageRepo, "save").mockImplementation((args) => Promise.resolve(args as any));
+
+      const result = await service.sendMessage(circleId, dto, business);
+
+      expect(circleRepo.manager.findOne).toHaveBeenCalledWith(Business, expect.objectContaining({ where: { id: 'bus1' } }));
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          senderName: 'Fetched Business Name',
+          senderId: 'bus1'
+        }),
+      );
+      expect(result.senderName).toBe('Fetched Business Name');
+    });
+
     it("should send a direct message", async () => {
       const dto: SendMessageDto = {
         content: "Hello Member",
@@ -159,7 +186,7 @@ describe("GroupCircleService", () => {
       jest.spyOn(messageRepo, "find").mockResolvedValue([]);
 
       await service.getMessages(circleId, businessId);
-      expect(messageRepo.find).toHaveBeenCalled();
+      expect(messageRepo.findAndCount).toHaveBeenCalled();
     });
 
     it("should filter messages by type and memberId", async () => {
@@ -180,7 +207,7 @@ describe("GroupCircleService", () => {
         memberId,
       );
 
-      expect(messageRepo.find).toHaveBeenCalledWith(
+      expect(messageRepo.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: [
             expect.objectContaining({

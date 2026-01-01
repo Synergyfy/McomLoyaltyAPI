@@ -11,7 +11,6 @@ import { Business } from "../../business/entities/business.entity";
 import { GroupCircleMember } from "./group-circle-member.entity";
 import {
   GroupCircleType,
-  GroupCircleVisibility,
   InteractionLevel,
   GroupCircleDuration,
   GroupCircleStatus,
@@ -35,13 +34,6 @@ export class GroupCircle extends AbstractBaseEntity {
   @ApiProperty({ enum: GroupCircleDuration, description: "Duration in days" })
   @Column({ type: "int" })
   duration: GroupCircleDuration;
-
-  @ApiProperty({
-    enum: GroupCircleVisibility,
-    description: "Visibility settings",
-  })
-  @Column({ type: "enum", enum: GroupCircleVisibility })
-  visibility: GroupCircleVisibility;
 
   @ApiProperty({ enum: InteractionLevel, description: "Interaction level" })
   @Column({ type: "enum", enum: InteractionLevel })
