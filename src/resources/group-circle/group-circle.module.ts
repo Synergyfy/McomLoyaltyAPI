@@ -8,6 +8,7 @@ import { GroupMessage } from "./entities/group-message.entity";
 import { GroupActivity } from "./entities/group-activity.entity";
 import { GroupCircleContribution } from "./entities/group-circle-contribution.entity";
 import { Network } from "../network/entities/network.entity";
+import { Referral } from "../referral/entities/referral.entity";
 import { PaymentModule } from "../payment/payment.module";
 
 @Module({
@@ -19,6 +20,7 @@ import { PaymentModule } from "../payment/payment.module";
       GroupActivity,
       GroupCircleContribution,
       Network,
+      Referral,
     ]),
     PaymentModule,
   ],
