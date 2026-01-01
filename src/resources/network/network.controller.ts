@@ -65,6 +65,40 @@ export class NetworkController {
     return this.networkService.onboard(id, dto);
   }
 
+  @Post("customers")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Add a customer to the network" })
+  @ApiResponse({ status: 201, description: "Customer added successfully." })
+  addCustomer(
+    @Body() createNetworkDto: CreateNetworkDto,
+    @CurrentUser() business: Business,
+  ) {
+    return this.networkService.addCustomer(createNetworkDto, business);
+  }
+
+  @Post("customers/bulk")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Bulk import customers" })
+  @ApiResponse({ status: 201, description: "Customers imported successfully." })
+  bulkImportCustomers(
+    @Body() bulkImportDto: BulkImportNetworkDto,
+    @CurrentUser() business: Business,
+  ) {
+    return this.networkService.bulkImportCustomers(bulkImportDto, business);
+  }
+
+  @Get("customers")
+  @Roles(Role.Business, Role.Admin)
+  @ApiOperation({ summary: "Get list of customers" })
+  @ApiResponse({ status: 200, type: GetNetworkDto })
+  findAllCustomers(
+    @Query(new ValidationPipe({ transform: true })) query: GetNetworkDto,
+    @CurrentUser() user: any,
+  ) {
+    const businessId = user.role === Role.Business ? user.id : undefined;
+    return this.networkService.findAllCustomers(query, businessId);
+  }
+
   @Post()
   @Roles(Role.Business)
   @ApiOperation({ summary: "Add a single contact to the network" })
