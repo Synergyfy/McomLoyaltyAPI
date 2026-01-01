@@ -14,6 +14,7 @@ import { Repository } from "typeorm";
 import { SendMessageDto } from "./dto/send-message.dto";
 import { Business } from "../business/entities/business.entity";
 import { GroupMessageType } from "./enums/group-circle.enums";
+import { Referral } from "../referral/entities/referral.entity";
 
 describe("GroupCircleService", () => {
   let service: GroupCircleService;
@@ -57,6 +58,7 @@ describe("GroupCircleService", () => {
           useValue: mockRepo,
         },
         { provide: getRepositoryToken(Network), useValue: mockRepo },
+        { provide: getRepositoryToken(Referral), useValue: mockRepo },
         { provide: StripeService, useValue: mockStripeService },
         { provide: PaypalService, useValue: mockPaypalService },
       ],
