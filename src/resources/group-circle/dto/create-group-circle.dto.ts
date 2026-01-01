@@ -11,7 +11,6 @@ import { ApiProperty } from "@nestjs/swagger";
 import {
   GroupCircleType,
   GroupCircleDuration,
-  GroupCircleVisibility,
   InteractionLevel,
 } from "../enums/group-circle.enums";
 
@@ -33,10 +32,6 @@ export class CreateGroupCircleDto {
   @ApiProperty({ enum: GroupCircleDuration })
   @IsEnum(GroupCircleDuration)
   duration: GroupCircleDuration;
-
-  @ApiProperty({ enum: GroupCircleVisibility })
-  @IsEnum(GroupCircleVisibility)
-  visibility: GroupCircleVisibility;
 
   @ApiProperty({ enum: InteractionLevel })
   @IsEnum(InteractionLevel)

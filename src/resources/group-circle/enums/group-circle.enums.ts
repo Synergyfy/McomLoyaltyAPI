@@ -21,11 +21,6 @@ export enum InteractionLevel {
   COLLABORATE = "COLLABORATE",
 }
 
-export enum GroupCircleVisibility {
-  PRIVATE = "PRIVATE",
-  INVITE_ONLY = "INVITE_ONLY",
-}
-
 export enum GroupCircleDuration {
   DAYS_90 = 90,
   DAYS_180 = 180,
