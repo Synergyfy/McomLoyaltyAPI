@@ -331,6 +331,11 @@ export class NetworkService {
       qb.andWhere("network.status = :status", { status });
     }
 
+    // Exclude customers from general findAll
+    qb.andWhere("(network.relationshipTag IS DISTINCT FROM :customerTag)", {
+      customerTag: NetworkRelationshipTag.CUSTOMER,
+    });
+
     const sortMapping: Record<string, string> = {
       createdAt: "created_at",
       updatedAt: "updated_at",
@@ -358,6 +363,91 @@ export class NetworkService {
         prevPage,
       },
     };
+  }
+
+  async addCustomer(createNetworkDto: CreateNetworkDto, business: Business) {
+    // Force relationship tag to CUSTOMER
+    const customerDto = {
+      ...createNetworkDto,
+      relationshipTag: NetworkRelationshipTag.CUSTOMER,
+    };
+    return this.addNetwork(customerDto, business);
+  }
+
+  async findAllCustomers(query: GetNetworkDto, businessId?: string) {
+    const {
+      page,
+      limit,
+      search,
+      status,
+      sortBy,
+      sortOrder,
+    } = query;
+    const filterBusinessId = businessId || query.businessId;
+
+    const qb = this.networkRepository.createQueryBuilder("network");
+
+    if (filterBusinessId) {
+      qb.where("network.businessId = :businessId", {
+        businessId: filterBusinessId,
+      });
+    }
+
+    // Filter ONLY customers
+    qb.andWhere("network.relationshipTag = :customerTag", {
+      customerTag: NetworkRelationshipTag.CUSTOMER,
+    });
+
+    if (search) {
+      qb.andWhere(
+        "(network.fullName ILIKE :search OR network.email ILIKE :search OR network.phone ILIKE :search OR network.businessName ILIKE :search)",
+        { search: `%${search}%` },
+      );
+    }
+
+    if (status) {
+      qb.andWhere("network.status = :status", { status });
+    }
+
+    const sortMapping: Record<string, string> = {
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    };
+
+    const sortField = sortMapping[sortBy] || sortBy;
+
+    qb.orderBy(`network.${sortField}`, sortOrder as "ASC" | "DESC");
+
+    const skip = (page - 1) * limit;
+    const [data, total] = await qb.take(limit).skip(skip).getManyAndCount();
+
+    const lastPage = Math.ceil(total / limit);
+    const nextPage = page < lastPage ? page + 1 : null;
+    const prevPage = page > 1 ? page - 1 : null;
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        lastPage,
+        nextPage,
+        prevPage,
+      },
+    };
+  }
+
+  async bulkImportCustomers(
+    bulkImportDto: BulkImportNetworkDto,
+    business: Business,
+  ) {
+    // Tag all incoming networks as CUSTOMER
+    const networks = bulkImportDto.networks.map((n) => ({
+      ...n,
+      relationshipTag: NetworkRelationshipTag.CUSTOMER,
+    }));
+
+    return this.bulkImport({ ...bulkImportDto, networks }, business);
   }
 
   async update(
