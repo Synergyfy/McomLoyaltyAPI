@@ -516,12 +516,29 @@ export class RewardsService {
     const { image_source_type, library_asset_id, emoji, stamp_emoji } = createBusinessRewardDto;
 
     if (image_source_type) {
-      if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
+      if (
+        [
+          ImageSourceType.BUSINESS_LOGO,
+          ImageSourceType.SECTOR_LOGO,
+          ImageSourceType.CATEGORY_LOGO,
+          ImageSourceType.SUB_CATEGORY_LOGO,
+        ].includes(image_source_type)
+      ) {
         const business = await this.businessRepository.findOne({
           where: { id: businessId },
+          relations: ["sector", "category", "subCategory"],
         });
-        if (business && business.profile_image) {
-          imageToUse = business.profile_image;
+
+        if (business) {
+          if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
+            imageToUse = business.profile_image;
+          } else if (image_source_type === ImageSourceType.SECTOR_LOGO) {
+            imageToUse = business.sector?.imageUrl;
+          } else if (image_source_type === ImageSourceType.CATEGORY_LOGO) {
+            imageToUse = business.category?.imageUrl;
+          } else if (image_source_type === ImageSourceType.SUB_CATEGORY_LOGO) {
+            imageToUse = business.subCategory?.imageUrl;
+          }
         }
       } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
         if (!library_asset_id) {
@@ -908,6 +925,64 @@ export class RewardsService {
       throw new ForbiddenException(
         "Stamps required must be set when stamps are enabled",
       );
+    }
+
+    // Resolve Image Source if provided
+    const { image_source_type, library_asset_id, emoji, stamp_emoji } =
+      updateBusinessRewardDto;
+
+    if (image_source_type) {
+      let imageToUse = updateBusinessRewardDto.image ?? businessReward.image;
+
+      if (
+        [
+          ImageSourceType.BUSINESS_LOGO,
+          ImageSourceType.SECTOR_LOGO,
+          ImageSourceType.CATEGORY_LOGO,
+          ImageSourceType.SUB_CATEGORY_LOGO,
+        ].includes(image_source_type)
+      ) {
+        const business = await this.businessRepository.findOne({
+          where: { id: userId },
+          relations: ["sector", "category", "subCategory"],
+        });
+
+        if (business) {
+          if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
+            imageToUse = business.profile_image;
+          } else if (image_source_type === ImageSourceType.SECTOR_LOGO) {
+            imageToUse = business.sector?.imageUrl;
+          } else if (image_source_type === ImageSourceType.CATEGORY_LOGO) {
+            imageToUse = business.category?.imageUrl;
+          } else if (image_source_type === ImageSourceType.SUB_CATEGORY_LOGO) {
+            imageToUse = business.subCategory?.imageUrl;
+          }
+        }
+      } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
+        if (!library_asset_id) {
+          throw new BadRequestException(
+            "Library Asset ID is required when source is set to Library Asset",
+          );
+        }
+        const asset = await this.libraryAssetRepository.findOne({
+          where: { id: library_asset_id },
+        });
+        if (!asset) {
+          throw new NotFoundException("Library Asset not found");
+        }
+        imageToUse = asset.url;
+      } else if (image_source_type === ImageSourceType.EMOJI) {
+        const emojiToUse = emoji || stamp_emoji;
+        if (!emojiToUse) {
+          throw new BadRequestException(
+            "Emoji is required when source is set to Emoji",
+          );
+        }
+        imageToUse = emojiToUse;
+      }
+
+      // Update image in DTO to the resolved one
+      updateBusinessRewardDto.image = imageToUse;
     }
 
     Object.assign(businessReward, updateBusinessRewardDto);
