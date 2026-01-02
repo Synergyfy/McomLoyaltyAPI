@@ -33,7 +33,7 @@ export class TransactionCodeService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
-  ) {}
+  ) { }
 
   async generateCode(
     dto: GenerateCodeDto,
@@ -55,6 +55,7 @@ export class TransactionCodeService {
       points: dto.points,
       expires_at: new Date(dto.expiresAt),
       status: TransactionCodeStatus.ACTIVE,
+      redemption_method: dto.redemptionMethod || "auto",
     });
 
     const businessCampaign = await this.businessCampaignRepository.findOne({

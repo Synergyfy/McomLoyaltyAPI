@@ -322,7 +322,7 @@ export class ParticipantCampaignBalanceController {
         dto.rewardId,
         dto.campaignId,
         dto.redemptionCode,
-        dto.redemptionMethod || "points",
+        dto.redemptionMethod,
       );
     }
   }

@@ -55,13 +55,13 @@ export class ScanParticipantDto {
 
   @ApiProperty({
     description: "The method used for redemption if type is REDEEM",
-    enum: ["points", "stamps"],
-    default: "points",
+    enum: ["points", "stamps", "auto"],
+    default: "auto",
     required: false,
   })
   @IsOptional()
   @IsString()
-  redemptionMethod?: "points" | "stamps" = "points";
+  redemptionMethod?: "points" | "stamps" | "auto" = "auto";
 
   @ApiProperty({
     description: "Optional redemption code",

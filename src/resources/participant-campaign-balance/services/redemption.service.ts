@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Repository, DataSource, EntityManager } from "typeorm";
 import { Staff } from "../../staff/entities/staff.entity";
 import { Business } from "../../business/entities/business.entity";
 import { Participant } from "../../participant/entities/participant.entity";
@@ -17,7 +17,6 @@ import {
   PointHistory,
   PointHistoryType,
 } from "../entities/point-history.entity";
-import { DataSource } from "typeorm";
 import { MailService } from "../../../mail/mail.service";
 import { NotificationService } from "../../notification/notification.service";
 import {
@@ -89,10 +88,10 @@ export class RedemptionService {
     participantId: string,
     rewardId: string,
     campaignId: string,
-    redemptionCode: string | null,
+    redemptionCode?: string | null,
     sourceDescription?: string,
-    redemptionMethod: "points" | "stamps" = "points",
-    transactionManager?: any, // EntityManager
+    redemptionMethod: "points" | "stamps" | "auto" = "auto",
+    transactionManager?: EntityManager,
   ): Promise<ParticipantCampaignBalance> {
     const execute = async (manager: any) => {
       let staff: Staff | null = null;
@@ -195,40 +194,95 @@ export class RedemptionService {
 
       let pointsCost = 0;
       let stampsCost = 0;
+      let resolvedMethod: "points" | "stamps" = "points";
 
-      if (redemptionMethod === "points") {
-        if (businessReward && businessReward.points_required !== null) {
-          pointsCost = businessReward.points_required;
-        } else if (reward) {
-          pointsCost = reward.max_points;
+      const canUseStamps =
+        (businessReward?.is_stamps_enabled ||
+          (!businessReward && reward?.is_stamps_enabled)) &&
+        (businessReward?.stamps_required || reward?.max_stamps_required) > 0;
+
+      const canUsePoints =
+        (businessReward?.is_points_enabled ||
+          (!businessReward && reward?.is_points_enabled)) &&
+        (businessReward?.points_required !== null ||
+          reward?.max_points !== null);
+
+      const participantCampaignBalance = await manager.findOne(
+        ParticipantCampaignBalance,
+        {
+          where: {
+            participant: { id: participantId },
+            businessCampaign: { id: campaignId },
+          },
+        },
+      );
+
+      if (!participantCampaignBalance) {
+        throw new BadRequestException(
+          "Participant is not enrolled in this campaign",
+        );
+      }
+
+      if (redemptionMethod === "auto" || !redemptionMethod) {
+        // Smart Selection: Prioritize stamps if sufficient
+        const stpCost =
+          (businessReward ? businessReward.stamps_required : reward?.max_stamps_required) || 0;
+        const ptsCost =
+          (businessReward ? businessReward.points_required : reward?.max_points) || 0;
+
+        if (
+          canUseStamps &&
+          participantCampaignBalance.stamp_balance >= stpCost &&
+          stpCost > 0
+        ) {
+          resolvedMethod = "stamps";
+          stampsCost = stpCost;
+        } else if (
+          canUsePoints &&
+          participantCampaignBalance.campaign_balance >= ptsCost
+        ) {
+          resolvedMethod = "points";
+          pointsCost = ptsCost;
+        } else {
+          // If neither is sufficient, we pick one to throw a meaningful error
+          if (canUseStamps && stpCost > 0) {
+            throw new BadRequestException("Not enough stamps for redemption");
+          } else if (canUsePoints) {
+            throw new BadRequestException("Not enough points for redemption");
+          } else {
+            throw new BadRequestException(
+              "No valid redemption method available for this reward",
+            );
+          }
         }
-
-        if (businessReward && !businessReward.is_points_enabled) {
+      } else if (redemptionMethod === "stamps") {
+        resolvedMethod = "stamps";
+        stampsCost =
+          (businessReward ? businessReward.stamps_required : reward?.max_stamps_required) || 0;
+        if (!canUseStamps) {
           throw new BadRequestException(
-            "Point redemption is disabled for this reward",
+            "Stamp redemption is disabled for this reward",
           );
         }
-      } else {
-        if (businessReward) {
-          stampsCost = businessReward.stamps_required || 0;
-          if (!businessReward.is_stamps_enabled) {
-            throw new BadRequestException(
-              "Stamp redemption is disabled for this reward",
-            );
-          }
-        } else if (reward) {
-          stampsCost = reward.max_stamps_required || 0;
-          if (!reward.is_stamps_enabled) {
-            throw new BadRequestException(
-              "Stamp redemption is disabled for this reward",
-            );
-          }
-        }
-
         if (stampsCost <= 0) {
           throw new BadRequestException(
             "Stamp cost not configured for this reward",
           );
+        }
+        if (participantCampaignBalance.stamp_balance < stampsCost) {
+          throw new BadRequestException("Not enough stamps");
+        }
+      } else {
+        resolvedMethod = "points";
+        pointsCost =
+          (businessReward ? businessReward.points_required : reward?.max_points) || 0;
+        if (!canUsePoints) {
+          throw new BadRequestException(
+            "Point redemption is disabled for this reward",
+          );
+        }
+        if (participantCampaignBalance.campaign_balance < pointsCost) {
+          throw new BadRequestException("Not enough points");
         }
       }
 
@@ -256,23 +310,7 @@ export class RedemptionService {
         }
       }
 
-      const participantCampaignBalance = await manager.findOne(
-        ParticipantCampaignBalance,
-        {
-          where: {
-            participant: { id: participantId },
-            businessCampaign: { id: campaignId },
-          },
-        },
-      );
-
-      if (!participantCampaignBalance) {
-        throw new BadRequestException(
-          "Participant is not enrolled in this campaign",
-        );
-      }
-
-      if (redemptionMethod === "points") {
+      if (resolvedMethod === "points") {
         if (participantCampaignBalance.campaign_balance < pointsCost) {
           throw new BadRequestException("Not enough points");
         }
@@ -335,7 +373,7 @@ export class RedemptionService {
 
       const pointHistory = this.pointHistoryRepository.create({
         type:
-          redemptionMethod === "points"
+          resolvedMethod === "points"
             ? PointHistoryType.REDEEM
             : PointHistoryType.STAMP_REDEEM,
         points: pointsCost,
@@ -392,10 +430,10 @@ export class RedemptionService {
         await this.mailService.sendRewardRedeemedEmail(
           participant.email,
           businessReward?.title || reward?.title || "Reward",
-          redemptionMethod === "points" ? pointsCost : stampsCost,
+          resolvedMethod === "points" ? pointsCost : stampsCost,
           business.name,
           businessCampaign.name,
-          redemptionMethod === "points"
+          resolvedMethod === "points"
             ? participantCampaignBalance.campaign_balance
             : participantCampaignBalance.stamp_balance,
           voucherCode,
@@ -412,7 +450,7 @@ export class RedemptionService {
           await this.mailService.sendBusinessActivityEmail(
             businessCampaign.business.email,
             "REDEEM",
-            redemptionMethod === "points" ? pointsCost : stampsCost,
+            resolvedMethod === "points" ? pointsCost : stampsCost,
             participant.name,
             staff ? staff.name : business.name,
             businessCampaign.name,
@@ -445,7 +483,7 @@ export class RedemptionService {
     rewardId: string,
     campaignId: string,
     redemptionCode: string | null,
-    redemptionMethod: "points" | "stamps" = "points",
+    redemptionMethod: "points" | "stamps" | "auto" = "auto",
   ) {
     const participant = await this.participantRepository.findOne({
       where: { uniqueCode: participantCode },
@@ -471,7 +509,7 @@ export class RedemptionService {
     rewardId: string,
     campaignId: string,
     redemptionCode: string | null,
-    redemptionMethod: "points" | "stamps" = "points",
+    redemptionMethod: "points" | "stamps" | "auto" = "auto",
   ) {
     const { staff, business } =
       await this.findPerformerByCode(staffOrBusinessCode);

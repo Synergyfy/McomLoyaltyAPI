@@ -332,7 +332,7 @@ export class ParticipantCampaignBalanceService {
           campaignId,
           code,
           "Redeemed via claimed code",
-          "points", // Default to points for claimed codes unless logic changes later
+          transactionCode.redemption_method as any || "auto",
           manager, // Pass manager
         );
       }

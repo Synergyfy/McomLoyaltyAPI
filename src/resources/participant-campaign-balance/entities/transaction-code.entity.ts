@@ -66,4 +66,11 @@ export class TransactionCode extends AbstractBaseEntity {
 
   @Column({ type: "timestamp" })
   expires_at: Date;
+
+  @Column({
+    type: "varchar",
+    nullable: true,
+    default: "auto",
+  })
+  redemption_method: string;
 }

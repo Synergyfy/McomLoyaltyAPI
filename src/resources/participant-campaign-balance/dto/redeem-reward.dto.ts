@@ -45,11 +45,11 @@ export class RedeemRewardDto {
   @ApiProperty({
     description: "The method of redemption (points or stamps)",
     example: "points",
-    enum: ["points", "stamps"],
-    default: "points",
+    enum: ["points", "stamps", "auto"],
+    default: "auto",
     required: false,
   })
   @IsOptional()
   @IsString()
-  redemptionMethod?: "points" | "stamps" = "points";
+  redemptionMethod?: "points" | "stamps" | "auto" = "auto";
 }

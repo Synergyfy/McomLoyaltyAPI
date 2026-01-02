@@ -53,410 +53,153 @@ export class RewardsService {
     private readonly sectorRepository: Repository<Sector>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
-    @InjectRepository(BusinessCampaign)
-    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
-    @InjectRepository(LibraryAsset)
-    private readonly libraryAssetRepository: Repository<LibraryAsset>,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
+    @InjectRepository(LibraryAsset)
+    private readonly libraryAssetRepository: Repository<LibraryAsset>,
+    @InjectRepository(BusinessCampaign)
+    private readonly businessCampaignRepository: Repository<BusinessCampaign>,
   ) { }
 
-  // Admin methods
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
-    const {
-      sector_ids,
-      tier_ids,
-      max_points,
-      max_stamps_required,
-      is_points_enabled = true,
-      is_stamps_enabled = false,
-      ...rewardData
-    } = createRewardDto;
-
-    if (!is_points_enabled && !is_stamps_enabled) {
-      throw new ForbiddenException(
-        "At least one of points or stamps must be enabled",
-      );
-    }
-
-    if (is_points_enabled && !max_points) {
-      throw new ForbiddenException(
-        "Max points must be provided when points are enabled",
-      );
-    }
-
-    if (is_stamps_enabled && !max_stamps_required) {
-      throw new ForbiddenException(
-        "Max stamps required must be provided when stamps are enabled",
-      );
-    }
-
-    let sectors: Sector[] = [];
-    if (sector_ids && sector_ids.length > 0) {
-      sectors = await this.sectorRepository.findBy({ id: In(sector_ids) });
-      if (sectors.length !== sector_ids.length) {
-        throw new NotFoundException("One or more sectors not found");
-      }
-    }
-
-    let tiers: Tier[] = [];
-    if (tier_ids && tier_ids.length > 0) {
-      tiers = await this.tierRepository.findBy({ id: In(tier_ids) });
-      if (tiers.length !== tier_ids.length) {
-        throw new NotFoundException("One or more tiers not found");
-      }
-    }
-
-    const reward = this.rewardRepository.create({
-      ...rewardData,
-      max_points,
-      max_stamps_required,
-      is_points_enabled,
-      is_stamps_enabled,
-      sectors: sectors,
-      tiers: tiers,
-    });
+    const reward = this.rewardRepository.create(createRewardDto);
     return this.rewardRepository.save(reward);
   }
 
-  async getRewards(
-    filterDto: GetRewardsFilterDto,
-  ): Promise<PaginationResult<Reward>> {
-    const {
-      page = 1,
-      limit = 10,
-      is_stamps_enabled,
-      is_points_enabled,
-      sortBy = SortBy.NEWEST,
-      min_points,
-      max_points,
-      min_stamps,
-      max_stamps,
-      search,
-      reward_type,
-      audience,
-      status,
-    } = filterDto;
-
-    const queryBuilder = this.rewardRepository.createQueryBuilder("reward");
-
-    if (is_stamps_enabled !== undefined) {
-      queryBuilder.andWhere("reward.is_stamps_enabled = :is_stamps_enabled", {
-        is_stamps_enabled,
-      });
-    }
-
-    if (is_points_enabled !== undefined) {
-      queryBuilder.andWhere("reward.is_points_enabled = :is_points_enabled", {
-        is_points_enabled,
-      });
-    }
-
-    if (min_points !== undefined) {
-      queryBuilder.andWhere("reward.max_points >= :min_points", { min_points });
-    }
-
-    if (max_points !== undefined) {
-      queryBuilder.andWhere("reward.max_points <= :max_points", { max_points });
-    }
-
-    if (min_stamps !== undefined) {
-      queryBuilder.andWhere("reward.max_stamps_required >= :min_stamps", {
-        min_stamps,
-      });
-    }
-
-    if (max_stamps !== undefined) {
-      queryBuilder.andWhere("reward.max_stamps_required <= :max_stamps", {
-        max_stamps,
-      });
-    }
-
-    if (search) {
-      queryBuilder.andWhere(
-        new Brackets((qb) => {
-          qb.where("reward.title ILIKE :search", { search: `%${search}%` })
-            .orWhere("reward.description ILIKE :search", {
-              search: `%${search}%`,
-            });
-        }),
-      );
-    }
-
-    if (reward_type) {
-      queryBuilder.andWhere("reward.reward_type = :reward_type", {
-        reward_type,
-      });
-    }
-
-    if (audience) {
-      queryBuilder.andWhere("reward.audience = :audience", { audience });
-    }
-
-    if (status) {
-      queryBuilder.andWhere("reward.status = :status", { status });
-    }
-
-    const order = sortBy === SortBy.OLDEST ? "ASC" : "DESC";
-    queryBuilder.orderBy("reward.created_at", order);
-
-    queryBuilder.skip((page - 1) * limit).take(limit);
-
-    const [data, total] = await queryBuilder.getManyAndCount();
-
-    const totalPages = Math.ceil(total / limit);
-    const next = page < totalPages ? Number(page) + 1 : null;
-    const previous = page > 1 ? Number(page) - 1 : null;
-
-    return {
-      data,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages,
-      next,
-      previous,
-    };
+  async getRewards(filterDto: GetRewardsFilterDto): Promise<PaginationResult<Reward>> {
+    return this.getGlobalRewards(filterDto);
   }
 
-  async updateReward(
-    id: string,
-    updateRewardDto: UpdateRewardDto,
-  ): Promise<Reward> {
+  async findOne(id: string): Promise<Reward> {
     const reward = await this.rewardRepository.findOne({ where: { id } });
     if (!reward) {
-      throw new NotFoundException("Reward not found");
+      throw new NotFoundException(`Reward with ID ${id} not found`);
     }
-    Object.assign(reward, updateRewardDto);
-    return this.rewardRepository.save(reward);
+    return reward;
+  }
+
+  async updateReward(id: string, updateRewardDto: UpdateRewardDto): Promise<Reward> {
+    await this.findOne(id);
+    await this.rewardRepository.update(id, updateRewardDto);
+    return this.findOne(id);
   }
 
   async deleteReward(id: string): Promise<void> {
-    const reward = await this.rewardRepository.findOne({ where: { id } });
-    if (!reward) {
-      throw new NotFoundException("Reward not found");
-    }
-    const businessReward = await this.businessRewardRepository.findOne({
-      where: { reward: { id } },
-    });
-    if (businessReward) {
-      throw new ConflictException("Reward is in use by a business");
-    }
+    await this.findOne(id);
     await this.rewardRepository.delete(id);
   }
 
   async disableReward(id: string): Promise<Reward> {
-    const reward = await this.rewardRepository.findOne({ where: { id } });
-    if (!reward) {
-      throw new NotFoundException("Reward not found");
-    }
+    const reward = await this.findOne(id);
     reward.disabled = true;
     return this.rewardRepository.save(reward);
   }
 
   async enableReward(id: string): Promise<Reward> {
-    const reward = await this.rewardRepository.findOne({ where: { id } });
-    if (!reward) {
-      throw new NotFoundException("Reward not found");
-    }
+    const reward = await this.findOne(id);
     reward.disabled = false;
     return this.rewardRepository.save(reward);
   }
 
-  // Business methods
   async addRewardToBusiness(
     rewardId: string,
     businessId: string,
     addRewardToBusinessDto: AddRewardToBusinessDto,
   ): Promise<BusinessReward> {
-    const reward = await this.rewardRepository.findOne({
-      where: { id: rewardId },
-      relations: ["sectors", "tiers"],
-    });
-
-    if (!reward) {
-      throw new NotFoundException("Reward not found");
-    }
-
-    if (reward.status !== RewardStatus.ACTIVE) {
-      throw new ForbiddenException("Reward is not active");
-    }
-
-    if (
-      reward.expiry_datetime &&
-      new Date(reward.expiry_datetime) < new Date()
-    ) {
-      throw new ForbiddenException("Reward has expired");
-    }
-
+    const { ...rest } = addRewardToBusinessDto;
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
-      relations: ["sector"],
     });
-
     if (!business) {
-      throw new NotFoundException("Business not found");
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
     }
 
-    if (reward.audience === RewardAudience.SPECIFIC_SECTORS) {
-      if (!reward.sectors.some((sector) => sector.id === business.sector.id)) {
-        throw new ForbiddenException(
-          "Business does not belong to the required sector for this reward",
-        );
-      }
-    }
-
-    if (reward.audience === RewardAudience.SPECIFIC_TIERS) {
-      const membership = await this.membershipRepository.findOne({
-        where: { business: { id: businessId } },
-      });
-      if (!membership || !membership.tier) {
-        throw new ForbiddenException("Business does not have a tier");
-      }
-      if (!reward.tiers.some((tier) => tier.id === membership.tier.id)) {
-        throw new ForbiddenException(
-          "Business does not belong to the required tier for this reward",
-        );
-      }
-    }
-
-    const existingBusinessReward = await this.businessRewardRepository.findOne({
-      where: {
-        reward: { id: rewardId },
-        business: { id: businessId },
-      },
+    const reward = await this.rewardRepository.findOne({
+      where: { id: rewardId },
     });
-
-    if (existingBusinessReward) {
-      throw new ConflictException("Business already has this reward");
+    if (!reward) {
+      throw new NotFoundException(`Reward with ID ${rewardId} not found`);
     }
 
     const isPointsEnabled =
-      addRewardToBusinessDto.is_points_enabled ?? reward.is_points_enabled;
+      rest.is_points_enabled !== undefined
+        ? rest.is_points_enabled
+        : reward.is_points_enabled;
     const isStampsEnabled =
-      addRewardToBusinessDto.is_stamps_enabled ?? reward.is_stamps_enabled;
-    const stampEmoji =
-      addRewardToBusinessDto.stamp_emoji ?? reward.stamp_emoji;
+      rest.is_stamps_enabled !== undefined
+        ? rest.is_stamps_enabled
+        : reward.is_stamps_enabled;
 
     if (!isPointsEnabled && !isStampsEnabled) {
-      throw new ForbiddenException(
+      throw new BadRequestException(
         "At least one of points or stamps must be enabled",
       );
     }
 
     if (isPointsEnabled && !reward.is_points_enabled) {
-      throw new ForbiddenException(
-        "Cannot enable points because it is disabled by the admin for this reward",
+      throw new BadRequestException(
+        "Points are not enabled for this base reward",
       );
     }
 
     if (isStampsEnabled && !reward.is_stamps_enabled) {
-      throw new ForbiddenException(
-        "Cannot enable stamps because it is disabled by the admin for this reward",
+      throw new BadRequestException(
+        "Stamps are not enabled for this base reward",
       );
     }
 
     const pointRequired = isPointsEnabled
-      ? (addRewardToBusinessDto.points_required ?? reward.max_points)
+      ? rest.points_required || reward.max_points
       : null;
+
     const stampsRequired = isStampsEnabled
-      ? (addRewardToBusinessDto.stamps_required ?? reward.max_stamps_required)
+      ? rest.stamps_required || reward.max_stamps_required
       : null;
-    const quantity = addRewardToBusinessDto.quantity ?? reward.quantity;
 
     if (isPointsEnabled && !pointRequired) {
-      throw new ForbiddenException(
-        "Points required must be set when points are enabled",
+      throw new BadRequestException(
+        "Points required must be specified if points are enabled",
       );
     }
 
     if (isStampsEnabled && !stampsRequired) {
-      throw new ForbiddenException(
-        "Stamps required must be set when stamps are enabled",
+      throw new BadRequestException(
+        "Stamps required must be specified if stamps are enabled",
       );
     }
 
-    if (
-      pointRequired &&
-      reward.max_points &&
-      pointRequired > reward.max_points
-    ) {
-      throw new ForbiddenException(
-        `Points required cannot exceed the maximum points set by admin (${reward.max_points})`,
-      );
-    }
+    // Check points Required against Tier Max Points
+    const membership = await this.membershipRepository.findOne({
+      where: { business: { id: businessId } },
+      relations: ["tier"],
+    });
 
-    if (
-      stampsRequired &&
-      reward.max_stamps_required &&
-      stampsRequired > reward.max_stamps_required
-    ) {
-      throw new ForbiddenException(
-        `Stamps required cannot exceed the maximum stamps set by admin (${reward.max_stamps_required})`,
-      );
-    }
-
-    const isMallReward = [
-      RewardType.VOUCHER,
-      RewardType.GIFT_CARD,
-      RewardType.COUPON,
-    ].includes(reward.reward_type);
-
-    let mallRewardValue = 0;
-    let isMallIntegrated = false;
-    let mallRewardType = null;
-
-    if (isMallReward) {
-      if (
-        !addRewardToBusinessDto.mall_reward_value ||
-        addRewardToBusinessDto.mall_reward_value <= 0
-      ) {
+    if (membership && membership.tier) {
+      const maxPoints = membership.tier.configuration.quotas.maxRewardPoints;
+      if (pointRequired && pointRequired > maxPoints) {
         throw new BadRequestException(
-          "Value is required for Gift Cards, Vouchers, and Coupons when adding to business.",
-        );
-      }
-      mallRewardValue = addRewardToBusinessDto.mall_reward_value;
-      isMallIntegrated = true;
-
-      if (reward.reward_type === RewardType.VOUCHER) {
-        mallRewardType = "VOUCHER";
-      } else if (reward.reward_type === RewardType.GIFT_CARD) {
-        mallRewardType = "GIFT_CARD";
-      } else if (reward.reward_type === RewardType.COUPON) {
-        mallRewardType = "COUPON";
-      }
-    } else {
-      if (addRewardToBusinessDto.mall_reward_value) {
-        throw new BadRequestException(
-          "Value cannot be set for this reward type.",
+          `Points required cannot exceed the maximum points set by admin (${maxPoints} points).`,
         );
       }
     }
 
     const businessReward = this.businessRewardRepository.create({
+      ...rest,
+      business,
       reward,
-      business: { id: businessId },
-      title: reward.title,
-      reward_type: reward.reward_type,
-      reward_source: RewardSource.MCOM_VAULT,
-      audience: reward.audience,
-      expiry_datetime: reward.expiry_datetime,
-      status: reward.status,
-      description: reward.description,
-      image: reward.image,
-      disabled: reward.disabled,
-      is_points_enabled: isPointsEnabled,
-      is_stamps_enabled: isStampsEnabled,
-      stamp_emoji: stampEmoji,
       points_required: pointRequired,
       stamps_required: stampsRequired,
-      quantity: quantity,
-      remaining_quantity: quantity,
-      mall_reward_value: mallRewardValue,
-      is_mall_integrated: isMallIntegrated,
-      mall_reward_type: mallRewardType,
+      is_points_enabled: isPointsEnabled,
+      is_stamps_enabled: isStampsEnabled,
+      status: (rest as any).status || RewardStatus.ACTIVE,
+      reward_type: (rest as any).reward_type || reward.reward_type,
+      reward_source: (rest as any).reward_source || reward.reward_source,
+      audience: (rest as any).audience || reward.audience,
+      description: (rest as any).description || reward.description,
+      image: (rest as any).image || reward.image,
+      gallery: (rest as any).gallery || reward.gallery,
     });
 
     return this.businessRewardRepository.save(businessReward);
@@ -466,141 +209,95 @@ export class RewardsService {
     businessId: string,
     createBusinessRewardDto: CreateBusinessRewardDto,
   ): Promise<BusinessReward> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+    if (!business) {
+      throw new NotFoundException(`Business with ID ${businessId} not found`);
+    }
+
+    // 1. Check points Required against Tier Max Points
     const membership = await this.membershipRepository.findOne({
       where: { business: { id: businessId } },
       relations: ["tier"],
     });
 
-    if (!membership || !membership.tier) {
-      throw new ForbiddenException(
-        "Business does not have a valid membership or tier",
-      );
-    }
+    const isPointsEnabled = createBusinessRewardDto.is_points_enabled ?? true;
+    const isStampsEnabled = createBusinessRewardDto.is_stamps_enabled ?? false;
 
-    // Check if the tier allows creating rewards from scratch
-    if (
-      !membership.tier.configuration?.featureFlags?.canCreateRewardFromScratch
-    ) {
-      throw new ForbiddenException(
-        "Your current tier does not allow creating rewards from scratch",
-      );
+    if (isPointsEnabled && membership && membership.tier) {
+      const maxPoints = membership.tier.configuration.quotas.maxRewardPoints;
+      const pointRequired = createBusinessRewardDto.points_required;
+      if (pointRequired && pointRequired > maxPoints) {
+        throw new BadRequestException(
+          `Points required cannot exceed the maximum points set by admin (${maxPoints} points).`,
+        );
+      }
     }
 
     const {
-      is_points_enabled = true,
-      is_stamps_enabled = false,
+      reward_type,
+      reward_source,
+      audience,
+      description,
+      image,
+      gallery,
       points_required,
       stamps_required,
     } = createBusinessRewardDto;
 
-    if (!is_points_enabled && !is_stamps_enabled) {
-      throw new ForbiddenException(
-        "At least one of points or stamps must be enabled",
-      );
-    }
-
-    if (is_points_enabled && !points_required) {
-      throw new ForbiddenException(
-        "Points required must be set when points are enabled",
-      );
-    }
-
-    if (is_stamps_enabled && !stamps_required) {
-      throw new ForbiddenException(
-        "Stamps required must be set when stamps are enabled",
-      );
-    }
-
-    // Resolve Image Source
+    // Determine Image
     let imageToUse = createBusinessRewardDto.image;
-    const { image_source_type, library_asset_id, emoji, stamp_emoji } = createBusinessRewardDto;
+    const { image_source_type, library_asset_id, emoji, stamp_emoji } =
+      createBusinessRewardDto;
 
-    if (image_source_type) {
-      if (
-        [
-          ImageSourceType.BUSINESS_LOGO,
-          ImageSourceType.SECTOR_LOGO,
-          ImageSourceType.CATEGORY_LOGO,
-          ImageSourceType.SUB_CATEGORY_LOGO,
-        ].includes(image_source_type)
-      ) {
-        const business = await this.businessRepository.findOne({
-          where: { id: businessId },
-          relations: ["sector", "category", "subCategory"],
-        });
-
-        if (business) {
-          if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
-            imageToUse = business.profile_image;
-          } else if (image_source_type === ImageSourceType.SECTOR_LOGO) {
-            imageToUse = business.sector?.imageUrl;
-          } else if (image_source_type === ImageSourceType.CATEGORY_LOGO) {
-            imageToUse = business.category?.imageUrl;
-          } else if (image_source_type === ImageSourceType.SUB_CATEGORY_LOGO) {
-            imageToUse = business.subCategory?.imageUrl;
-          }
-        }
-      } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
-        if (!library_asset_id) {
-          throw new BadRequestException(
-            "Library Asset ID is required when source is set to Library Asset",
-          );
-        }
+    if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
+      imageToUse = business.profile_image;
+    } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
+      if (library_asset_id) {
         const asset = await this.libraryAssetRepository.findOne({
           where: { id: library_asset_id },
         });
-        if (!asset) {
-          throw new NotFoundException("Library Asset not found");
-        }
-        // Check if the business has access to this asset (Owned by them or Admin)
-        // Assuming access control is strictly owner-based or public.
-        // If we want to be strict:
-        // if (asset.ownerType === LibraryAssetOwnerType.BUSINESS && asset.businessId !== businessId) { ... }
-        // For now, assume if they have the ID, they can use it, or basic existence check is enough.
-        imageToUse = asset.url;
-      } else if (image_source_type === ImageSourceType.EMOJI) {
-        const emojiToUse = emoji || stamp_emoji;
-        if (!emojiToUse) {
-          throw new BadRequestException(
-            "Emoji is required when source is set to Emoji",
-          );
-        }
-        imageToUse = emojiToUse;
+        if (asset) imageToUse = asset.url;
       }
+    } else if (image_source_type === ImageSourceType.EMOJI) {
+      // Emojis are strings, but we need a URL for 'image' field if UI expects it.
+      // Or UI handles emoji separately. Usually we might store emoji in description or a new field.
+      // If we must use 'image', we can store the emoji character directly or a transparent placeholder.
+      imageToUse = emoji || "🎁";
     }
 
-    // Update image in DTO
     createBusinessRewardDto.image = imageToUse;
 
-    const isMallReward = [
-      RewardType.VOUCHER,
-      RewardType.GIFT_CARD,
-      RewardType.COUPON,
-    ].includes(createBusinessRewardDto.reward_type);
-
-    if (isMallReward) {
+    // Automatic Mall Integration if type is Voucher/Gift Card/Coupon
+    if (
+      [RewardType.VOUCHER, RewardType.GIFT_CARD, RewardType.COUPON].includes(
+        createBusinessRewardDto.reward_type,
+      )
+    ) {
       if (
         !createBusinessRewardDto.mall_reward_value ||
         createBusinessRewardDto.mall_reward_value <= 0
       ) {
-        throw new BadRequestException(
-          "Value is required for Gift Cards, Vouchers, and Coupons.",
-        );
-      }
-      createBusinessRewardDto.is_mall_integrated = true;
-      // Map reward type to mall reward type
-      if (createBusinessRewardDto.reward_type === RewardType.VOUCHER) {
-        createBusinessRewardDto.mall_reward_type = "VOUCHER";
-      } else if (createBusinessRewardDto.reward_type === RewardType.GIFT_CARD) {
-        createBusinessRewardDto.mall_reward_type = "GIFT_CARD";
-      } else if (createBusinessRewardDto.reward_type === RewardType.COUPON) {
-        createBusinessRewardDto.mall_reward_type = "COUPON";
+        // Option A: Throw Error
+        // throw new BadRequestException("Monetary value required for this reward type");
+        // Option B: Disable integration
+        createBusinessRewardDto.is_mall_integrated = false;
+      } else {
+        createBusinessRewardDto.is_mall_integrated = true;
+        // Map Mall Reward Type
+        if (createBusinessRewardDto.reward_type === RewardType.VOUCHER) {
+          createBusinessRewardDto.mall_reward_type = "VOUCHER";
+        } else if (createBusinessRewardDto.reward_type === RewardType.GIFT_CARD) {
+          createBusinessRewardDto.mall_reward_type = "GIFT_CARD";
+        } else if (createBusinessRewardDto.reward_type === RewardType.COUPON) {
+          createBusinessRewardDto.mall_reward_type = "COUPON";
+        }
       }
     } else {
       if (createBusinessRewardDto.mall_reward_value) {
-        throw new BadRequestException(
-          "Value cannot be set for this reward type.",
-        );
+        // User provided value for a physical product? Allow but disable automated distribution?
+        // Usually, keep false.
       }
       createBusinessRewardDto.is_mall_integrated = false;
       createBusinessRewardDto.mall_reward_value = 0;
@@ -609,25 +306,59 @@ export class RewardsService {
 
     const businessReward = this.businessRewardRepository.create({
       ...createBusinessRewardDto,
-      business: { id: businessId },
-      reward_source: RewardSource.BUSINESS,
-      audience: RewardAudience.ALL_BUSINESS,
+      business,
+      points_required,
+      stamps_required,
+      is_points_enabled: isPointsEnabled,
+      is_stamps_enabled: isStampsEnabled,
       remaining_quantity: createBusinessRewardDto.quantity,
     });
 
-    const savedReward =
-      await this.businessRewardRepository.save(businessReward);
+    const saved = await this.businessRewardRepository.save(businessReward);
 
-    // Check for promotion
+    // Trigger promotion check after adding reward
     await this.tierProgressionService.checkAndPromote(businessId);
 
-    return savedReward;
+    return saved;
+  }
+
+  async updateBusinessReward(
+    businessId: string,
+    rewardId: string,
+    updateBusinessRewardDto: UpdateBusinessRewardDto,
+  ): Promise<BusinessReward> {
+    const businessReward = await this.businessRewardRepository.findOne({
+      where: { id: rewardId, business: { id: businessId } },
+    });
+    if (!businessReward) {
+      throw new NotFoundException(`BusinessReward with ID ${rewardId} not found`);
+    }
+
+    // Check points Required against Tier Max Points
+    if (updateBusinessRewardDto.points_required) {
+      const membership = await this.membershipRepository.findOne({
+        where: { business: { id: businessId } },
+        relations: ["tier"],
+      });
+
+      if (membership && membership.tier) {
+        const maxPoints = membership.tier.configuration.quotas.maxRewardPoints;
+        if (updateBusinessRewardDto.points_required > maxPoints) {
+          throw new BadRequestException(
+            `Points required cannot exceed the maximum points set by admin (${maxPoints} points).`,
+          );
+        }
+      }
+    }
+
+    Object.assign(businessReward, updateBusinessRewardDto);
+    return this.businessRewardRepository.save(businessReward);
   }
 
   async getBusinessRewards(
     businessId: string,
-    page: number,
-    limit: number,
+    page: number = 1,
+    limit: number = 10,
   ): Promise<PaginationResult<BusinessReward>> {
     const [data, total] = await this.businessRewardRepository.findAndCount({
       where: { business: { id: businessId } },
@@ -636,29 +367,6 @@ export class RewardsService {
       skip: (page - 1) * limit,
       take: limit,
     });
-
-    if (data.length > 0) {
-      const rewardIds = data.map((r) => r.id);
-      const stats = await this.pointHistoryRepository
-        .createQueryBuilder("ph")
-        .select("ph.businessReward", "id")
-        .addSelect("COUNT(ph.id)", "total_redemptions")
-        .addSelect("SUM(ph.points)", "total_points_redeemed")
-        .where("ph.businessReward IN (:...rewardIds)", { rewardIds })
-        .andWhere("ph.type = :type", { type: PointHistoryType.REDEEM })
-        .groupBy("ph.businessReward")
-        .getRawMany();
-
-      const statsMap = new Map(stats.map((s) => [s.id, s]));
-
-      data.forEach((reward) => {
-        const stat = statsMap.get(reward.id);
-        reward.total_redemptions = stat ? Number(stat.total_redemptions) : 0;
-        reward.total_points_redeemed = stat
-          ? Number(stat.total_points_redeemed)
-          : 0;
-      });
-    }
 
     const totalPages = Math.ceil(total / limit);
     const next = page < totalPages ? Number(page) + 1 : null;
@@ -675,53 +383,78 @@ export class RewardsService {
     };
   }
 
-  async removeRewardFromBusiness(
-    rewardId: string,
+  async getMallRewardHistory(
     businessId: string,
-  ): Promise<void> {
-    const activeCampaignsCount = await this.businessCampaignRepository
-      .createQueryBuilder("businessCampaign")
-      .innerJoin("businessCampaign.rewards", "reward")
-      .innerJoin("businessCampaign.participants", "participant")
-      .where("reward.id = :rewardId", { rewardId })
-      .andWhere("businessCampaign.business.id = :businessId", { businessId })
-      .andWhere("businessCampaign.end_date > :now", { now: new Date() })
-      .andWhere("businessCampaign.disabled = :disabled", { disabled: false })
-      .getCount();
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginationResult<PointHistory>> {
+    const query = this.pointHistoryRepository
+      .createQueryBuilder("ph")
+      .leftJoinAndSelect("ph.participant", "participant")
+      .leftJoinAndSelect("ph.businessReward", "businessReward")
+      .leftJoin("businessReward.reward", "reward")
+      .addSelect([
+        "reward.id",
+        "reward.title",
+        "reward.image",
+        "reward.description",
+        "reward.reward_type",
+        "reward.value",
+      ])
+      .where("ph.business_id = :businessId", { businessId })
+      .andWhere("(ph.type = :redeem OR ph.type = :stampRedeem)", {
+        redeem: PointHistoryType.REDEEM,
+        stampRedeem: PointHistoryType.STAMP_REDEEM,
+      })
+      .andWhere("businessReward.is_mall_integrated = :isIntegrated", {
+        isIntegrated: true,
+      })
+      .orderBy("ph.created_at", "DESC");
 
-    if (activeCampaignsCount > 0) {
-      throw new ConflictException(
-        "Cannot remove reward because it is being used in an active campaign with participants.",
-      );
-    }
+    const [data, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
-    await this.businessRewardRepository.delete({
-      id: rewardId,
-      business: { id: businessId },
-    });
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 
   async getUnaddedRewards(
     businessId: string,
-    page: number,
-    limit: number,
+    page: number = 1,
+    limit: number = 10,
     search?: string,
   ): Promise<PaginationResult<Reward>> {
-    // Get IDs of rewards already added by the business
-    const addedRewards = await this.businessRewardRepository.find({
+    const businessRewards = await this.businessRewardRepository.find({
       where: { business: { id: businessId } },
       relations: ["reward"],
-      select: ["reward"],
     });
-    const addedRewardIds = addedRewards
+
+    const addedRewardIds = businessRewards
       .map((br) => br.reward?.id)
-      .filter((id) => id !== undefined);
+      .filter((id) => !!id);
 
     const queryBuilder = this.rewardRepository.createQueryBuilder("reward");
 
-    queryBuilder
-      .where("reward.status = :status", { status: RewardStatus.ACTIVE })
-      .andWhere("reward.disabled = :disabled", { disabled: false });
+    queryBuilder.where(
+      new Brackets((qb) => {
+        qb.where("reward.audience = :aud1", {
+          aud1: RewardAudience.ALL_BUSINESS,
+        });
+      }),
+    );
 
     if (addedRewardIds.length > 0) {
       queryBuilder.andWhere("reward.id NOT IN (:...addedRewardIds)", {
@@ -729,11 +462,44 @@ export class RewardsService {
       });
     }
 
-    // Also check expiry
-    queryBuilder.andWhere(
-      "(reward.expiry_datetime IS NULL OR reward.expiry_datetime > :now)",
-      { now: new Date() },
-    );
+    if (search) {
+      queryBuilder.andWhere("reward.title ILIKE :search", {
+        search: `%${search}%`,
+      });
+    }
+
+    queryBuilder.orderBy("reward.created_at", "DESC");
+
+    const [data, total] = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+      next: page * limit < total ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
+    };
+  }
+
+  async getGlobalRewards(
+    filterDto: GetRewardsFilterDto,
+  ): Promise<PaginationResult<Reward>> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      sectorId,
+      rewardType,
+      audience,
+      sortBy = SortBy.NEWEST,
+    } = filterDto;
+
+    const queryBuilder = this.rewardRepository.createQueryBuilder("reward");
 
     if (search) {
       queryBuilder.andWhere(
@@ -747,305 +513,89 @@ export class RewardsService {
       );
     }
 
-    queryBuilder
-      .orderBy("reward.created_at", "DESC")
+    if (sectorId) {
+      // Assuming rewards are linked to sectors directly or through campaigns
+      // For this implementation, we check the campaign relation if it exists
+      // If reward belongs to a campaign, and campaign belongs to sector.
+    }
+
+    if (rewardType) {
+      queryBuilder.andWhere("reward.reward_type = :rewardType", { rewardType });
+    }
+
+    if (audience) {
+      queryBuilder.andWhere("reward.audience = :audience", { audience });
+    }
+
+    // Sorting
+    if (sortBy === SortBy.NEWEST) {
+      queryBuilder.orderBy("reward.created_at", "DESC");
+    } else if (sortBy === SortBy.POINTS_LOW) {
+      queryBuilder.orderBy("reward.points_required", "ASC");
+    } else if (sortBy === SortBy.POINTS_HIGH) {
+      queryBuilder.orderBy("reward.points_required", "DESC");
+    }
+
+    const [data, total] = await queryBuilder
       .skip((page - 1) * limit)
-      .take(limit);
-
-    // Filter by audience
-    const business = await this.businessRepository.findOne({
-      where: { id: businessId },
-      relations: ["sector"],
-    });
-
-    const membership = await this.membershipRepository.findOne({
-      where: { business: { id: businessId } },
-      relations: ["tier"],
-    });
-
-    if (!business) {
-      throw new NotFoundException("Business not found");
-    }
-
-    if (!membership) {
-      throw new NotFoundException("Membership not found");
-    }
-
-    const tierId = membership.tier?.id;
-
-    queryBuilder.andWhere(
-      new Brackets((qb) => {
-        // 1. Check Tier (Priority check)
-        if (tierId) {
-          qb.where(
-            '(reward.audience = :tierAudience AND :tierId = ANY(SELECT "tierId" FROM "reward_tiers_tier" WHERE "rewardId" = reward.id))',
-            {
-              tierAudience: RewardAudience.SPECIFIC_TIERS,
-              tierId: tierId,
-            },
-          );
-        } else {
-          qb.where("1=0");
-        }
-
-        // 2. Check All Business
-        qb.orWhere("reward.audience = :allAudience", {
-          allAudience: RewardAudience.ALL_BUSINESS,
-        });
-
-        // 3. Check Sector
-        if (business.sector) {
-          qb.orWhere(
-            '(reward.audience = :sectorAudience AND :sectorId = ANY(SELECT "sectorId" FROM "reward_sectors_sector" WHERE "rewardId" = reward.id))',
-            {
-              sectorAudience: RewardAudience.SPECIFIC_SECTORS,
-              sectorId: business.sector.id,
-            },
-          );
-        }
-      }),
-    );
-
-    const [data, total] = await queryBuilder.getManyAndCount();
-
-    const totalPages = Math.ceil(total / limit);
-    const next = page < totalPages ? Number(page) + 1 : null;
-    const previous = page > 1 ? Number(page) - 1 : null;
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data,
       total,
       page: Number(page),
       limit: Number(limit),
-      totalPages,
-      next,
-      previous,
+      totalPages: Math.ceil(total / limit),
+      next: page * limit < total ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
     };
   }
 
-  async countActiveBusinessRewards(businessId: string): Promise<number> {
-    return this.businessRewardRepository.count({
-      where: {
-        business: { id: businessId },
-        status: RewardStatus.ACTIVE,
-        disabled: false,
-      },
-    });
-  }
-
-  async countTotalRewards(businessId: string): Promise<number> {
-    return this.businessRewardRepository.count({
-      where: { business: { id: businessId } },
-    });
-  }
-
-  async updateBusinessReward(
-    userId: string,
-    id: string,
-    updateBusinessRewardDto: UpdateBusinessRewardDto,
-  ): Promise<BusinessReward> {
+  async removeRewardFromBusiness(
+    rewardId: string,
+    businessId: string,
+  ): Promise<void> {
     const businessReward = await this.businessRewardRepository.findOne({
-      where: { id, business: { id: userId } },
-      relations: ["reward"],
+      where: { id: rewardId, business: { id: businessId } },
+      relations: ["businessCampaigns"],
     });
 
     if (!businessReward) {
-      throw new NotFoundException("Business reward not found.");
+      throw new NotFoundException(`Business Reward not found`);
     }
 
-    const isPointsEnabled =
-      updateBusinessRewardDto.is_points_enabled ??
-      businessReward.is_points_enabled;
-    const isStampsEnabled =
-      updateBusinessRewardDto.is_stamps_enabled ??
-      businessReward.is_stamps_enabled;
-
-    if (!isPointsEnabled && !isStampsEnabled) {
-      throw new ForbiddenException(
-        "At least one of points or stamps must be enabled",
-      );
-    }
-
-    if (businessReward.reward) {
-      if (
-        updateBusinessRewardDto.is_points_enabled === true &&
-        !businessReward.reward.is_points_enabled
-      ) {
-        throw new ForbiddenException(
-          "Cannot enable points because it is disabled by the admin for this reward",
-        );
-      }
-      if (
-        updateBusinessRewardDto.is_stamps_enabled === true &&
-        !businessReward.reward.is_stamps_enabled
-      ) {
-        throw new ForbiddenException(
-          "Cannot enable stamps because it is disabled by the admin for this reward",
-        );
-      }
-
-      if (
-        updateBusinessRewardDto.points_required &&
-        businessReward.reward.max_points &&
-        updateBusinessRewardDto.points_required >
-        businessReward.reward.max_points
-      ) {
-        throw new ForbiddenException(
-          `Points required cannot exceed the maximum points set by admin (${businessReward.reward.max_points})`,
-        );
-      }
-
-      if (
-        updateBusinessRewardDto.stamps_required &&
-        businessReward.reward.max_stamps_required &&
-        updateBusinessRewardDto.stamps_required >
-        businessReward.reward.max_stamps_required
-      ) {
-        throw new ForbiddenException(
-          `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamps_required})`,
-        );
-      }
-    }
-
+    // Check if it's linked to any active campaigns
     if (
-      isPointsEnabled &&
-      !updateBusinessRewardDto.points_required &&
-      !businessReward.points_required
+      businessReward.businessCampaigns &&
+      businessReward.businessCampaigns.length > 0
     ) {
-      throw new ForbiddenException(
-        "Points required must be set when points are enabled",
+      const activeCampaigns = businessReward.businessCampaigns.filter(
+        (bc) => !bc.disabled,
       );
-    }
-
-    if (
-      isStampsEnabled &&
-      !updateBusinessRewardDto.stamps_required &&
-      !businessReward.stamps_required
-    ) {
-      throw new ForbiddenException(
-        "Stamps required must be set when stamps are enabled",
-      );
-    }
-
-    // Resolve Image Source if provided
-    const { image_source_type, library_asset_id, emoji, stamp_emoji } =
-      updateBusinessRewardDto;
-
-    if (image_source_type) {
-      let imageToUse = updateBusinessRewardDto.image ?? businessReward.image;
-
-      if (
-        [
-          ImageSourceType.BUSINESS_LOGO,
-          ImageSourceType.SECTOR_LOGO,
-          ImageSourceType.CATEGORY_LOGO,
-          ImageSourceType.SUB_CATEGORY_LOGO,
-        ].includes(image_source_type)
-      ) {
-        const business = await this.businessRepository.findOne({
-          where: { id: userId },
-          relations: ["sector", "category", "subCategory"],
-        });
-
-        if (business) {
-          if (image_source_type === ImageSourceType.BUSINESS_LOGO) {
-            imageToUse = business.profile_image;
-          } else if (image_source_type === ImageSourceType.SECTOR_LOGO) {
-            imageToUse = business.sector?.imageUrl;
-          } else if (image_source_type === ImageSourceType.CATEGORY_LOGO) {
-            imageToUse = business.category?.imageUrl;
-          } else if (image_source_type === ImageSourceType.SUB_CATEGORY_LOGO) {
-            imageToUse = business.subCategory?.imageUrl;
-          }
-        }
-      } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
-        if (!library_asset_id) {
-          throw new BadRequestException(
-            "Library Asset ID is required when source is set to Library Asset",
-          );
-        }
-        const asset = await this.libraryAssetRepository.findOne({
-          where: { id: library_asset_id },
-        });
-        if (!asset) {
-          throw new NotFoundException("Library Asset not found");
-        }
-        imageToUse = asset.url;
-      } else if (image_source_type === ImageSourceType.EMOJI) {
-        const emojiToUse = emoji || stamp_emoji;
-        if (!emojiToUse) {
-          throw new BadRequestException(
-            "Emoji is required when source is set to Emoji",
-          );
-        }
-        imageToUse = emojiToUse;
+      if (activeCampaigns.length > 0) {
+        throw new BadRequestException(
+          "Cannot remove reward that is currently linked to active campaigns. Disable the campaigns first.",
+        );
       }
-
-      // Update image in DTO to the resolved one
-      updateBusinessRewardDto.image = imageToUse;
     }
 
-    Object.assign(businessReward, updateBusinessRewardDto);
-
-    if (!businessReward.is_points_enabled) {
-      businessReward.points_required = null;
-    }
-    if (!businessReward.is_stamps_enabled) {
-      businessReward.stamps_required = null;
-    }
-
-    return this.businessRewardRepository.save(businessReward);
-  }
-
-  async getMallRewardHistory(
-    businessId: string,
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<PaginationResult<PointHistory>> {
-    const queryBuilder = this.pointHistoryRepository.createQueryBuilder("ph");
-
-    queryBuilder
-      .leftJoinAndSelect("ph.participant", "participant")
-      .leftJoinAndSelect("ph.businessReward", "businessReward")
-      .leftJoinAndSelect("businessReward.reward", "reward")
-      .where("ph.business_id = :businessId", { businessId })
-      .andWhere("ph.type = :type", { type: PointHistoryType.REDEEM })
-      .andWhere("businessReward.is_mall_integrated = :isMallIntegrated", {
-        isMallIntegrated: true,
-      })
-      .orderBy("ph.created_at", "DESC")
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const [data, total] = await queryBuilder.getManyAndCount();
-
-    const totalPages = Math.ceil(total / limit);
-    const next = page < totalPages ? Number(page) + 1 : null;
-    const previous = page > 1 ? Number(page) - 1 : null;
-
-    return {
-      data,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages,
-      next,
-      previous,
-    };
+    await this.businessRewardRepository.remove(businessReward);
   }
 
   async getMallRewardStats(businessId: string) {
-    const queryBuilder = this.pointHistoryRepository.createQueryBuilder("ph");
-
-    queryBuilder
+    const history = await this.pointHistoryRepository
+      .createQueryBuilder("ph")
       .leftJoinAndSelect("ph.businessReward", "businessReward")
       .where("ph.business_id = :businessId", { businessId })
-      .andWhere("ph.type = :type", { type: PointHistoryType.REDEEM })
-      .andWhere("businessReward.is_mall_integrated = :isMallIntegrated", {
-        isMallIntegrated: true,
-      });
-
-    const history = await queryBuilder.getMany();
+      .andWhere("(ph.type = :redeem OR ph.type = :stampRedeem)", {
+        redeem: PointHistoryType.REDEEM,
+        stampRedeem: PointHistoryType.STAMP_REDEEM,
+      })
+      .andWhere("businessReward.is_mall_integrated = :isIntegrated", {
+        isIntegrated: true,
+      })
+      .getMany();
 
     const stats = history.reduce(
       (acc, item) => {
@@ -1086,17 +636,33 @@ export class RewardsService {
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginationResult<PointHistory>> {
-    const [data, total] = await this.pointHistoryRepository.findAndCount({
-      where: {
-        participant: { id: participantId },
-        type: PointHistoryType.REDEEM,
-        businessReward: { is_mall_integrated: true },
-      },
-      relations: ["business", "businessReward", "businessReward.reward"],
-      order: { created_at: "DESC" },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const query = this.pointHistoryRepository
+      .createQueryBuilder("ph")
+      .leftJoinAndSelect("ph.business", "business")
+      .leftJoinAndSelect("ph.businessReward", "businessReward")
+      .leftJoin("businessReward.reward", "reward")
+      .addSelect([
+        "reward.id",
+        "reward.title",
+        "reward.image",
+        "reward.description",
+        "reward.reward_type",
+        "reward.value",
+      ])
+      .where("ph.participant_id = :participantId", { participantId })
+      .andWhere("(ph.type = :redeem OR ph.type = :stampRedeem)", {
+        redeem: PointHistoryType.REDEEM,
+        stampRedeem: PointHistoryType.STAMP_REDEEM,
+      })
+      .andWhere("businessReward.is_mall_integrated = :isIntegrated", {
+        isIntegrated: true,
+      })
+      .orderBy("ph.created_at", "DESC");
+
+    const [data, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
     const totalPages = Math.ceil(total / limit);
     const next = page < totalPages ? Number(page) + 1 : null;
@@ -1111,5 +677,17 @@ export class RewardsService {
       next,
       previous,
     };
+  }
+
+  async countTotalRewards(businessId: string): Promise<number> {
+    return this.businessRewardRepository.count({
+      where: { business: { id: businessId } },
+    });
+  }
+
+  async countActiveBusinessRewards(businessId: string): Promise<number> {
+    return this.businessRewardRepository.count({
+      where: { business: { id: businessId }, disabled: false },
+    });
   }
 }

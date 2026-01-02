@@ -6,6 +6,8 @@ import { RewardStatus } from "../enums/reward-status.enum";
 import { Sector } from "../../sector/entities/sector.entity";
 import { Tier } from "../../tier/entities/tier.entity";
 
+import { RewardSource } from "../enums/reward-source.enum";
+
 @Entity()
 export class Reward extends AbstractBaseEntity {
   @Column()
@@ -19,6 +21,9 @@ export class Reward extends AbstractBaseEntity {
 
   @Column({ type: "enum", enum: RewardType })
   reward_type: RewardType;
+
+  @Column({ type: "enum", enum: RewardSource, default: RewardSource.MCOM_VAULT })
+  reward_source: RewardSource;
 
   @Column({ type: "enum", enum: RewardAudience })
   audience: RewardAudience;
