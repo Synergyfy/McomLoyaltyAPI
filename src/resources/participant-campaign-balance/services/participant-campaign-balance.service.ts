@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DataSource, EntityManager } from "typeorm";
+import { Repository, DataSource, EntityManager, In } from "typeorm";
 import { Participant } from "../../participant/entities/participant.entity";
 import { ParticipantCampaignBalance } from "../entities/participant-campaign-balance.entity";
 import {
@@ -174,9 +174,9 @@ export class ParticipantCampaignBalanceService {
     if (Array.isArray(where)) {
       where.forEach(w => {
         if (historyType === HistoryDisplayType.POINTS) {
-          w.type = [PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA];
+          w.type = In([PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA]);
         } else if (historyType === HistoryDisplayType.STAMPS) {
-          w.type = [PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM];
+          w.type = In([PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM]);
         }
       });
     }
@@ -208,9 +208,9 @@ export class ParticipantCampaignBalanceService {
     };
 
     if (historyType === HistoryDisplayType.POINTS) {
-      where.type = [PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA];
+      where.type = In([PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA]);
     } else if (historyType === HistoryDisplayType.STAMPS) {
-      where.type = [PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM];
+      where.type = In([PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM]);
     }
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({

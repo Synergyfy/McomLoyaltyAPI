@@ -395,7 +395,7 @@ export class CapabilityService {
       .createQueryBuilder("event")
       .innerJoin("event.stampCard", "card")
       .innerJoin("card.businessStampReward", "reward")
-      .where("reward.business_id = :userId", { userId })
+      .where("reward.businessId = :userId", { userId })
       .andWhere("event.created_at BETWEEN :start AND :end", {
         start: startOfMonth,
         end: endOfMonth,

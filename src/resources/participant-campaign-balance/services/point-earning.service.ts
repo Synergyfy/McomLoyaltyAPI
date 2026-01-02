@@ -142,7 +142,7 @@ export class PointEarningService {
 
       const businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
-        relations: ["business", "campaign"],
+        relations: ["business", "campaign", "businessRewards"],
       });
 
       if (!businessCampaign) {
@@ -159,7 +159,12 @@ export class PointEarningService {
       }
 
       // Check Reward Mode
-      if (businessCampaign.reward_mode === CampaignRewardMode.STAMPS) {
+      const isPointsEnabled =
+        businessCampaign.reward_mode === CampaignRewardMode.POINTS ||
+        businessCampaign.reward_mode === CampaignRewardMode.BOTH ||
+        businessCampaign.businessRewards?.some((r) => r.is_points_enabled);
+
+      if (!isPointsEnabled) {
         throw new BadRequestException(
           "This campaign only allows awarding stamps.",
         );
@@ -554,6 +559,7 @@ export class PointEarningService {
           "business",
           "businessStampReward",
           "businessStampReward.template",
+          "businessRewards",
         ],
       });
 
@@ -566,15 +572,20 @@ export class PointEarningService {
         );
       }
 
-      if (businessCampaign.reward_mode === CampaignRewardMode.POINTS) {
+      const isStampsEnabled =
+        businessCampaign.reward_mode === CampaignRewardMode.STAMPS ||
+        businessCampaign.reward_mode === CampaignRewardMode.BOTH ||
+        businessCampaign.businessRewards?.some((r) => r.is_stamps_enabled);
+
+      if (!isStampsEnabled) {
         throw new BadRequestException(
           "This campaign only allows awarding points.",
         );
       }
 
-      if (!businessCampaign.businessStampReward) {
+      if (!isStampsEnabled) {
         throw new BadRequestException(
-          "This campaign does not have a linked stamp reward.",
+          "This campaign only allows awarding points.",
         );
       }
 
@@ -598,13 +609,16 @@ export class PointEarningService {
         }
       }
 
-      // Award Stamps via StampService
-      const card = await this.stampService.processAddStamp(
-        participant,
-        businessCampaign.businessStampReward,
-        triggerMethod,
-        sourceDescription || "Awarded manually",
-      );
+      // Award Stamps via StampService (if template exists)
+      let card = null;
+      if (businessCampaign.businessStampReward) {
+        card = await this.stampService.processAddStamp(
+          participant,
+          businessCampaign.businessStampReward,
+          triggerMethod,
+          sourceDescription || "Awarded manually",
+        );
+      }
 
       // --- NEW: Update Campaign Stamp Balance and Log History ---
       let participantCampaignBalance = await manager.findOne(
@@ -663,13 +677,13 @@ export class PointEarningService {
           stamps,
           business.name,
           businessCampaign.name,
-          card.current_stamps,
+          card ? card.current_stamps : participantCampaignBalance.stamp_balance,
         );
       } catch (error) {
         console.error("Failed to send stamp notifications:", error);
       }
 
-      return card;
+      return card || participantCampaignBalance;
     };
 
     if (transactionManager) {
@@ -734,6 +748,7 @@ export class PointEarningService {
     performerType: "Staff" | "Business",
     participantCode: string,
     campaignId: string,
+    stamps: number = 1,
   ) {
     const participant = await this.participantRepository.findOne({
       where: { uniqueCode: participantCode },
@@ -745,7 +760,7 @@ export class PointEarningService {
       performerType,
       participant.id,
       campaignId,
-      1,
+      stamps,
       "Awarded by stamp scan",
     );
   }
@@ -754,6 +769,7 @@ export class PointEarningService {
     staffOrBusinessCode: string,
     participantCode: string,
     campaignId: string,
+    stamps: number = 1,
   ) {
     const { staff, business } =
       await this.findPerformerByCode(staffOrBusinessCode);
@@ -770,7 +786,7 @@ export class PointEarningService {
       performerType,
       participant.id,
       campaignId,
-      1,
+      stamps,
       "Awarded by stamp dual scan",
     );
   }

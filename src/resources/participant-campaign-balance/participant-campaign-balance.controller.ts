@@ -310,6 +310,7 @@ export class ParticipantCampaignBalanceController {
         performerType,
         dto.participantCode,
         dto.campaignId,
+        dto.stamps,
       );
     } else {
       if (!dto.rewardId)
@@ -383,6 +384,7 @@ export class ParticipantCampaignBalanceController {
         dto.staffOrBusinessCode,
         dto.participantCode,
         dto.campaignId,
+        dto.stamps,
       );
     } else {
       if (!dto.rewardId)
