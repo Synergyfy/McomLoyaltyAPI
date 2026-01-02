@@ -91,6 +91,7 @@ export class RedemptionService {
     campaignId: string,
     redemptionCode: string | null,
     sourceDescription?: string,
+    redemptionMethod: "points" | "stamps" = "points",
     transactionManager?: any, // EntityManager
   ): Promise<ParticipantCampaignBalance> {
     const execute = async (manager: any) => {
@@ -98,13 +99,11 @@ export class RedemptionService {
       let business: Business | null = null;
 
       if (performerType === "Participant") {
-        // If Participant is redeeming, they must be the one initiating it.
         if (performerId !== participantId) {
           throw new BadRequestException(
             "You can only redeem rewards for yourself.",
           );
         }
-        // Business is derived from the campaign later
       } else {
         const performer = await this.findPerformer(
           performerId,
@@ -121,18 +120,15 @@ export class RedemptionService {
         throw new NotFoundException("Participant not found");
       }
 
-      // 1. Try to find BusinessReward first (assuming rewardId is a BusinessReward ID)
       let businessReward = await manager.findOne(BusinessReward, {
         where: { id: rewardId },
         relations: ["reward", "business"],
       });
 
       let reward: Reward | null = null;
-
       if (businessReward) {
-        reward = businessReward.reward; // Might be null if it's a custom BusinessReward
+        reward = businessReward.reward;
       } else {
-        // 2. Fallback: Try to find base Reward (backward compatibility)
         reward = await manager.findOne(Reward, { where: { id: rewardId } });
       }
 
@@ -149,7 +145,6 @@ export class RedemptionService {
         throw new NotFoundException("Business campaign not found");
       }
 
-      // If business was not already set (i.e. Participant redemption), set it from campaign
       if (!business) {
         business = businessCampaign.business;
       }
@@ -167,25 +162,15 @@ export class RedemptionService {
         throw new BadRequestException("Campaign is not active");
       }
 
-      // Validate Reward inclusion in Campaign
       let isRewardInCampaign = false;
       if (businessReward) {
-        // Check if this specific BusinessReward is linked to the campaign
-        // or matches one of the campaign's businessRewards
         isRewardInCampaign = businessCampaign.businessRewards?.some(
           (br) => br.id === businessReward.id,
         );
-
-        // If not directly in businessRewards list, check if it's linked via Campaign entity match
-        if (!isRewardInCampaign && businessCampaign.campaign) {
-          // Some business rewards are linked to the global campaign
-          // But usually they should be in businessRewards relation of BusinessCampaign if modeled that way.
-          // Fallback: Check if base reward is in campaign.rewards
-          if (reward) {
-            isRewardInCampaign = businessCampaign.rewards.some(
-              (r) => r.id === reward.id,
-            );
-          }
+        if (!isRewardInCampaign && reward) {
+          isRewardInCampaign = businessCampaign.rewards.some(
+            (r) => r.id === reward.id,
+          );
         }
       } else if (reward) {
         isRewardInCampaign = businessCampaign.rewards.some(
@@ -194,22 +179,11 @@ export class RedemptionService {
       }
 
       if (!isRewardInCampaign) {
-        // Strict check: if not found in lists, ensure we didn't miss a relation
-        // But for now, let's allow if logic was permissive before.
-        // Previous logic: businessCampaign.rewards.some(r => r.id === reward.id)
-
-        // If we found a businessReward but the base reward check failed (or didn't exist),
-        // we should rely on the businessReward being part of the campaign context.
-        // Assuming if passed ID is valid BusinessReward and business matches, it's likely intended.
-        // However, security-wise, we should ensure it belongs to THIS campaign.
-
-        // Let's assume if it wasn't found in the explicit lists, we throw.
         throw new BadRequestException(
           "Reward is not available in this campaign",
         );
       }
 
-      // If we started with a base Reward ID, try to find the specific BusinessReward override
       if (!businessReward && reward) {
         businessReward = await manager.findOne(BusinessReward, {
           where: {
@@ -219,20 +193,45 @@ export class RedemptionService {
         });
       }
 
-      // Determine Points Cost
       let pointsCost = 0;
-      if (businessReward && businessReward.points_required !== null) {
-        pointsCost = businessReward.points_required;
-      } else if (reward) {
-        pointsCost = reward.max_points;
+      let stampsCost = 0;
+
+      if (redemptionMethod === "points") {
+        if (businessReward && businessReward.points_required !== null) {
+          pointsCost = businessReward.points_required;
+        } else if (reward) {
+          pointsCost = reward.max_points;
+        }
+
+        if (businessReward && !businessReward.is_points_enabled) {
+          throw new BadRequestException(
+            "Point redemption is disabled for this reward",
+          );
+        }
       } else {
-        // Should not happen if data is consistent
-        throw new BadRequestException(
-          "Cannot determine point cost for this reward",
-        );
+        if (businessReward) {
+          stampsCost = businessReward.stamps_required || 0;
+          if (!businessReward.is_stamps_enabled) {
+            throw new BadRequestException(
+              "Stamp redemption is disabled for this reward",
+            );
+          }
+        } else if (reward) {
+          stampsCost = reward.max_stamps_required || 0;
+          if (!reward.is_stamps_enabled) {
+            throw new BadRequestException(
+              "Stamp redemption is disabled for this reward",
+            );
+          }
+        }
+
+        if (stampsCost <= 0) {
+          throw new BadRequestException(
+            "Stamp cost not configured for this reward",
+          );
+        }
       }
 
-      // Check stock and update quantity (using businessReward)
       if (businessReward) {
         if (businessReward.remaining_quantity !== null) {
           if (businessReward.remaining_quantity <= 0) {
@@ -241,11 +240,10 @@ export class RedemptionService {
           businessReward.remaining_quantity -= 1;
           await manager.save(BusinessReward, businessReward);
         } else if (businessReward.quantity !== null) {
-          // Initialize remaining_quantity logic
           const pastRedemptions = await manager.count(PointHistory, {
             where: {
               business: { id: business.id },
-              businessReward: { id: businessReward.id }, // More specific
+              businessReward: { id: businessReward.id },
               type: PointHistoryType.REDEEM,
             },
           });
@@ -258,15 +256,13 @@ export class RedemptionService {
         }
       }
 
-      const whereCondition: any = {
-        participant: { id: participantId },
-        businessCampaign: { id: campaignId },
-      };
-
       const participantCampaignBalance = await manager.findOne(
         ParticipantCampaignBalance,
         {
-          where: whereCondition,
+          where: {
+            participant: { id: participantId },
+            businessCampaign: { id: campaignId },
+          },
         },
       );
 
@@ -276,35 +272,37 @@ export class RedemptionService {
         );
       }
 
-      if (participantCampaignBalance.campaign_balance < pointsCost) {
-        throw new BadRequestException("Not enough points");
+      if (redemptionMethod === "points") {
+        if (participantCampaignBalance.campaign_balance < pointsCost) {
+          throw new BadRequestException("Not enough points");
+        }
+        participantCampaignBalance.campaign_balance -= pointsCost;
+        participant.global_total_points -= pointsCost;
+        businessCampaign.total_points_redeemed += pointsCost;
+
+        if (businessCampaign.business) {
+          businessCampaign.business.total_points_redeemed += pointsCost;
+          await manager.save(businessCampaign.business);
+        }
+      } else {
+        if (participantCampaignBalance.stamp_balance < stampsCost) {
+          throw new BadRequestException("Not enough stamps");
+        }
+        participantCampaignBalance.stamp_balance -= stampsCost;
       }
 
-      participantCampaignBalance.campaign_balance -= pointsCost;
-      participant.global_total_points -= pointsCost;
-      businessCampaign.total_points_redeemed += pointsCost;
-
-      // Update business totals
-      if (businessCampaign.business) {
-        businessCampaign.business.total_points_redeemed += pointsCost;
-        await manager.save(businessCampaign.business);
-      }
-
-      // --- Mall Integration Logic ---
       let voucherCode: string | undefined;
       if (
         businessReward &&
         businessReward.is_mall_integrated &&
         businessReward.mall_reward_value > 0
       ) {
-        // 1. Deduct from Business Wallet
         await this.walletService.spend(
           business.id,
           businessReward.mall_reward_value,
           `Reward Redemption: ${businessReward.title || (reward ? reward.title : "Reward")} (Participant: ${participant.name})`,
         );
 
-        // 2. Generate Reward in Mall API
         try {
           const amount = Number(businessReward.mall_reward_value);
           const payload = {
@@ -323,35 +321,33 @@ export class RedemptionService {
             mallResponse =
               await this.mallIntegrationService.createCoupon(payload);
           } else {
-            // Default to VOUCHER
             mallResponse =
               await this.mallIntegrationService.createVoucher(payload);
           }
           voucherCode = mallResponse.code;
         } catch (error) {
-          // If Mall API fails, should we rollback?
-          // Since we are inside a transaction (handled by `execute` wrapper or `manager`),
-          // throwing here will rollback the wallet spend and point deduction.
           console.error("Mall Integration Failed:", error);
           throw new BadRequestException(
             "Failed to generate external voucher. Please contact support or try again.",
           );
         }
       }
-      // -----------------------------
 
       const pointHistory = this.pointHistoryRepository.create({
-        type: PointHistoryType.REDEEM,
+        type:
+          redemptionMethod === "points"
+            ? PointHistoryType.REDEEM
+            : PointHistoryType.STAMP_REDEEM,
         points: pointsCost,
+        stamps: stampsCost,
         participant,
         reward: reward,
         initiated_by_staff: staff,
         business: business,
-        redemption_code: voucherCode || redemptionCode, // Store voucher code if available
+        redemption_code: voucherCode || redemptionCode,
         description: sourceDescription,
       });
 
-      // Try to find BusinessReward to link
       if (businessReward) {
         pointHistory.businessReward = businessReward;
       }
@@ -366,7 +362,6 @@ export class RedemptionService {
       await manager.save(BusinessCampaign, businessCampaign);
       await manager.save(pointHistory);
 
-      // Notification: Reward Redeemed (Business)
       try {
         await this.notificationService.create(
           "Reward Redeemed",
@@ -380,7 +375,6 @@ export class RedemptionService {
         console.error(e);
       }
 
-      // Notification: Reward Redeemed (Participant)
       try {
         await this.notificationService.create(
           "Reward Redeemed",
@@ -394,19 +388,17 @@ export class RedemptionService {
         console.error(e);
       }
 
-      // Send email notifications
-      const businessOwner = businessCampaign.business;
-
-      // To Participant
       try {
         await this.mailService.sendRewardRedeemedEmail(
           participant.email,
           businessReward?.title || reward?.title || "Reward",
-          pointsCost,
+          redemptionMethod === "points" ? pointsCost : stampsCost,
           business.name,
           businessCampaign.name,
-          participantCampaignBalance.campaign_balance,
-          voucherCode, // Pass the voucher code
+          redemptionMethod === "points"
+            ? participantCampaignBalance.campaign_balance
+            : participantCampaignBalance.stamp_balance,
+          voucherCode,
         );
       } catch (error) {
         console.error(
@@ -415,13 +407,12 @@ export class RedemptionService {
         );
       }
 
-      // To Business Owner
-      if (businessOwner) {
+      if (businessCampaign.business) {
         try {
           await this.mailService.sendBusinessActivityEmail(
-            businessOwner.email,
+            businessCampaign.business.email,
             "REDEEM",
-            pointsCost,
+            redemptionMethod === "points" ? pointsCost : stampsCost,
             participant.name,
             staff ? staff.name : business.name,
             businessCampaign.name,
@@ -454,6 +445,7 @@ export class RedemptionService {
     rewardId: string,
     campaignId: string,
     redemptionCode: string | null,
+    redemptionMethod: "points" | "stamps" = "points",
   ) {
     const participant = await this.participantRepository.findOne({
       where: { uniqueCode: participantCode },
@@ -468,6 +460,7 @@ export class RedemptionService {
       campaignId,
       redemptionCode,
       "Redeemed by scan",
+      redemptionMethod,
     );
   }
 
@@ -478,6 +471,7 @@ export class RedemptionService {
     rewardId: string,
     campaignId: string,
     redemptionCode: string | null,
+    redemptionMethod: "points" | "stamps" = "points",
   ) {
     const { staff, business } =
       await this.findPerformerByCode(staffOrBusinessCode);
@@ -497,6 +491,7 @@ export class RedemptionService {
       campaignId,
       redemptionCode,
       "Redeemed by dual scan",
+      redemptionMethod,
     );
   }
 }

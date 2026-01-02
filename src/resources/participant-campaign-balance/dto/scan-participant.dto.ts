@@ -52,4 +52,22 @@ export class ScanParticipantDto {
   @IsEnum(TransactionType)
   @IsNotEmpty()
   type: TransactionType;
+
+  @ApiProperty({
+    description: "The method used for redemption if type is REDEEM",
+    enum: ["points", "stamps"],
+    default: "points",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  redemptionMethod?: "points" | "stamps" = "points";
+
+  @ApiProperty({
+    description: "Optional redemption code",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  redemptionCode?: string;
 }

@@ -18,6 +18,8 @@ import { RedemptionService } from "./redemption.service";
 import { PointHistory } from "../entities/point-history.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 import { TierProgressionService } from "../../tier-progression/tier-progression.service";
+import { GetHistoryQueryDto, HistoryDisplayType } from "../dto/get-history-query.dto";
+import { PointHistoryType } from "../entities/point-history.entity";
 
 @Injectable()
 export class ParticipantCampaignBalanceService {
@@ -36,7 +38,7 @@ export class ParticipantCampaignBalanceService {
     private readonly redemptionService: RedemptionService,
     private readonly dataSource: DataSource,
     private readonly tierProgressionService: TierProgressionService,
-  ) {}
+  ) { }
 
   async getParticipantBalance(participantId: string) {
     const participant = await this.participantRepository.findOne({
@@ -69,6 +71,7 @@ export class ParticipantCampaignBalanceService {
             ? balance.campaign.name
             : "Unknown",
         balance: balance.campaign_balance,
+        stamp_balance: balance.stamp_balance,
       })),
     };
   }
@@ -104,6 +107,7 @@ export class ParticipantCampaignBalanceService {
       campaign_id: cId,
       campaign_name: cName,
       balance: campaignBalance.campaign_balance,
+      stamp_balance: campaignBalance.stamp_balance,
     };
   }
 
@@ -153,9 +157,9 @@ export class ParticipantCampaignBalanceService {
   async getHistoryForCampaign(
     participantId: string,
     campaignId: string,
-    page: number = 1,
-    limit: number = 10,
+    query: GetHistoryQueryDto,
   ) {
+    const { page = 1, limit = 10, historyType = HistoryDisplayType.BOTH } = query;
     // Check if participant is joined
     const isJoined = await this.isJoined(participantId, campaignId);
     if (!isJoined.isJoined) {
@@ -164,8 +168,21 @@ export class ParticipantCampaignBalanceService {
       );
     }
 
+    const where: any = this.getCampaignCriteria(participantId, campaignId);
+
+    // Apply historyType filtering
+    if (Array.isArray(where)) {
+      where.forEach(w => {
+        if (historyType === HistoryDisplayType.POINTS) {
+          w.type = [PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA];
+        } else if (historyType === HistoryDisplayType.STAMPS) {
+          w.type = [PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM];
+        }
+      });
+    }
+
     const [data, total] = await this.pointHistoryRepository.findAndCount({
-      where: this.getCampaignCriteria(participantId, campaignId),
+      where,
       order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
@@ -182,13 +199,22 @@ export class ParticipantCampaignBalanceService {
 
   async getAllHistory(
     participantId: string,
-    page: number = 1,
-    limit: number = 10,
+    query: GetHistoryQueryDto,
   ) {
+    const { page = 1, limit = 10, historyType = HistoryDisplayType.BOTH } = query;
+
+    const where: any = {
+      participant: { id: participantId },
+    };
+
+    if (historyType === HistoryDisplayType.POINTS) {
+      where.type = [PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA];
+    } else if (historyType === HistoryDisplayType.STAMPS) {
+      where.type = [PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM];
+    }
+
     const [data, total] = await this.pointHistoryRepository.findAndCount({
-      where: {
-        participant: { id: participantId },
-      },
+      where,
       order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,
@@ -306,6 +332,7 @@ export class ParticipantCampaignBalanceService {
           campaignId,
           code,
           "Redeemed via claimed code",
+          "points", // Default to points for claimed codes unless logic changes later
           manager, // Pass manager
         );
       }

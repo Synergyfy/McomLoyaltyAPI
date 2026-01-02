@@ -28,4 +28,7 @@ export class ParticipantCampaignBalance extends AbstractBaseEntity {
 
   @Column({ default: 0 })
   campaign_balance: number;
+
+  @Column({ default: 0 })
+  stamp_balance: number;
 }

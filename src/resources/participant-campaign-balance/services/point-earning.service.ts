@@ -62,7 +62,7 @@ export class PointEarningService {
     private readonly stampPackageService: StampPackageService,
     private readonly stampService: StampService,
     private readonly notificationService: NotificationService,
-  ) {}
+  ) { }
 
   // Helper to find performer (Staff or Business)
   private async findPerformer(id: string, type: "Staff" | "Business") {
@@ -281,7 +281,7 @@ export class PointEarningService {
         if (
           activeCampaign.regular_points_threshold !== null &&
           activeCampaign.total_points_earned + points >
-            activeCampaign.regular_points_threshold
+          activeCampaign.regular_points_threshold
         ) {
           throw new BadRequestException(
             "Campaign regular points threshold reached.",
@@ -450,7 +450,7 @@ export class PointEarningService {
         if (
           activeCampaign.matching_points_threshold !== null &&
           activeCampaign.total_matching_points_earned + points >
-            activeCampaign.matching_points_threshold
+          activeCampaign.matching_points_threshold
         ) {
           throw new BadRequestException(
             "Campaign matching points threshold reached.",
@@ -605,6 +605,48 @@ export class PointEarningService {
         triggerMethod,
         sourceDescription || "Awarded manually",
       );
+
+      // --- NEW: Update Campaign Stamp Balance and Log History ---
+      let participantCampaignBalance = await manager.findOne(
+        ParticipantCampaignBalance,
+        {
+          where: {
+            participant: { id: participant.id },
+            businessCampaign: { id: campaignId },
+          },
+        },
+      );
+
+      if (!participantCampaignBalance) {
+        participantCampaignBalance = manager.create(
+          ParticipantCampaignBalance,
+          {
+            participant,
+            businessCampaign,
+            campaign: businessCampaign.campaign,
+            stamp_balance: 0,
+            campaign_balance: 0,
+          },
+        );
+      }
+
+      participantCampaignBalance.stamp_balance += stamps;
+      await manager.save(ParticipantCampaignBalance, participantCampaignBalance);
+
+      const stampHistory = this.pointHistoryRepository.create({
+        type: PointHistoryType.STAMP_EARN,
+        points: 0, // No points for stamp earn history
+        stamps: stamps,
+        participant,
+        initiated_by_staff: staff,
+        business: business,
+        businessCampaign: businessCampaign,
+        campaign: businessCampaign.campaign,
+        description: sourceDescription || "Stamps Awarded",
+      });
+
+      await manager.save(stampHistory);
+      // ----------------------------------------------------------
 
       // Notifications
       try {
