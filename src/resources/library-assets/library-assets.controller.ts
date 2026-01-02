@@ -35,10 +35,10 @@ import { PageDto } from "../../common/dto/page.dto";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class LibraryAssetsController {
-  constructor(private readonly libraryAssetsService: LibraryAssetsService) {}
+  constructor(private readonly libraryAssetsService: LibraryAssetsService) { }
 
   @Post()
-  @Roles(Role.Business, Role.Admin, Role.Staff)
+  @Roles(Role.Business, Role.Admin)
   @ApiOperation({
     summary: "Create a new library asset",
     description:
@@ -94,7 +94,7 @@ export class LibraryAssetsController {
   }
 
   @Patch(":id")
-  @Roles(Role.Business, Role.Admin, Role.Staff)
+  @Roles(Role.Business, Role.Admin)
   @ApiOperation({
     summary: "Update an asset",
     description:
@@ -116,7 +116,7 @@ export class LibraryAssetsController {
   }
 
   @Delete(":id")
-  @Roles(Role.Business, Role.Admin, Role.Staff)
+  @Roles(Role.Business, Role.Admin)
   @ApiOperation({
     summary: "Delete an asset",
     description:

@@ -17,6 +17,7 @@ import {
 } from "./dto/search-library-asset.dto";
 import { PageDto } from "../../common/dto/page.dto";
 import { Business } from "../business/entities/business.entity";
+import { Staff } from "../staff/entities/staff.entity";
 import { Role } from "../../common/role.enum";
 import { User } from "../../common/interfaces/user.interface";
 
@@ -27,7 +28,9 @@ export class LibraryAssetsService {
     private readonly assetRepository: Repository<LibraryAsset>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
-  ) {}
+    @InjectRepository(Staff)
+    private readonly staffRepository: Repository<Staff>,
+  ) { }
 
   async create(
     createDto: CreateLibraryAssetDto,
@@ -37,23 +40,20 @@ export class LibraryAssetsService {
 
     if (user.role === Role.Business) {
       asset.ownerType = LibraryAssetOwnerType.BUSINESS;
-      asset.businessId = user.id; // Assuming user.id is businessId for Business role
-      // Business cannot set sector/category for global filtering, they manage their own tags usually,
-      // but for this task, Admin sets tags. Business assets are just theirs.
-      // We ignore sectorId etc from DTO for Business users to prevent them from "polluting" global tags?
-      // Or we let them tag their own files? Prompt says: "Admin... should be able to upload files and tag it...".
-      // It doesn't explicitly forbid Business from tagging, but usually Business assets are private to them.
+      asset.businessId = user.id;
+      // Business assets are private; clear sector/category
       asset.sectorId = null;
       asset.categoryId = null;
       asset.subCategoryId = null;
-    } else {
-      // Admin/Staff
+    } else if (user.role === Role.Admin) {
       asset.ownerType = LibraryAssetOwnerType.ADMIN;
-      asset.businessId = null;
-      // Admin can set tags
+      asset.businessId = null; // Admin assets don't have a businessId
+      // Admin sets tags for global/sector-based distribution
       asset.sectorId = createDto.sectorId || null;
       asset.categoryId = createDto.categoryId || null;
       asset.subCategoryId = createDto.subCategoryId || null;
+    } else {
+      throw new ForbiddenException("Only Business and Admin can upload assets");
     }
 
     return this.assetRepository.save(asset);
@@ -100,16 +100,26 @@ export class LibraryAssetsService {
     }
 
     // Access Control Logic
-    if (user.role === Role.Business) {
+    if (user.role === Role.Business || user.role === Role.Staff) {
       let business: Business | null = null;
+      let targetBusinessId: string = user.id;
 
-      // We might need business sector info if we are showing Admin assets by default
-      if (source === AssetSource.ALL || source === AssetSource.ADMIN) {
-        business = await this.businessRepository.findOne({
+      if (user.role === Role.Staff) {
+        const staff = await this.staffRepository.findOne({
           where: { id: user.id },
-          relations: ["sector"],
+          relations: ["business"],
         });
+        if (!staff || !staff.business) {
+          throw new ForbiddenException("Staff must belong to a business");
+        }
+        targetBusinessId = staff.business.id;
       }
+
+      // Always fetch business info for sector/category matching of Admin assets
+      business = await this.businessRepository.findOne({
+        where: { id: targetBusinessId },
+        relations: ["sector", "category"],
+      });
 
       // Logic construction
       const conditions: string[] = [];
@@ -117,11 +127,11 @@ export class LibraryAssetsService {
 
       if (source === AssetSource.MINE || source === AssetSource.ALL) {
         conditions.push("(asset.businessId = :businessId)");
-        params.businessId = user.id;
+        params.businessId = targetBusinessId;
       }
 
       if (source === AssetSource.ADMIN || source === AssetSource.ALL) {
-        // Admin assets logic
+        // Admin assets logic: Must match BOTH sector AND category if they exist on the business
         let adminCondition = "asset.ownerType = :adminOwnerType";
         params.adminOwnerType = LibraryAssetOwnerType.ADMIN;
 
@@ -130,18 +140,21 @@ export class LibraryAssetsService {
           adminCondition += " AND asset.sectorId = :reqSectorId";
           params.reqSectorId = sectorId;
         } else if (business && business.sector) {
-          // Default: Show Admin assets from Business Sector OR Global Assets (no sector)
-          // "by default ... fetch those files ... in that sector"
           adminCondition +=
             " AND (asset.sectorId = :userSectorId OR asset.sectorId IS NULL)";
           params.userSectorId = business.sector.id;
         }
 
-        // Category/SubCategory filters (only apply if passed, logic implies if passed we filter by it)
+        // Apply Category Filters for Admin Assets
         if (categoryId) {
           adminCondition += " AND asset.categoryId = :reqCategoryId";
           params.reqCategoryId = categoryId;
+        } else if (business && business.category) {
+          adminCondition +=
+            " AND (asset.categoryId = :userCategoryId OR asset.categoryId IS NULL)";
+          params.userCategoryId = business.category.id;
         }
+
         if (subCategoryId) {
           adminCondition += " AND asset.subCategoryId = :reqSubCategoryId";
           params.reqSubCategoryId = subCategoryId;
@@ -160,20 +173,13 @@ export class LibraryAssetsService {
           }),
         );
       } else {
-        // Should not happen with valid enum, but safe fallback
         query.andWhere("1=0");
       }
     } else {
-      // Admin View: Sees everything usually? Or we can apply filters.
-      // If Admin wants to search a specific business's assets, they might need extra params not in DTO yet.
-      // But assuming Admin mostly manages Admin assets or views all.
-      // For now, simple view.
-      if (source === AssetSource.MINE || source === AssetSource.ADMIN) {
-        query.andWhere("asset.ownerType = :ownerType", {
-          ownerType: LibraryAssetOwnerType.ADMIN,
-        });
-      }
-      // If ALL, shows all.
+      // Admin View: Sees all admin-uploaded assets.
+      query.andWhere("asset.ownerType = :adminOwnerType", {
+        adminOwnerType: LibraryAssetOwnerType.ADMIN,
+      });
 
       // Apply filters if present
       if (sectorId) query.andWhere("asset.sectorId = :sectorId", { sectorId });
@@ -211,19 +217,35 @@ export class LibraryAssetsService {
       throw new NotFoundException("Asset not found");
     }
 
-    if (user.role === Role.Business) {
-      // Can view if Own or Admin
+    if (user.role === Role.Business || user.role === Role.Staff) {
+      let targetBusinessId = user.id;
+      if (user.role === Role.Staff) {
+        const staff = await this.staffRepository.findOne({
+          where: { id: user.id },
+          relations: ["business"],
+        });
+        if (staff && staff.business) {
+          targetBusinessId = staff.business.id;
+        }
+      }
+
+      // Can view if Own Business asset or Admin asset
       if (
         asset.ownerType === LibraryAssetOwnerType.BUSINESS &&
-        asset.businessId !== user.id
+        asset.businessId !== targetBusinessId
       ) {
         throw new ForbiddenException(
           "You do not have permission to view this asset",
         );
       }
-      // If Admin asset, they can view it.
+    } else {
+      // Admin: Can view any admin asset
+      if (asset.ownerType !== LibraryAssetOwnerType.ADMIN) {
+        throw new ForbiddenException(
+          "You do not have permission to view this asset",
+        );
+      }
     }
-    // Admin can view all.
 
     return asset;
   }
@@ -235,28 +257,35 @@ export class LibraryAssetsService {
   ): Promise<LibraryAsset> {
     const asset = await this.findOne(id, user);
 
-    if (user.role === Role.Business) {
+    if (user.role === Role.Business || user.role === Role.Staff) {
       if (asset.ownerType !== LibraryAssetOwnerType.BUSINESS) {
         throw new ForbiddenException("You can only update your own assets");
       }
-    }
-    // Admin can update Admin assets. Can Admin update Business assets? Usually no, but maybe?
-    // Requirement: "business can manages their own files... but can fetch or view admin own but can't delete or update it"
-    // Doesn't explicitly say Admin can't update Business files, but usually they shouldn't.
-    // I will restrict Admin to Admin assets for safety unless specified.
-    if (
-      user.role !== Role.Business &&
-      asset.ownerType === LibraryAssetOwnerType.BUSINESS
-    ) {
-      // Maybe allow Admin? I'll allow Admin to be superuser if needed, but safe default is restrict.
-      // Prompt says "business can manages their own files", implies ownership.
+      let targetBusinessId = user.id;
+      if (user.role === Role.Staff) {
+        const staff = await this.staffRepository.findOne({
+          where: { id: user.id },
+          relations: ["business"],
+        });
+        if (staff && staff.business) {
+          targetBusinessId = staff.business.id;
+        }
+      }
+      if (asset.businessId !== targetBusinessId) {
+        throw new ForbiddenException("You can only update your own business assets");
+      }
+    } else {
+      // Admin: Can update any admin asset
+      if (asset.ownerType !== LibraryAssetOwnerType.ADMIN) {
+        throw new ForbiddenException("You can only update admin assets");
+      }
     }
 
     // Update fields
     Object.assign(asset, updateDto);
 
-    // Validate: Business cannot set sector/category even on update
-    if (user.role === Role.Business) {
+    // Validate: Business / Staff cannot set sector/category even on update
+    if (user.role === Role.Business || user.role === Role.Staff) {
       asset.sectorId = null;
       asset.categoryId = null;
       asset.subCategoryId = null;
@@ -268,9 +297,14 @@ export class LibraryAssetsService {
   async remove(id: string, user: User): Promise<void> {
     const asset = await this.findOne(id, user);
 
-    if (user.role === Role.Business) {
+    if (user.role === Role.Business || user.role === Role.Staff) {
       if (asset.ownerType !== LibraryAssetOwnerType.BUSINESS) {
         throw new ForbiddenException("You can only delete your own assets");
+      }
+    } else {
+      // Admin: Can delete any admin asset
+      if (asset.ownerType !== LibraryAssetOwnerType.ADMIN) {
+        throw new ForbiddenException("You can only delete admin assets");
       }
     }
 
