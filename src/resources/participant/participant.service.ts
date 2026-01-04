@@ -44,7 +44,7 @@ export class ParticipantService {
     private readonly otpService: OtpService,
     private readonly progressionService: ParticipantProgressionService,
     private readonly referralService: ReferralService,
-  ) {}
+  ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
@@ -431,7 +431,7 @@ export class ParticipantService {
     const campaignBalances =
       await this.participantCampaignBalanceRepository.find({
         where: { participant: { id: participantId } },
-        relations: ["campaign"],
+        relations: ["campaign", "businessCampaign"],
       });
 
     // Calculate point utilization in a single query
@@ -462,9 +462,10 @@ export class ParticipantService {
       total_points_earned: earned,
       total_points_redeemed: redeemed,
       campaign_balances: campaignBalances.map((balance) => ({
-        campaign_id: balance.campaign.id,
-        campaign_name: balance.campaign.name,
+        campaign_id: balance.campaign?.id || balance.businessCampaign?.id,
+        campaign_name: balance.campaign?.name || balance.businessCampaign?.name,
         balance: balance.campaign_balance,
+        stamp_balance: balance.stamp_balance,
       })),
     };
   }
@@ -477,17 +478,21 @@ export class ParticipantService {
     const [data, total] =
       await this.participantCampaignBalanceRepository.findAndCount({
         where: { participant: { id: participantId } },
-        relations: ["campaign"],
+        relations: ["campaign", "businessCampaign"],
         skip: (page - 1) * limit,
         take: limit,
         order: { created_at: "DESC" },
       });
 
     return {
-      data: data.map((item) => ({
-        ...item.campaign,
-        balance: item.campaign_balance,
-      })),
+      data: data.map((item) => {
+        const campaignData = item.campaign || item.businessCampaign;
+        return {
+          ...campaignData,
+          balance: item.campaign_balance,
+          stamp_balance: item.stamp_balance,
+        };
+      }),
       total,
     };
   }

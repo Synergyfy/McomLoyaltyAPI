@@ -7,6 +7,7 @@ import {
   IsUUID,
   Min,
   IsDateString,
+  IsString,
 } from "class-validator";
 import { TransactionType } from "../entities/transaction-code.entity";
 
@@ -46,4 +47,14 @@ export class GenerateCodeDto {
   @IsDateString()
   @IsNotEmpty()
   expiresAt: string;
+
+  @ApiProperty({
+    description: "The method used for redemption if type is REDEEM",
+    enum: ["points", "stamps", "auto"],
+    default: "auto",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  redemptionMethod?: "points" | "stamps" | "auto" = "auto";
 }

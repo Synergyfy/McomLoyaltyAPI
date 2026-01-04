@@ -11,6 +11,8 @@ import {
 import { RewardStatus } from "../enums/reward-status.enum";
 import { RewardType } from "../enums/reward-type.enum";
 import { ImageSourceType } from "../enums/image-source-type.enum";
+import { RewardSource } from "../enums/reward-source.enum";
+import { RewardAudience } from "../enums/reward-audience.enum";
 
 export class CreateBusinessRewardDto {
   @ApiProperty({
@@ -180,12 +182,17 @@ export class CreateBusinessRewardDto {
   @IsOptional()
   library_asset_id?: string;
 
-  @ApiProperty({
-    description: "The emoji to use if source is EMOJI",
-    example: "🚀",
-    required: false,
-  })
   @IsString()
   @IsOptional()
   emoji?: string;
+
+  @ApiProperty({ enum: RewardSource, required: false })
+  @IsEnum(RewardSource)
+  @IsOptional()
+  reward_source?: RewardSource;
+
+  @ApiProperty({ enum: RewardAudience, required: false })
+  @IsEnum(RewardAudience)
+  @IsOptional()
+  audience?: RewardAudience;
 }

@@ -40,6 +40,7 @@ import {
   TransactionType,
 } from "./entities/transaction-code.entity";
 import { PaginationDto } from "../../common/dto/pagination.dto";
+import { GetHistoryQueryDto } from "./dto/get-history-query.dto";
 
 @ApiTags("Participant Campaign Balance")
 @ApiBearerAuth()
@@ -50,7 +51,7 @@ export class ParticipantCampaignBalanceController {
     private readonly pointEarningService: PointEarningService,
     private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
     private readonly transactionCodeService: TransactionCodeService,
-  ) {}
+  ) { }
 
   @Get("my-balance")
   @ApiOperation({
@@ -126,7 +127,7 @@ export class ParticipantCampaignBalanceController {
     description:
       "Returns a paginated list of all point transactions across all campaigns.",
   })
-  @ApiQuery({ type: PaginationDto })
+  @ApiQuery({ type: GetHistoryQueryDto })
   @ApiResponse({
     status: 200,
     description: "Returns transaction history.",
@@ -134,12 +135,11 @@ export class ParticipantCampaignBalanceController {
   @Roles(Role.Participant)
   async getAllHistory(
     @CurrentUser() user: User,
-    @Query() query: PaginationDto,
+    @Query() query: GetHistoryQueryDto,
   ) {
     return this.participantCampaignBalanceService.getAllHistory(
       user.id,
-      query.page || 1,
-      query.limit || 10,
+      query,
     );
   }
 
@@ -149,7 +149,7 @@ export class ParticipantCampaignBalanceController {
     description:
       "Returns a paginated list of point transactions for a specific campaign.",
   })
-  @ApiQuery({ type: PaginationDto })
+  @ApiQuery({ type: GetHistoryQueryDto })
   @ApiResponse({
     status: 200,
     description: "Returns transaction history for the campaign.",
@@ -162,13 +162,12 @@ export class ParticipantCampaignBalanceController {
   async getHistoryForCampaign(
     @CurrentUser() user: User,
     @Param("campaignId") campaignId: string,
-    @Query() query: PaginationDto,
+    @Query() query: GetHistoryQueryDto,
   ) {
     return this.participantCampaignBalanceService.getHistoryForCampaign(
       user.id,
       campaignId,
-      query.page || 1,
-      query.limit || 10,
+      query,
     );
   }
 
@@ -247,6 +246,8 @@ export class ParticipantCampaignBalanceController {
       redeemRewardDto.rewardId,
       redeemRewardDto.campaignId,
       redeemRewardDto.redemptionCode,
+      "Redeemed via direct input",
+      redeemRewardDto.redemptionMethod || "points",
     );
   }
 
@@ -309,6 +310,7 @@ export class ParticipantCampaignBalanceController {
         performerType,
         dto.participantCode,
         dto.campaignId,
+        dto.stamps,
       );
     } else {
       if (!dto.rewardId)
@@ -319,7 +321,8 @@ export class ParticipantCampaignBalanceController {
         dto.participantCode,
         dto.rewardId,
         dto.campaignId,
-        null,
+        dto.redemptionCode,
+        dto.redemptionMethod,
       );
     }
   }
@@ -381,6 +384,7 @@ export class ParticipantCampaignBalanceController {
         dto.staffOrBusinessCode,
         dto.participantCode,
         dto.campaignId,
+        dto.stamps,
       );
     } else {
       if (!dto.rewardId)
@@ -390,7 +394,8 @@ export class ParticipantCampaignBalanceController {
         dto.participantCode,
         dto.rewardId,
         dto.campaignId,
-        null,
+        dto.redemptionCode,
+        dto.redemptionMethod || "points",
       );
     }
   }

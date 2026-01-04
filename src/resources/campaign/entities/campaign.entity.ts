@@ -35,9 +35,6 @@ export class Campaign extends AbstractBaseEntity {
   @Column("text")
   campaign_message: string;
 
-  @Column()
-  quantity: number;
-
   @Column({ type: "enum", enum: AudienceType })
   audience_type: AudienceType;
 
@@ -46,15 +43,6 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   logo_url: string;
-
-  @Column()
-  cta_text: string;
-
-  @Column()
-  cta_background_color: string;
-
-  @Column()
-  cta_text_color: string;
 
   @ManyToMany(() => Reward)
   @JoinTable()
@@ -70,12 +58,6 @@ export class Campaign extends AbstractBaseEntity {
 
   @Column({ default: false })
   disabled: boolean;
-
-  @Column()
-  text_color: string;
-
-  @Column()
-  background_color: string;
 
   @Column({ nullable: true })
   signUpPoint: number;

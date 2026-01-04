@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class RedeemRewardDto {
@@ -41,4 +41,15 @@ export class RedeemRewardDto {
   @IsString()
   @IsNotEmpty()
   redemptionCode: string;
+
+  @ApiProperty({
+    description: "The method of redemption (points or stamps)",
+    example: "points",
+    enum: ["points", "stamps", "auto"],
+    default: "auto",
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  redemptionMethod?: "points" | "stamps" | "auto" = "auto";
 }

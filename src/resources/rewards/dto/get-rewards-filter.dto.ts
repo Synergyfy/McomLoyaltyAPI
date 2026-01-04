@@ -15,6 +15,8 @@ import { RewardStatus } from "../enums/reward-status.enum";
 export enum SortBy {
     NEWEST = "newest",
     OLDEST = "oldest",
+    POINTS_LOW = "points_low",
+    POINTS_HIGH = "points_high",
 }
 
 export class GetRewardsFilterDto {
@@ -136,4 +138,14 @@ export class GetRewardsFilterDto {
     @IsOptional()
     @IsEnum(RewardStatus)
     status?: RewardStatus;
+
+    @ApiPropertyOptional({ description: "Filter by sector ID" })
+    @IsOptional()
+    @IsString()
+    sectorId?: string;
+
+    @ApiPropertyOptional({ description: "Filter by reward type (camelCase variant)" })
+    @IsOptional()
+    @IsEnum(RewardType)
+    rewardType?: RewardType;
 }
