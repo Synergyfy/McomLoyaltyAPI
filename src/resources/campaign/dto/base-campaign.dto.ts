@@ -5,7 +5,6 @@ import {
   IsDate,
   IsUrl,
   IsOptional,
-  IsHexColor,
   IsEnum,
   IsInt,
   IsEmail,
@@ -38,10 +37,6 @@ export class BaseCampaignDto {
   @IsNotEmpty()
   campaign_message: string;
 
-  @ApiProperty({ description: "The quantity of rewards available." })
-  @IsInt()
-  quantity: number;
-
   @ApiProperty({
     description: "The audience type for the campaign.",
     enum: AudienceType,
@@ -68,27 +63,6 @@ export class BaseCampaignDto {
   @IsOptional()
   @IsUrl()
   logo_url?: string;
-
-  @ApiProperty({ description: "The text on the CTA button." })
-  @IsString()
-  @IsNotEmpty()
-  cta_text: string;
-
-  @ApiProperty({ description: "The background color of the CTA button." })
-  @IsHexColor()
-  cta_background_color: string;
-
-  @ApiProperty({ description: "The text color of the CTA button." })
-  @IsHexColor()
-  cta_text_color: string;
-
-  @ApiProperty({ description: "The text color for the campaign." })
-  @IsHexColor()
-  text_color: string;
-
-  @ApiProperty({ description: "The background color for the campaign." })
-  @IsHexColor()
-  background_color: string;
 
   @ApiProperty({
     description: "The type of reward for the campaign.",

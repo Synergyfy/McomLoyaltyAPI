@@ -58,9 +58,6 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @Column()
   end_date: Date;
 
-  @Column()
-  quantity: number;
-
   @Column({ type: "enum", enum: AudienceType })
   audience_type: AudienceType;
 
@@ -70,23 +67,8 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @Column({ nullable: true })
   logo_url: string;
 
-  @Column()
-  cta_text: string;
-
-  @Column()
-  cta_background_color: string;
-
-  @Column()
-  cta_text_color: string;
-
   @Column({ default: false })
   disabled: boolean;
-
-  @Column()
-  text_color: string;
-
-  @Column()
-  background_color: string;
 
   @Column({ nullable: true })
   signUpPoint: number;
