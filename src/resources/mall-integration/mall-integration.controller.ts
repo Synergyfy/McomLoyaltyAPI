@@ -7,7 +7,9 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 @ApiBearerAuth()
 @Controller("mall-integration")
 export class MallIntegrationController {
-  constructor(private readonly mallIntegrationService: MallIntegrationService) {}
+  constructor(
+    private readonly mallIntegrationService: MallIntegrationService,
+  ) {}
 
   @ApiOperation({ summary: "Get SSO login URL for McomMall" })
   @UseGuards(JwtAuthGuard)
@@ -16,10 +18,10 @@ export class MallIntegrationController {
     const user = req.user;
     // req.user usually contains id, email, role etc from JwtStrategy
     // We need to determine if it's a business or participant
-    
+
     // In McomLoyalty, business owners might have role 'business' and participants 'participant'
     // I should check the User object structure in McomLoyalty
-    
+
     return this.mallIntegrationService.generateSsoToken({
       email: user.email,
       name: user.name || user.email,

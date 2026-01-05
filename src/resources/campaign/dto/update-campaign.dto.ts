@@ -14,17 +14,11 @@ export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   @IsArray()
   @IsUUID("all", { each: true })
   business_reward_ids?: string[];
-
-  @ApiProperty({
-    description: "The ID of the business stamp reward to award stamps to.",
-    required: false,
-  })
-  @IsOptional()
-  @IsUUID()
-  business_stamp_reward_id?: string;
 }
 
-export class UpdateCampaignAdminDto extends PartialType(CreateCampaignAdminDto) {
+export class UpdateCampaignAdminDto extends PartialType(
+  CreateCampaignAdminDto,
+) {
   @ApiProperty({
     description: "The IDs of the rewards attached to the campaign.",
     type: [String],
@@ -45,4 +39,3 @@ export class UpdateCampaignAdminDto extends PartialType(CreateCampaignAdminDto) 
   @IsUUID("all", { each: true })
   target_tier_ids?: string[];
 }
-

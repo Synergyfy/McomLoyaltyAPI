@@ -36,7 +36,7 @@ import { GetRewardsFilterDto } from "../dto/get-rewards-filter.dto";
 @ApiTags("rewards")
 @Controller("rewards")
 export class RewardsController {
-  constructor(private readonly rewardsService: RewardsService) { }
+  constructor(private readonly rewardsService: RewardsService) {}
 
   // Admin endpoints
   @ApiOperation({ summary: "Admin: Create a new reward" })

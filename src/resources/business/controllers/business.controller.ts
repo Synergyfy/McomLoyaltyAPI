@@ -151,6 +151,14 @@ export class BusinessController {
   }
 
   @Roles(Role.Business)
+  @Get("stamps/balance/monthly")
+  @ApiOperation({ summary: "Get monthly stamp balance" })
+  @ApiResponse({ status: 200, description: "Return monthly stamp balance." })
+  async getMonthlyStampBalance(@Request() req) {
+    return this.businessService.getMonthlyStampBalance(req.user.id);
+  }
+
+  @Roles(Role.Business)
   @Get("points/balance/total")
   @ApiOperation({ summary: "Get total subscription point balance" })
   @ApiResponse({

@@ -63,7 +63,7 @@ export class PaymentService {
     private readonly matchingPointService: MatchingPointService,
     private readonly walletService: WalletService,
     private readonly referralService: ReferralService,
-  ) { }
+  ) {}
 
   async initiateStripePayment(
     initiatePaymentDto: InitiatePaymentDto,

@@ -51,7 +51,7 @@ export class ParticipantCampaignBalanceController {
     private readonly pointEarningService: PointEarningService,
     private readonly participantCampaignBalanceService: ParticipantCampaignBalanceService,
     private readonly transactionCodeService: TransactionCodeService,
-  ) { }
+  ) {}
 
   @Get("my-balance")
   @ApiOperation({
@@ -137,10 +137,7 @@ export class ParticipantCampaignBalanceController {
     @CurrentUser() user: User,
     @Query() query: GetHistoryQueryDto,
   ) {
-    return this.participantCampaignBalanceService.getAllHistory(
-      user.id,
-      query,
-    );
+    return this.participantCampaignBalanceService.getAllHistory(user.id, query);
   }
 
   @Get("history/:campaignId")

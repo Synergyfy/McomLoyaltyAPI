@@ -169,12 +169,4 @@ export class BaseCampaignDto {
   @IsOptional()
   @IsString()
   footer_text?: string;
-
-  @ApiProperty({
-    description: "The ID of the business stamp reward to award stamps to.",
-    required: false,
-  })
-  @IsOptional()
-  @IsUUID()
-  business_stamp_reward_id?: string;
 }

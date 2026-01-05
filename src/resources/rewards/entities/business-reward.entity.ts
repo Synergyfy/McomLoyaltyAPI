@@ -100,7 +100,10 @@ export class BusinessReward extends AbstractBaseEntity {
   @JoinColumn({ name: "campaign_id" })
   campaign: Campaign;
 
-  @ManyToMany(() => BusinessCampaign, (businessCampaign) => businessCampaign.businessRewards)
+  @ManyToMany(
+    () => BusinessCampaign,
+    (businessCampaign) => businessCampaign.businessRewards,
+  )
   businessCampaigns?: BusinessCampaign[];
 
   total_redemptions?: number;

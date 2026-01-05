@@ -33,7 +33,6 @@ export class CreateTierDto {
   @IsEnum(TierType)
   type: TierType;
 
-
   @ApiProperty({
     description: "Color code for the tier",
     example: "#FF5733",

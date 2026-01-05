@@ -23,7 +23,7 @@ export class MembershipService {
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
     private readonly paymentService: PaymentService,
-  ) { }
+  ) {}
 
   async findOneByBusinessId(businessId: string) {
     // Prefer Standard tier if multiple exist, otherwise just one

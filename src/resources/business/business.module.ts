@@ -22,6 +22,7 @@ import { PaymentModule } from "../payment/payment.module";
 import { OtpModule } from "../otp/otp.module";
 import { MailModule } from "src/mail/mail.module";
 import { WalletModule } from "../wallet/wallet.module";
+import { StampModule } from "../stamp/stamp.module";
 
 @Module({
   imports: [
@@ -46,9 +47,10 @@ import { WalletModule } from "../wallet/wallet.module";
     OtpModule,
     MailModule,
     WalletModule,
+    StampModule,
   ],
   providers: [BusinessService],
   controllers: [BusinessController, AffiliateController],
   exports: [BusinessService],
 })
-export class BusinessModule { }
+export class BusinessModule {}

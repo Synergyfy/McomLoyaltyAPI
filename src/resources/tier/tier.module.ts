@@ -12,4 +12,4 @@ import { Membership } from "../membership/entities/membership.entity";
   controllers: [TierController],
   providers: [TierService],
 })
-export class TierModule { }
+export class TierModule {}

@@ -21,7 +21,10 @@ import {
 } from "@nestjs/swagger";
 import { CampaignService } from "./campaign.service";
 import { CreateCampaignDto } from "./dto/create-campaign.dto";
-import { UpdateCampaignDto, UpdateCampaignAdminDto } from "./dto/update-campaign.dto";
+import {
+  UpdateCampaignDto,
+  UpdateCampaignAdminDto,
+} from "./dto/update-campaign.dto";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/role.enum";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -48,7 +51,7 @@ import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
 @ApiTags("Campaigns")
 @Controller("campaigns")
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) { }
+  constructor(private readonly campaignService: CampaignService) {}
 
   @Post()
   @ApiBearerAuth()
@@ -330,9 +333,7 @@ export class CampaignController {
   })
   @ApiResponse({ status: 404, description: "Campaign not found." })
   @ApiResponse({ status: 401, description: "Unauthorized." })
-  getTierAnalytics(
-    @Param("id", ParseUUIDPipe) id: string,
-  ) {
+  getTierAnalytics(@Param("id", ParseUUIDPipe) id: string) {
     return this.campaignService.getTierAnalytics(id);
   }
 
@@ -374,7 +375,10 @@ export class CampaignController {
     },
   })
   @ApiResponse({ status: 401, description: "Unauthorized." })
-  @ApiResponse({ status: 400, description: "Bad Request. Possible invalid reward IDs for role." })
+  @ApiResponse({
+    status: 400,
+    description: "Bad Request. Possible invalid reward IDs for role.",
+  })
   @ApiResponse({ status: 404, description: "Campaign not found." })
   @CheckPermission(ActionType.UPDATE_CAMPAIGN)
   async update(

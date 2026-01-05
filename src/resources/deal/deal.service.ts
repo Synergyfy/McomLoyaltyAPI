@@ -27,7 +27,7 @@ export class DealService {
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
-  ) { }
+  ) {}
 
   async create(createDealDto: CreateDealDto, user: User) {
     const { categoryId, ...rest } = createDealDto;

@@ -9,7 +9,11 @@ import { Membership } from "../../membership/entities/membership.entity";
 import { Sector } from "../../sector/entities/sector.entity";
 import { Tier } from "../../tier/entities/tier.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
+import { Category } from "../../category/entities/category.entity";
+import { SubCategory } from "../../subcategory/entities/subcategory.entity";
+import { LibraryAsset } from "../../library-assets/entities/library-asset.entity";
 import { TierProgressionService } from "../../tier-progression/tier-progression.service";
+import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
 import { CreateRewardDto } from "../dto/create-reward.dto";
 import { RewardType } from "../enums/reward-type.enum";
 import { BadgeLevel } from "../enums/badge-level.enum";
@@ -56,6 +60,20 @@ describe("RewardsService", () => {
   const mockTierProgressionService = {
     checkAndPromote: jest.fn(),
   };
+  const mockLibraryAssetRepository = {
+    findOne: jest.fn(),
+  };
+  const mockCategoryRepository = {
+    findOne: jest.fn(),
+  };
+  const mockSubCategoryRepository = {
+    findOne: jest.fn(),
+  };
+  const mockPointHistoryRepository = {
+    createQueryBuilder: jest.fn(),
+    count: jest.fn(),
+    getMany: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -83,6 +101,22 @@ describe("RewardsService", () => {
         {
           provide: TierProgressionService,
           useValue: mockTierProgressionService,
+        },
+        {
+          provide: getRepositoryToken(LibraryAsset),
+          useValue: mockLibraryAssetRepository,
+        },
+        {
+          provide: getRepositoryToken(Category),
+          useValue: mockCategoryRepository,
+        },
+        {
+          provide: getRepositoryToken(SubCategory),
+          useValue: mockSubCategoryRepository,
+        },
+        {
+          provide: getRepositoryToken(PointHistory),
+          useValue: mockPointHistoryRepository,
         },
       ],
     }).compile();

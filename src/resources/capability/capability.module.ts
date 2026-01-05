@@ -1,20 +1,18 @@
 import { Module, forwardRef } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
-import { Staff } from "../staff/entities/staff.entity";
-import { StampEvent } from "../stamp/entities/stamp-event.entity";
 import { CapabilityService } from "./capability.service";
 import { MembershipModule } from "../membership/membership.module";
 import { CampaignModule } from "../campaign/campaign.module";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
 import { RewardsModule } from "../rewards/rewards.module";
+import { Staff } from "../staff/entities/staff.entity";
 
 @Module({
   imports: [
     MembershipModule,
-
-    forwardRef(() => RewardsModule),
     forwardRef(() => CampaignModule),
-    TypeOrmModule.forFeature([PointHistory, Staff, StampEvent]),
+    RewardsModule,
+    TypeOrmModule.forFeature([PointHistory, Staff]),
   ],
   providers: [CapabilityService],
   exports: [CapabilityService],

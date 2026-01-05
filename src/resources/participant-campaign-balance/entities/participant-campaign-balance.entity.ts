@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne } from "typeorm";
+import { Entity, Column, ManyToOne, JoinColumn } from "typeorm";
 import { AbstractBaseEntity } from "../../../database/entities/base.entity";
 import { Participant } from "../../participant/entities/participant.entity";
 import { Campaign } from "../../campaign/entities/campaign.entity";
@@ -21,9 +21,10 @@ export class ParticipantCampaignBalance extends AbstractBaseEntity {
 
   @ManyToOne(
     () => BusinessCampaign,
-    (businessCampaign) => businessCampaign.participantCampaignBalances,
+    (businessCampaign) => businessCampaign.participants,
     { nullable: true },
   )
+  @JoinColumn({ name: "business_campaign_id" })
   businessCampaign: BusinessCampaign;
 
   @Column({ default: 0 })

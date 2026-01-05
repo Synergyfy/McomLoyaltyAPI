@@ -20,16 +20,27 @@ class ReferredBusinessDto {
   @ApiProperty({ description: "The date when the referral was created." })
   referredAt: Date;
 
-  @ApiProperty({ description: "The status of the referral.", enum: ReferralStatus })
+  @ApiProperty({
+    description: "The status of the referral.",
+    enum: ReferralStatus,
+  })
   status: ReferralStatus;
 
   @ApiProperty({ description: "The points earned from this referral." })
   pointsEarned: number;
 
-  @ApiProperty({ description: "The location tag of the business.", enum: NetworkLocationTag, required: false })
+  @ApiProperty({
+    description: "The location tag of the business.",
+    enum: NetworkLocationTag,
+    required: false,
+  })
   locationTag?: NetworkLocationTag;
 
-  @ApiProperty({ description: "The relationship tag of the business.", enum: NetworkRelationshipTag, required: false })
+  @ApiProperty({
+    description: "The relationship tag of the business.",
+    enum: NetworkRelationshipTag,
+    required: false,
+  })
   relationshipTag?: NetworkRelationshipTag;
 }
 

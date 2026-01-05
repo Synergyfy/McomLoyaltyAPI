@@ -19,4 +19,4 @@ import { ParticipantProgressionModule } from "../participant-progression/partici
   providers: [ReferralService],
   exports: [ReferralService],
 })
-export class ReferralModule { }
+export class ReferralModule {}

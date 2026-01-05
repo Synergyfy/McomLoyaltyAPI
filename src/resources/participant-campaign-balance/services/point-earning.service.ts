@@ -28,8 +28,6 @@ import { TierProgressionService } from "../../tier-progression/tier-progression.
 import { MembershipService } from "../../membership/membership.service";
 import { PointPackageService } from "../../point-package/point-package.service";
 import { StampPackageService } from "../../stamp/services/stamp-package.service";
-import { StampService } from "../../stamp/services/stamp.service";
-import { StampTriggerMethod } from "../../stamp/enums/stamp-trigger-method.enum";
 import { NotificationService } from "../../notification/notification.service";
 import {
   NotificationType,
@@ -60,9 +58,8 @@ export class PointEarningService {
     private readonly membershipService: MembershipService,
     private readonly pointPackageService: PointPackageService,
     private readonly stampPackageService: StampPackageService,
-    private readonly stampService: StampService,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   // Helper to find performer (Staff or Business)
   private async findPerformer(id: string, type: "Staff" | "Business") {
@@ -286,7 +283,7 @@ export class PointEarningService {
         if (
           activeCampaign.regular_points_threshold !== null &&
           activeCampaign.total_points_earned + points >
-          activeCampaign.regular_points_threshold
+            activeCampaign.regular_points_threshold
         ) {
           throw new BadRequestException(
             "Campaign regular points threshold reached.",
@@ -455,7 +452,7 @@ export class PointEarningService {
         if (
           activeCampaign.matching_points_threshold !== null &&
           activeCampaign.total_matching_points_earned + points >
-          activeCampaign.matching_points_threshold
+            activeCampaign.matching_points_threshold
         ) {
           throw new BadRequestException(
             "Campaign matching points threshold reached.",
@@ -539,10 +536,9 @@ export class PointEarningService {
     campaignId: string,
     stamps: number = 1,
     sourceDescription?: string,
-    triggerMethod: StampTriggerMethod = StampTriggerMethod.MANUAL,
     transactionManager?: any,
   ): Promise<any> {
-    const execute = async (manager: any) => {
+    const execute = async (manager: EntityManager) => {
       const { staff, business } = await this.findPerformer(
         performerId,
         performerType,
@@ -557,8 +553,6 @@ export class PointEarningService {
         where: { id: campaignId },
         relations: [
           "business",
-          "businessStampReward",
-          "businessStampReward.template",
           "businessRewards",
         ],
       });
@@ -583,12 +577,6 @@ export class PointEarningService {
         );
       }
 
-      if (!isStampsEnabled) {
-        throw new BadRequestException(
-          "This campaign only allows awarding points.",
-        );
-      }
-
       // Check Quota and Packages
       try {
         await this.capabilityService.checkPermission(
@@ -603,24 +591,18 @@ export class PointEarningService {
             business.id,
             stamps,
             manager,
+            {
+              participantId: participant.id,
+              campaignId: campaignId,
+              description: sourceDescription || "Stamps Awarded (Package)",
+            },
           );
         } else {
           throw e;
         }
       }
 
-      // Award Stamps via StampService (if template exists)
-      let card = null;
-      if (businessCampaign.businessStampReward) {
-        card = await this.stampService.processAddStamp(
-          participant,
-          businessCampaign.businessStampReward,
-          triggerMethod,
-          sourceDescription || "Awarded manually",
-        );
-      }
-
-      // --- NEW: Update Campaign Stamp Balance and Log History ---
+      // --- Update Campaign Stamp Balance and Log History ---
       let participantCampaignBalance = await manager.findOne(
         ParticipantCampaignBalance,
         {
@@ -645,7 +627,10 @@ export class PointEarningService {
       }
 
       participantCampaignBalance.stamp_balance += stamps;
-      await manager.save(ParticipantCampaignBalance, participantCampaignBalance);
+      await manager.save(
+        ParticipantCampaignBalance,
+        participantCampaignBalance,
+      );
 
       const stampHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.STAMP_EARN,
@@ -659,14 +644,14 @@ export class PointEarningService {
         description: sourceDescription || "Stamps Awarded",
       });
 
-      await manager.save(stampHistory);
+      await manager.save(PointHistory, stampHistory);
       // ----------------------------------------------------------
 
       // Notifications
       try {
         await this.notificationService.create(
           "Stamps Awarded",
-          `You earned a stamp from ${business.name} !`,
+          `You earned ${stamps} stamp(s) from ${business.name} !`,
           NotificationType.STAMP_AWARDED,
           NotificationRecipientType.USER,
           participant.id,
@@ -677,13 +662,13 @@ export class PointEarningService {
           stamps,
           business.name,
           businessCampaign.name,
-          card ? card.current_stamps : participantCampaignBalance.stamp_balance,
+          participantCampaignBalance.stamp_balance,
         );
       } catch (error) {
         console.error("Failed to send stamp notifications:", error);
       }
 
-      return card || participantCampaignBalance;
+      return participantCampaignBalance;
     };
 
     if (transactionManager) {

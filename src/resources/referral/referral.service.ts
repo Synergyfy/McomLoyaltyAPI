@@ -30,7 +30,7 @@ export class ReferralService {
     private readonly mailService: MailService,
     private readonly progressionService: ParticipantProgressionService,
     private readonly matchingPointService: MatchingPointService,
-  ) { }
+  ) {}
 
   async inviteFriend(participantId: string, dto: InviteFriendDto) {
     const referrer = await this.participantRepository.findOne({

@@ -119,23 +119,33 @@ describe("GroupCircleService", () => {
       jest
         .spyOn(circleRepo, "findOne")
         .mockResolvedValue({ id: circleId, business } as any);
-      
-      // Mock manager.findOne to return full business with name
-      jest.spyOn(circleRepo.manager, 'findOne').mockResolvedValue({ id: 'bus1', name: 'Fetched Business Name' } as any);
 
-      jest.spyOn(messageRepo, "create").mockImplementation((args) => args as any);
-      jest.spyOn(messageRepo, "save").mockImplementation((args) => Promise.resolve(args as any));
+      // Mock manager.findOne to return full business with name
+      jest.spyOn(circleRepo.manager, "findOne").mockResolvedValue({
+        id: "bus1",
+        name: "Fetched Business Name",
+      } as any);
+
+      jest
+        .spyOn(messageRepo, "create")
+        .mockImplementation((args) => args as any);
+      jest
+        .spyOn(messageRepo, "save")
+        .mockImplementation((args) => Promise.resolve(args as any));
 
       const result = await service.sendMessage(circleId, dto, business);
 
-      expect(circleRepo.manager.findOne).toHaveBeenCalledWith(Business, expect.objectContaining({ where: { id: 'bus1' } }));
+      expect(circleRepo.manager.findOne).toHaveBeenCalledWith(
+        Business,
+        expect.objectContaining({ where: { id: "bus1" } }),
+      );
       expect(messageRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          senderName: 'Fetched Business Name',
-          senderId: 'bus1'
+          senderName: "Fetched Business Name",
+          senderId: "bus1",
         }),
       );
-      expect(result.senderName).toBe('Fetched Business Name');
+      expect(result.senderName).toBe("Fetched Business Name");
     });
 
     it("should send a direct message", async () => {

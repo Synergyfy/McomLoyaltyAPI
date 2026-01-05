@@ -16,6 +16,7 @@ export enum PointHistoryType {
   PURCHASED_EXTRA = "PURCHASED_EXTRA",
   STAMP_EARN = "STAMP_EARN",
   STAMP_REDEEM = "STAMP_REDEEM",
+  BUSINESS_STAMP_SPENT = "BUSINESS_STAMP_SPENT",
 }
 
 @Entity("point_histories")

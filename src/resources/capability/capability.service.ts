@@ -23,7 +23,6 @@ import {
   PointHistoryType,
 } from "../participant-campaign-balance/entities/point-history.entity";
 import { Staff } from "../staff/entities/staff.entity";
-import { StampEvent } from "../stamp/entities/stamp-event.entity";
 import moment from "moment";
 
 export enum ActionType {
@@ -51,11 +50,9 @@ export class CapabilityService {
     private readonly rewardsService: RewardsService,
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
-    @InjectRepository(StampEvent)
-    private readonly stampEventRepository: Repository<StampEvent>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
-  ) { }
+  ) {}
 
   async checkPermission(
     userId: string,
@@ -355,11 +352,7 @@ export class CapabilityService {
     const result = await this.pointHistoryRepository
       .createQueryBuilder("ph")
       .select("SUM(ph.points)", "total")
-      .where("ph.business_id = :businessId", { businessId: userId }) // Assuming userId is businessId, or we need to fetch businessId from userId
-      // If userId is actually the User ID of the business owner, we might need to join with Business table or fetch Business first.
-      // However, based on how checkPermission is called, it seems userId is the key.
-      // Let's assume for now that the caller passes the correct ID that links to business_id in PointHistory.
-      // If PointHistory.business_id is a UUID of the Business entity, then userId passed here must be that UUID.
+      .where("ph.business_id = :businessId", { businessId: userId })
       .andWhere("ph.type = :type", { type: PointHistoryType.EARN })
       .andWhere("ph.created_at BETWEEN :start AND :end", {
         start: startOfMonth,
@@ -391,16 +384,19 @@ export class CapabilityService {
     const startOfMonth = moment().startOf("month").toDate();
     const endOfMonth = moment().endOf("month").toDate();
 
-    const totalAwarded = await this.stampEventRepository
-      .createQueryBuilder("event")
-      .innerJoin("event.stampCard", "card")
-      .innerJoin("card.businessStampReward", "reward")
-      .where("reward.businessId = :userId", { userId })
-      .andWhere("event.created_at BETWEEN :start AND :end", {
+    const result = await this.pointHistoryRepository
+      .createQueryBuilder("ph")
+      .select("SUM(ph.stamps)", "total")
+      .where("ph.business_id = :businessId", { businessId: userId })
+      .andWhere("ph.type = :type", { type: PointHistoryType.STAMP_EARN })
+      .andWhere("ph.created_at BETWEEN :start AND :end", {
         start: startOfMonth,
         end: endOfMonth,
       })
-      .getCount();
+      .getRawOne();
+
+    const totalAwarded =
+      result && result.total ? parseInt(result.total, 10) : 0;
 
     if (totalAwarded + stampsToAward > allowance) {
       this.logger.warn(
