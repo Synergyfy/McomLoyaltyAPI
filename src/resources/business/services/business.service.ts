@@ -44,6 +44,7 @@ import { MatchingPointActivityType } from "../../matching-point/entities/matchin
 import { OtpService } from "../../otp/otp.service";
 import { MailService } from "../../../mail/mail.service";
 import { WalletService } from "../../wallet/wallet.service";
+import { StampPackageService } from "../../stamp/services/stamp-package.service";
 
 @Injectable()
 export class BusinessService {
@@ -74,6 +75,7 @@ export class BusinessService {
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly walletService: WalletService,
+    private readonly stampPackageService: StampPackageService,
   ) {}
 
   private async generateAffiliateCode(): Promise<string> {
@@ -491,6 +493,30 @@ export class BusinessService {
       remaining: monthlyAllowance + extraPoints - used,
       extraPoints: extraPoints,
       maxBuyable: maxBuyable,
+    };
+  }
+
+  async getMonthlyStampBalance(businessId: string) {
+    const balance =
+      await this.stampPackageService.getAggregateBalance(businessId);
+
+    // Calculate start of current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const usedResult = await this.pointHistoryRepository.sum("stamps", {
+      business: { id: businessId },
+      type: PointHistoryType.BUSINESS_STAMP_SPENT,
+      created_at: MoreThanOrEqual(startOfMonth),
+    });
+
+    const used = usedResult || 0;
+
+    return {
+      monthlyLimit: -1, // No monthly limit for stamps (package based)
+      used: used,
+      remaining: balance.total_balance,
+      totalBalance: balance.total_balance,
     };
   }
 

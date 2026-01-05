@@ -6,6 +6,7 @@ export enum CampaignType {
 }
 
 export enum AudienceType {
+  ALL = "all",
   MEMBERS = "members",
   BADGE_LEVEL = "badge_level",
   TARGET_WISHLIST = "target_wishlist",

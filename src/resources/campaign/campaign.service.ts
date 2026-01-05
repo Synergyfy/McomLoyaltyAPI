@@ -37,7 +37,6 @@ import { CampaignAnalyticsQueryDto } from "./dto/campaign-analytics-query.dto";
 import { User } from "src/common/interfaces/user.interface";
 import { CreateCampaignAdminDto } from "./dto/create-campaign-admin.dto";
 import { PaginationDto } from "src/common/dto/pagination.dto";
-import { BusinessStampReward } from "../stamp/entities/business-stamp-reward.entity";
 import { nanoid } from "nanoid";
 import { MatchingPointService } from "../matching-point/services/matching-point.service";
 import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
@@ -73,8 +72,6 @@ export class CampaignService {
     private readonly rewardRepository: Repository<Reward>,
     @InjectRepository(BusinessReward)
     private readonly businessRewardRepository: Repository<BusinessReward>,
-    @InjectRepository(BusinessStampReward)
-    private readonly businessStampRewardRepository: Repository<BusinessStampReward>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(PointHistory)
@@ -161,29 +158,13 @@ export class CampaignService {
       campaign.rewards = rewards;
       return this.campaignRepository.save(campaign);
     } else {
-      const { business_reward_ids, business_stamp_reward_id, ...campaignData } =
+      const { business_reward_ids, ...campaignData } =
         createCampaignDto as CreateCampaignDto;
       // Business creating a campaign -> BusinessCampaign
       const businessCampaign =
         this.businessCampaignRepository.create(campaignData);
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
-
-      if (business_stamp_reward_id) {
-        const stampReward = await this.businessStampRewardRepository.findOne({
-          where: { id: business_stamp_reward_id },
-          relations: ["business"],
-        });
-        if (!stampReward) {
-          throw new NotFoundException("Business stamp reward not found.");
-        }
-        if (stampReward.business.id !== currentUser.id) {
-          throw new UnauthorizedException(
-            "This stamp reward does not belong to your business.",
-          );
-        }
-        businessCampaign.businessStampReward = stampReward;
-      }
 
       if (!business_reward_ids || business_reward_ids.length === 0) {
         throw new BadRequestException(
@@ -536,7 +517,6 @@ export class CampaignService {
         "rewards",
         "campaign",
         "businessRewards",
-        "businessStampReward",
       ],
     });
 
@@ -600,7 +580,6 @@ export class CampaignService {
     const {
       reward_ids,
       business_reward_ids,
-      business_stamp_reward_id,
       target_tier_ids,
       ...campaignData
     } = updateCampaignDto as any;
@@ -682,11 +661,6 @@ export class CampaignService {
               "Cannot add business rewards to a claimed campaign template.",
             );
           }
-          if (business_stamp_reward_id) {
-            throw new BadRequestException(
-              "Cannot add business stamp reward to a claimed campaign template.",
-            );
-          }
         } else {
           // Created from Scratch
           if (business_reward_ids) {
@@ -695,23 +669,6 @@ export class CampaignService {
               relations: ["reward"],
             });
             campaign.businessRewards = businessRewards;
-          }
-
-          if (business_stamp_reward_id) {
-            const stampReward =
-              await this.businessStampRewardRepository.findOne({
-                where: { id: business_stamp_reward_id },
-                relations: ["business"],
-              });
-            if (!stampReward) {
-              throw new NotFoundException("Business stamp reward not found.");
-            }
-            if (stampReward.business.id !== currentUser.id) {
-              throw new UnauthorizedException(
-                "This stamp reward does not belong to your business.",
-              );
-            }
-            campaign.businessStampReward = stampReward;
           }
         }
 
@@ -787,24 +744,7 @@ export class CampaignService {
 
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
-
-    // Query BusinessCampaigns for this business
-    const [data, total] = await this.businessCampaignRepository.findAndCount({
-      where: {
-        business: { id: businessId },
-        start_date: LessThanOrEqual(new Date()),
-        end_date: MoreThanOrEqual(new Date()),
-        disabled: false,
-      },
-      relations: ["business", "rewards"],
-      order: { created_at: "DESC" },
-      skip,
-      take: limit,
-    });
-
-    // We need participant count.
-    // Since we can't easily do this with findAndCount and subqueries in one go for mapped entities easily in typeorm without qb,
-    // let's use QB or post-process.
+    const now = new Date();
 
     // Let's stick to QB for efficiency
     const qb = this.businessCampaignRepository
@@ -812,8 +752,8 @@ export class CampaignService {
       .leftJoinAndSelect("bc.business", "business")
       .leftJoinAndSelect("bc.rewards", "rewards")
       .where("bc.business_id = :businessId", { businessId })
-      .andWhere("bc.start_date <= NOW()")
-      .andWhere("bc.end_date >= NOW()")
+      .andWhere("bc.start_date <= :now", { now })
+      .andWhere("bc.end_date >= :now", { now })
       .andWhere("bc.disabled = :disabled", { disabled: false })
       .addSelect(
         (subQuery) =>

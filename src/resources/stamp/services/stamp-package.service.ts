@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { Repository, In, EntityManager } from "typeorm";
 import { StampPackage } from "../entities/stamp-package.entity";
 import {
   BusinessStampPackage,
@@ -16,6 +16,10 @@ import { Tier } from "../../tier/entities/tier.entity";
 import { PaginationResult } from "../../../common/interfaces/pagination-result.interface";
 import { PaymentService } from "../../payment/payment.service";
 import { PackageType } from "../../payment/dto/package-purchase.dto";
+import {
+  PointHistory,
+  PointHistoryType,
+} from "../../participant-campaign-balance/entities/point-history.entity";
 
 @Injectable()
 export class StampPackageService {
@@ -26,6 +30,8 @@ export class StampPackageService {
     private readonly businessStampPackageRepository: Repository<BusinessStampPackage>,
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    @InjectRepository(PointHistory)
+    private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly paymentService: PaymentService,
   ) {}
 
@@ -177,7 +183,18 @@ export class StampPackageService {
     });
   }
 
-  async deductStamps(businessId: string, stamps: number, manager: any) {
+  async deductStamps(
+    businessId: string,
+    stamps: number,
+    manager: EntityManager,
+    context?: {
+      participantId?: string;
+      campaignId?: string;
+      rewardId?: string;
+      businessRewardId?: string;
+      description?: string;
+    },
+  ) {
     const packages = await manager.find(BusinessStampPackage, {
       where: {
         business: { id: businessId },
@@ -209,6 +226,25 @@ export class StampPackageService {
         `Insufficient stamps. You need ${stampsToDeduct} more stamps from packages.`,
       );
     }
+
+    // Log usage
+    const history = manager.create(PointHistory, {
+      business: { id: businessId },
+      type: PointHistoryType.BUSINESS_STAMP_SPENT,
+      stamps: stamps,
+      points: 0,
+      description: context?.description || "Stamps spent",
+      participant: context?.participantId
+        ? { id: context.participantId }
+        : null,
+      campaign: context?.campaignId ? { id: context.campaignId } : null,
+      reward: context?.rewardId ? { id: context.rewardId } : null,
+      businessReward: context?.businessRewardId
+        ? { id: context.businessRewardId }
+        : null,
+    });
+
+    await manager.save(PointHistory, history);
   }
 
   async getAggregateBalance(
