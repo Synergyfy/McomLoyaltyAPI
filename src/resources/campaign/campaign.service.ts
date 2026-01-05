@@ -16,7 +16,7 @@ import {
   Not,
 } from "typeorm";
 import { CreateCampaignDto } from "./dto/create-campaign.dto";
-import { UpdateCampaignDto } from "./dto/update-campaign.dto";
+import { UpdateCampaignDto, UpdateCampaignAdminDto } from "./dto/update-campaign.dto";
 import { Campaign } from "./entities/campaign.entity";
 import { Business } from "../business/entities/business.entity";
 import { Reward } from "../rewards/entities/reward.entity";
@@ -590,7 +590,7 @@ export class CampaignService {
 
   async update(
     id: string,
-    updateCampaignDto: UpdateCampaignDto,
+    updateCampaignDto: UpdateCampaignDto | UpdateCampaignAdminDto,
     currentUser: Business | Admin,
   ): Promise<Campaign | BusinessCampaign> {
     const campaign = await this.findOne(id, currentUser);
@@ -600,14 +600,19 @@ export class CampaignService {
       business_stamp_reward_id,
       target_tier_ids,
       ...campaignData
-    } = updateCampaignDto;
-    let rewards: Reward[] = [];
+    } = updateCampaignDto as any;
 
     if (currentUser.role === Role.Admin) {
       // Admin updating Campaign
+      if (business_reward_ids && business_reward_ids.length > 0) {
+        throw new BadRequestException(
+          "Admins can only update admin rewards. Please use 'reward_ids'.",
+        );
+      }
+
       if (campaign instanceof Campaign) {
         if (reward_ids) {
-          rewards = await this.rewardRepository.findBy({
+          const rewards = await this.rewardRepository.findBy({
             id: In(reward_ids),
           });
           campaign.rewards = rewards;
@@ -631,18 +636,17 @@ export class CampaignService {
                 "All selected target tiers must be of the same type (Standard or Seasonal).",
               );
             }
-            // Validate reward limits for each tier (optional but good consistency)
-            // If rewards are not being updated, we use existing rewards?
-            // Accessing campaign.rewards might need ensuring they are loaded.
-            // findOne loads relations: ["business", "rewards"]. So they are loaded.
-            const currentRewards = rewards.length > 0 ? rewards : campaign.rewards;
+            // Validate reward limits for each tier
+            const currentRewards =
+              reward_ids && reward_ids.length > 0 ? campaign.rewards : []; // rewardRepository.findBy was used to update campaign.rewards above
 
             for (const tier of tiers) {
-              const maxRewards = tier.configuration?.quotas?.maxRewardsPerCampaign;
+              const maxRewards =
+                tier.configuration?.quotas?.maxRewardsPerCampaign;
               if (maxRewards !== undefined && maxRewards !== -1) {
-                if (currentRewards && currentRewards.length > maxRewards) {
+                if (campaign.rewards && campaign.rewards.length > maxRewards) {
                   throw new BadRequestException(
-                    `Target tier '${tier.name}' allows a maximum of ${maxRewards} rewards per campaign. You selected ${currentRewards.length}.`,
+                    `Target tier '${tier.name}' allows a maximum of ${maxRewards} rewards per campaign. You selected ${campaign.rewards.length}.`,
                   );
                 }
               }
@@ -656,6 +660,12 @@ export class CampaignService {
       }
     } else {
       // Business updating BusinessCampaign
+      if (reward_ids && reward_ids.length > 0) {
+        throw new BadRequestException(
+          "Businesses can only update business rewards. Please use 'business_reward_ids'.",
+        );
+      }
+
       if (campaign instanceof BusinessCampaign) {
         // Check if claimed (Template)
         if (campaign.campaign) {
@@ -674,21 +684,8 @@ export class CampaignService {
               "Cannot add business stamp reward to a claimed campaign template.",
             );
           }
-
-          if (reward_ids) {
-            const newRewards = await this.rewardRepository.findBy({
-              id: In(reward_ids),
-            });
-            campaign.rewards = newRewards;
-          }
         } else {
           // Created from Scratch
-          if (reward_ids && reward_ids.length > 0) {
-            throw new BadRequestException(
-              "Cannot add admin rewards to a custom business campaign.",
-            );
-          }
-
           if (business_reward_ids) {
             const businessRewards = await this.businessRewardRepository.find({
               where: { id: In(business_reward_ids) },
@@ -698,11 +695,10 @@ export class CampaignService {
           }
 
           if (business_stamp_reward_id) {
-            const stampReward =
-              await this.businessStampRewardRepository.findOne({
-                where: { id: business_stamp_reward_id },
-                relations: ["business"],
-              });
+            const stampReward = await this.businessStampRewardRepository.findOne({
+              where: { id: business_stamp_reward_id },
+              relations: ["business"],
+            });
             if (!stampReward) {
               throw new NotFoundException("Business stamp reward not found.");
             }
@@ -720,11 +716,6 @@ export class CampaignService {
         const hasBusinessRewards =
           campaign.businessRewards && campaign.businessRewards.length > 0;
         if (!hasRewards && !hasBusinessRewards) {
-          // Only throw if we actually modified something that resulted in empty rewards?
-          // Or always enforce?
-          // If it's an existing campaign, it should have rewards.
-          // If we are not updating rewards, hasRewards/hasBusinessRewards will reflect DB state (loaded in findOne).
-          // So this check is safe.
           throw new BadRequestException(
             "Campaign must have at least one reward.",
           );

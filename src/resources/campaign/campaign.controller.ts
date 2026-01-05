@@ -21,7 +21,7 @@ import {
 } from "@nestjs/swagger";
 import { CampaignService } from "./campaign.service";
 import { CreateCampaignDto } from "./dto/create-campaign.dto";
-import { UpdateCampaignDto } from "./dto/update-campaign.dto";
+import { UpdateCampaignDto, UpdateCampaignAdminDto } from "./dto/update-campaign.dto";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/role.enum";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -353,9 +353,15 @@ export class CampaignController {
   @UseGuards(RolesGuard, CapabilitiesGuard)
   @Roles(Role.Admin, Role.Business)
   @ApiOperation({ summary: "Update a campaign" })
+  @ApiExtraModels(UpdateCampaignDto, UpdateCampaignAdminDto)
   @ApiBody({
     description: "Payload for updating a campaign",
-    type: UpdateCampaignDto,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(UpdateCampaignDto) },
+        { $ref: getSchemaPath(UpdateCampaignAdminDto) },
+      ],
+    },
   })
   @ApiResponse({
     status: 200,
@@ -368,11 +374,12 @@ export class CampaignController {
     },
   })
   @ApiResponse({ status: 401, description: "Unauthorized." })
+  @ApiResponse({ status: 400, description: "Bad Request. Possible invalid reward IDs for role." })
   @ApiResponse({ status: 404, description: "Campaign not found." })
   @CheckPermission(ActionType.UPDATE_CAMPAIGN)
   async update(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() updateCampaignDto: UpdateCampaignDto,
+    @Body() updateCampaignDto: UpdateCampaignDto | UpdateCampaignAdminDto,
     @CurrentUser() currentUser: Business | Admin,
   ) {
     return this.campaignService.update(id, updateCampaignDto, currentUser);
