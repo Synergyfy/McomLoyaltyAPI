@@ -237,8 +237,8 @@ export class RewardsService {
 
     const {
       reward_type,
-      reward_source,
-      audience,
+      reward_source = RewardSource.BUSINESS,
+      audience = RewardAudience.ALL_BUSINESS,
       description,
       image,
       gallery,
@@ -307,6 +307,8 @@ export class RewardsService {
     const businessReward = this.businessRewardRepository.create({
       ...createBusinessRewardDto,
       business,
+      reward_source,
+      audience,
       points_required,
       stamps_required,
       is_points_enabled: isPointsEnabled,

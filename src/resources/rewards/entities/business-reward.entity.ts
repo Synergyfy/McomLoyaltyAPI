@@ -29,10 +29,18 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column({ type: "enum", enum: RewardType })
   reward_type: RewardType;
 
-  @Column({ type: "enum", enum: RewardSource })
+  @Column({
+    type: "enum",
+    enum: RewardSource,
+    default: RewardSource.BUSINESS,
+  })
   reward_source: RewardSource;
 
-  @Column({ type: "enum", enum: RewardAudience })
+  @Column({
+    type: "enum",
+    enum: RewardAudience,
+    default: RewardAudience.ALL_BUSINESS,
+  })
   audience: RewardAudience;
 
   @Column({ type: "timestamp", nullable: true })
