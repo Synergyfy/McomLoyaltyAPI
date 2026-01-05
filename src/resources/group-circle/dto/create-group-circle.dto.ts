@@ -28,7 +28,8 @@ export class CreateGroupCircleDto {
   networkIds: string[];
 
   @ApiProperty({
-    description: "List of referred business IDs to add as initial members (will be auto-added to network if missing)",
+    description:
+      "List of referred business IDs to add as initial members (will be auto-added to network if missing)",
     required: false,
   })
   @IsOptional()

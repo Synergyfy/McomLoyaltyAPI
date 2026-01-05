@@ -48,7 +48,7 @@ export class RedemptionService {
     private readonly notificationService: NotificationService,
     private readonly walletService: WalletService,
     private readonly mallIntegrationService: MallIntegrationService,
-  ) { }
+  ) {}
 
   // Helper to find performer (Staff or Business)
   private async findPerformer(id: string, type: "Staff" | "Business") {
@@ -226,9 +226,13 @@ export class RedemptionService {
       if (redemptionMethod === "auto" || !redemptionMethod) {
         // Smart Selection: Prioritize stamps if sufficient
         const stpCost =
-          (businessReward ? businessReward.stamps_required : reward?.max_stamps_required) || 0;
+          (businessReward
+            ? businessReward.stamps_required
+            : reward?.max_stamps_required) || 0;
         const ptsCost =
-          (businessReward ? businessReward.points_required : reward?.max_points) || 0;
+          (businessReward
+            ? businessReward.points_required
+            : reward?.max_points) || 0;
 
         if (
           canUseStamps &&
@@ -258,7 +262,9 @@ export class RedemptionService {
       } else if (redemptionMethod === "stamps") {
         resolvedMethod = "stamps";
         stampsCost =
-          (businessReward ? businessReward.stamps_required : reward?.max_stamps_required) || 0;
+          (businessReward
+            ? businessReward.stamps_required
+            : reward?.max_stamps_required) || 0;
         if (!canUseStamps) {
           throw new BadRequestException(
             "Stamp redemption is disabled for this reward",
@@ -275,7 +281,9 @@ export class RedemptionService {
       } else {
         resolvedMethod = "points";
         pointsCost =
-          (businessReward ? businessReward.points_required : reward?.max_points) || 0;
+          (businessReward
+            ? businessReward.points_required
+            : reward?.max_points) || 0;
         if (!canUsePoints) {
           throw new BadRequestException(
             "Point redemption is disabled for this reward",
@@ -455,7 +463,7 @@ export class RedemptionService {
             staff ? staff.name : business.name,
             businessCampaign.name,
             sourceDescription ||
-            `Redeemed: ${businessReward?.title || reward?.title || "Reward"}`,
+              `Redeemed: ${businessReward?.title || reward?.title || "Reward"}`,
           );
         } catch (error) {
           console.error(

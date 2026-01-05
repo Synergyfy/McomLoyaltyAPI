@@ -12,4 +12,4 @@ import { Staff } from "../staff/entities/staff.entity";
   providers: [LibraryAssetsService],
   exports: [LibraryAssetsService],
 })
-export class LibraryAssetsModule { }
+export class LibraryAssetsModule {}

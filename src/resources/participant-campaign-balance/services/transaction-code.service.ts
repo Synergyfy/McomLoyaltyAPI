@@ -33,7 +33,7 @@ export class TransactionCodeService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
-  ) { }
+  ) {}
 
   async generateCode(
     dto: GenerateCodeDto,

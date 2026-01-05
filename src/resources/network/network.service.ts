@@ -57,7 +57,7 @@ export class NetworkService {
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
     private readonly hashService: HashService,
-  ) { }
+  ) {}
 
   async getOnboardingDetails(id: string) {
     const network = await this.networkRepository.findOne({ where: { id } });
@@ -302,14 +302,7 @@ export class NetworkService {
   }
 
   async findAll(query: GetNetworkDto, businessId?: string) {
-    const {
-      page,
-      limit,
-      search,
-      status,
-      sortBy,
-      sortOrder,
-    } = query;
+    const { page, limit, search, status, sortBy, sortOrder } = query;
     const filterBusinessId = businessId || query.businessId;
 
     const qb = this.networkRepository.createQueryBuilder("network");
@@ -375,14 +368,7 @@ export class NetworkService {
   }
 
   async findAllCustomers(query: GetNetworkDto, businessId?: string) {
-    const {
-      page,
-      limit,
-      search,
-      status,
-      sortBy,
-      sortOrder,
-    } = query;
+    const { page, limit, search, status, sortBy, sortOrder } = query;
     const filterBusinessId = businessId || query.businessId;
 
     const qb = this.networkRepository.createQueryBuilder("network");

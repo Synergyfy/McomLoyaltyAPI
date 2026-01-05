@@ -22,7 +22,11 @@ export class Reward extends AbstractBaseEntity {
   @Column({ type: "enum", enum: RewardType })
   reward_type: RewardType;
 
-  @Column({ type: "enum", enum: RewardSource, default: RewardSource.MCOM_VAULT })
+  @Column({
+    type: "enum",
+    enum: RewardSource,
+    default: RewardSource.MCOM_VAULT,
+  })
   reward_source: RewardSource;
 
   @Column({ type: "enum", enum: RewardAudience })

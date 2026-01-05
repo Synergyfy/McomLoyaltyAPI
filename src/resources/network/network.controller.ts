@@ -37,7 +37,7 @@ import { TagNetworkDto } from "./dto/tag-network.dto";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("network")
 export class NetworkController {
-  constructor(private readonly networkService: NetworkService) { }
+  constructor(private readonly networkService: NetworkService) {}
 
   @Public()
   @Get("onboarding-details/:id")

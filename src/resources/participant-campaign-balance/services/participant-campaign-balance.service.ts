@@ -18,7 +18,10 @@ import { RedemptionService } from "./redemption.service";
 import { PointHistory } from "../entities/point-history.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 import { TierProgressionService } from "../../tier-progression/tier-progression.service";
-import { GetHistoryQueryDto, HistoryDisplayType } from "../dto/get-history-query.dto";
+import {
+  GetHistoryQueryDto,
+  HistoryDisplayType,
+} from "../dto/get-history-query.dto";
 import { PointHistoryType } from "../entities/point-history.entity";
 
 @Injectable()
@@ -38,7 +41,7 @@ export class ParticipantCampaignBalanceService {
     private readonly redemptionService: RedemptionService,
     private readonly dataSource: DataSource,
     private readonly tierProgressionService: TierProgressionService,
-  ) { }
+  ) {}
 
   async getParticipantBalance(participantId: string) {
     const participant = await this.participantRepository.findOne({
@@ -159,7 +162,11 @@ export class ParticipantCampaignBalanceService {
     campaignId: string,
     query: GetHistoryQueryDto,
   ) {
-    const { page = 1, limit = 10, historyType = HistoryDisplayType.BOTH } = query;
+    const {
+      page = 1,
+      limit = 10,
+      historyType = HistoryDisplayType.BOTH,
+    } = query;
     // Check if participant is joined
     const isJoined = await this.isJoined(participantId, campaignId);
     if (!isJoined.isJoined) {
@@ -172,11 +179,19 @@ export class ParticipantCampaignBalanceService {
 
     // Apply historyType filtering
     if (Array.isArray(where)) {
-      where.forEach(w => {
+      where.forEach((w) => {
         if (historyType === HistoryDisplayType.POINTS) {
-          w.type = In([PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA]);
+          w.type = In([
+            PointHistoryType.EARN,
+            PointHistoryType.REDEEM,
+            PointHistoryType.MATCHING,
+            PointHistoryType.PURCHASED_EXTRA,
+          ]);
         } else if (historyType === HistoryDisplayType.STAMPS) {
-          w.type = In([PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM]);
+          w.type = In([
+            PointHistoryType.STAMP_EARN,
+            PointHistoryType.STAMP_REDEEM,
+          ]);
         }
       });
     }
@@ -197,20 +212,29 @@ export class ParticipantCampaignBalanceService {
     };
   }
 
-  async getAllHistory(
-    participantId: string,
-    query: GetHistoryQueryDto,
-  ) {
-    const { page = 1, limit = 10, historyType = HistoryDisplayType.BOTH } = query;
+  async getAllHistory(participantId: string, query: GetHistoryQueryDto) {
+    const {
+      page = 1,
+      limit = 10,
+      historyType = HistoryDisplayType.BOTH,
+    } = query;
 
     const where: any = {
       participant: { id: participantId },
     };
 
     if (historyType === HistoryDisplayType.POINTS) {
-      where.type = In([PointHistoryType.EARN, PointHistoryType.REDEEM, PointHistoryType.MATCHING, PointHistoryType.PURCHASED_EXTRA]);
+      where.type = In([
+        PointHistoryType.EARN,
+        PointHistoryType.REDEEM,
+        PointHistoryType.MATCHING,
+        PointHistoryType.PURCHASED_EXTRA,
+      ]);
     } else if (historyType === HistoryDisplayType.STAMPS) {
-      where.type = In([PointHistoryType.STAMP_EARN, PointHistoryType.STAMP_REDEEM]);
+      where.type = In([
+        PointHistoryType.STAMP_EARN,
+        PointHistoryType.STAMP_REDEEM,
+      ]);
     }
 
     const [data, total] = await this.pointHistoryRepository.findAndCount({
@@ -332,7 +356,7 @@ export class ParticipantCampaignBalanceService {
           campaignId,
           code,
           "Redeemed via claimed code",
-          transactionCode.redemption_method as any || "auto",
+          (transactionCode.redemption_method as any) || "auto",
           manager, // Pass manager
         );
       }

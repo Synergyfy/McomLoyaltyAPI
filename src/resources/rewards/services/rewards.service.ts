@@ -37,6 +37,8 @@ import { AddRewardToBusinessDto } from "../dto/add-reward-to-business.dto";
 import { GetRewardsFilterDto, SortBy } from "../dto/get-rewards-filter.dto";
 import { LibraryAsset } from "../../library-assets/entities/library-asset.entity";
 import { ImageSourceType } from "../enums/image-source-type.enum";
+import { Category } from "../../category/entities/category.entity";
+import { SubCategory } from "../../subcategory/entities/subcategory.entity";
 
 @Injectable()
 export class RewardsService {
@@ -61,14 +63,89 @@ export class RewardsService {
     private readonly libraryAssetRepository: Repository<LibraryAsset>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+    @InjectRepository(SubCategory)
+    private readonly subCategoryRepository: Repository<SubCategory>,
   ) { }
 
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
-    const reward = this.rewardRepository.create(createRewardDto);
+    const {
+      image_source_type,
+      library_asset_id,
+      sector_id,
+      category_id,
+      sub_category_id,
+      emoji,
+      ...rest
+    } = createRewardDto;
+
+    let imageToUse = createRewardDto.image;
+
+    if (image_source_type === ImageSourceType.SECTOR_LOGO && sector_id) {
+      const sector = await this.sectorRepository.findOne({
+        where: { id: sector_id },
+      });
+      if (sector) imageToUse = sector.imageUrl;
+    } else if (
+      image_source_type === ImageSourceType.CATEGORY_LOGO &&
+      category_id
+    ) {
+      const category = await this.categoryRepository.findOne({
+        where: { id: category_id },
+      });
+      if (category) imageToUse = category.imageUrl;
+    } else if (
+      image_source_type === ImageSourceType.SUB_CATEGORY_LOGO &&
+      sub_category_id
+    ) {
+      const subCategory = await this.subCategoryRepository.findOne({
+        where: { id: sub_category_id },
+      });
+      if (subCategory) imageToUse = subCategory.imageUrl;
+    } else if (image_source_type === ImageSourceType.LIBRARY_ASSET) {
+      if (library_asset_id) {
+        const asset = await this.libraryAssetRepository.findOne({
+          where: { id: library_asset_id },
+        });
+        if (asset) imageToUse = asset.url;
+      }
+    } else if (image_source_type === ImageSourceType.EMOJI) {
+      imageToUse = emoji || "🎁";
+    }
+
+    if (!rest.max_points && !rest.max_stamps_required) {
+      throw new ForbiddenException(
+        "At least one of max_points or max_stamps_required must be provided",
+      );
+    }
+
+    const sectors = rest.sector_ids
+      ? await this.sectorRepository.findBy({ id: In(rest.sector_ids) })
+      : [];
+    if (rest.sector_ids && sectors.length !== rest.sector_ids.length) {
+      throw new NotFoundException("One or more sectors not found");
+    }
+
+    const tiers = rest.tier_ids
+      ? await this.tierRepository.findBy({ id: In(rest.tier_ids) })
+      : [];
+    if (rest.tier_ids && tiers.length !== rest.tier_ids.length) {
+      throw new NotFoundException("One or more tiers not found");
+    }
+
+    const reward = this.rewardRepository.create({
+      ...rest,
+      image: imageToUse,
+      sectors,
+      tiers,
+    });
     return this.rewardRepository.save(reward);
   }
 
-  async getRewards(filterDto: GetRewardsFilterDto): Promise<PaginationResult<Reward>> {
+  async getRewards(
+    filterDto: GetRewardsFilterDto,
+  ): Promise<PaginationResult<Reward>> {
     return this.getGlobalRewards(filterDto);
   }
 
@@ -80,7 +157,10 @@ export class RewardsService {
     return reward;
   }
 
-  async updateReward(id: string, updateRewardDto: UpdateRewardDto): Promise<Reward> {
+  async updateReward(
+    id: string,
+    updateRewardDto: UpdateRewardDto,
+  ): Promise<Reward> {
     await this.findOne(id);
     await this.rewardRepository.update(id, updateRewardDto);
     return this.findOne(id);
@@ -288,7 +368,9 @@ export class RewardsService {
         // Map Mall Reward Type
         if (createBusinessRewardDto.reward_type === RewardType.VOUCHER) {
           createBusinessRewardDto.mall_reward_type = "VOUCHER";
-        } else if (createBusinessRewardDto.reward_type === RewardType.GIFT_CARD) {
+        } else if (
+          createBusinessRewardDto.reward_type === RewardType.GIFT_CARD
+        ) {
           createBusinessRewardDto.mall_reward_type = "GIFT_CARD";
         } else if (createBusinessRewardDto.reward_type === RewardType.COUPON) {
           createBusinessRewardDto.mall_reward_type = "COUPON";
@@ -331,9 +413,23 @@ export class RewardsService {
   ): Promise<BusinessReward> {
     const businessReward = await this.businessRewardRepository.findOne({
       where: { id: rewardId, business: { id: businessId } },
+      relations: ["reward"],
     });
     if (!businessReward) {
-      throw new NotFoundException(`BusinessReward with ID ${rewardId} not found`);
+      throw new NotFoundException(
+        `BusinessReward with ID ${rewardId} not found`,
+      );
+    }
+
+    if (
+      updateBusinessRewardDto.stamps_required &&
+      businessReward.reward &&
+      updateBusinessRewardDto.stamps_required >
+      businessReward.reward.max_stamps_required
+    ) {
+      throw new ForbiddenException(
+        `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamps_required} stamps).`,
+      );
     }
 
     // Check points Required against Tier Max Points

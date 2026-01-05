@@ -124,7 +124,8 @@ export class CreateQrPlaqueDto {
   relationshipTag?: NetworkRelationshipTag;
 
   @ApiProperty({
-    description: "ID of a referred business to assign the plaque to (without transferring ownership)",
+    description:
+      "ID of a referred business to assign the plaque to (without transferring ownership)",
     required: false,
   })
   @IsOptional()

@@ -1,5 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNumber, IsOptional, IsString, IsBoolean, IsEnum, IsArray } from "class-validator";
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsEnum,
+  IsArray,
+} from "class-validator";
 import { RewardStatus } from "../enums/reward-status.enum";
 import { RewardType } from "../enums/reward-type.enum";
 import { RewardSource } from "../enums/reward-source.enum";

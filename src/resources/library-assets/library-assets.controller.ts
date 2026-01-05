@@ -35,7 +35,7 @@ import { PageDto } from "../../common/dto/page.dto";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class LibraryAssetsController {
-  constructor(private readonly libraryAssetsService: LibraryAssetsService) { }
+  constructor(private readonly libraryAssetsService: LibraryAssetsService) {}
 
   @Post()
   @Roles(Role.Business, Role.Admin)

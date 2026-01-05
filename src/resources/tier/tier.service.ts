@@ -27,7 +27,7 @@ export class TierService {
     private readonly membershipRepository: Repository<Membership>,
     @InjectRepository(Season)
     private readonly seasonRepository: Repository<Season>,
-  ) { }
+  ) {}
 
   private async createHistory(tier: Tier, admin: Admin) {
     const history = this.tierHistoryRepository.create({

@@ -35,7 +35,7 @@ import { Public } from "../../common/decorators/public.decorator";
 @ApiBearerAuth()
 @Controller("deals")
 export class DealController {
-  constructor(private readonly dealService: DealService) { }
+  constructor(private readonly dealService: DealService) {}
 
   @Post()
   @Roles(Role.Admin, Role.Business)
@@ -66,10 +66,7 @@ export class DealController {
   @Get()
   @ApiOperation({ summary: "Get all deals" })
   @ApiResponse({ status: 200, description: "Return a list of deals." })
-  findAll(
-    @Query() filterDealDto: FilterDealDto,
-    @CurrentUser() user?: User,
-  ) {
+  findAll(@Query() filterDealDto: FilterDealDto, @CurrentUser() user?: User) {
     return this.dealService.findAll(filterDealDto, user);
   }
 

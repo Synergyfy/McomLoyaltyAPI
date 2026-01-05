@@ -30,7 +30,7 @@ export class QrPlaquesService {
     @InjectRepository(Referral)
     private readonly referralRepository: Repository<Referral>,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   private generateUniqueCode(): string {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -294,9 +294,10 @@ export class QrPlaquesService {
     // Handle Assignment to Referred Business (Without Ownership Transfer)
     if (assignToReferredBusinessId) {
       if (!requesterId) {
-        throw new BadRequestException("Requester ID required for this operation");
+        throw new BadRequestException(
+          "Requester ID required for this operation",
+        );
       }
-
 
       // 1. Verify Referral
       const referral = await this.referralRepository.findOne({
@@ -372,9 +373,7 @@ export class QrPlaquesService {
         network.business &&
         network.business.id !== requesterId
       ) {
-        throw new BadRequestException(
-          "Network contact does not belong to you",
-        );
+        throw new BadRequestException("Network contact does not belong to you");
       }
 
       // Assign to contact (even if onboarded, we treat it as assignment, not transfer)

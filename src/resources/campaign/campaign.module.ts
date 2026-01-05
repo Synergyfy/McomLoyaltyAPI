@@ -46,4 +46,4 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
   providers: [CampaignService],
   exports: [CampaignService],
 })
-export class CampaignModule { }
+export class CampaignModule {}

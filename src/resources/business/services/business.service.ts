@@ -74,7 +74,7 @@ export class BusinessService {
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly walletService: WalletService,
-  ) { }
+  ) {}
 
   private async generateAffiliateCode(): Promise<string> {
     let affiliateCode: string;
@@ -146,7 +146,8 @@ export class BusinessService {
       });
 
       if (existingNetworkContact) {
-        existingNetworkContact.relationshipTag = NetworkRelationshipTag.AFFILIATE;
+        existingNetworkContact.relationshipTag =
+          NetworkRelationshipTag.AFFILIATE;
         existingNetworkContact.onboardedBusinessId = newBusiness.id;
         existingNetworkContact.isOnboarded = true;
         existingNetworkContact.onboardedType = "business";

@@ -45,4 +45,4 @@ import { WalletModule } from "../wallet/wallet.module";
   providers: [PaymentService, StripeService, PaypalService],
   exports: [PaymentService, StripeService, PaypalService],
 })
-export class PaymentModule { }
+export class PaymentModule {}

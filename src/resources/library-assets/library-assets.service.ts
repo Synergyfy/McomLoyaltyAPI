@@ -30,7 +30,7 @@ export class LibraryAssetsService {
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
-  ) { }
+  ) {}
 
   async create(
     createDto: CreateLibraryAssetDto,
@@ -272,7 +272,9 @@ export class LibraryAssetsService {
         }
       }
       if (asset.businessId !== targetBusinessId) {
-        throw new ForbiddenException("You can only update your own business assets");
+        throw new ForbiddenException(
+          "You can only update your own business assets",
+        );
       }
     } else {
       // Admin: Can update any admin asset

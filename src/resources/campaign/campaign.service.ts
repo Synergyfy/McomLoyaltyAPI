@@ -16,7 +16,10 @@ import {
   Not,
 } from "typeorm";
 import { CreateCampaignDto } from "./dto/create-campaign.dto";
-import { UpdateCampaignDto, UpdateCampaignAdminDto } from "./dto/update-campaign.dto";
+import {
+  UpdateCampaignDto,
+  UpdateCampaignAdminDto,
+} from "./dto/update-campaign.dto";
 import { Campaign } from "./entities/campaign.entity";
 import { Business } from "../business/entities/business.entity";
 import { Reward } from "../rewards/entities/reward.entity";
@@ -94,7 +97,7 @@ export class CampaignService {
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly matchingPointService: MatchingPointService,
-  ) { }
+  ) {}
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -695,10 +698,11 @@ export class CampaignService {
           }
 
           if (business_stamp_reward_id) {
-            const stampReward = await this.businessStampRewardRepository.findOne({
-              where: { id: business_stamp_reward_id },
-              relations: ["business"],
-            });
+            const stampReward =
+              await this.businessStampRewardRepository.findOne({
+                where: { id: business_stamp_reward_id },
+                relations: ["business"],
+              });
             if (!stampReward) {
               throw new NotFoundException("Business stamp reward not found.");
             }
@@ -1193,7 +1197,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-        100
+          100
         : 0;
 
     return {
@@ -1401,7 +1405,9 @@ export class CampaignService {
 
     return parseInt(result.count, 10) || 0;
   }
-  async getTierAnalytics(campaignId: string): Promise<TierAnalyticsResponseDto> {
+  async getTierAnalytics(
+    campaignId: string,
+  ): Promise<TierAnalyticsResponseDto> {
     const campaignStats = await this.businessCampaignRepository
       .createQueryBuilder("bc")
       .innerJoin("bc.business", "b")
@@ -1428,10 +1434,7 @@ export class CampaignService {
       .innerJoin("m.tier", "t")
       .where("bc.campaign_id = :campaignId", { campaignId })
       .andWhere("m.status = :status", { status: MembershipStatus.ACTIVE })
-      .select([
-        't.id AS "tierId"',
-        'COUNT(pcb.id) AS "totalParticipants"',
-      ])
+      .select(['t.id AS "tierId"', 'COUNT(pcb.id) AS "totalParticipants"'])
       .groupBy("t.id")
       .getRawMany();
 

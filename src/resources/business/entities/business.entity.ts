@@ -225,11 +225,19 @@ export class Business extends AbstractBaseEntity {
   @Column({ default: false })
   isEmailVerified: boolean;
 
-  @ApiProperty({ enum: NetworkLocationTag, description: "Location tag", required: false })
+  @ApiProperty({
+    enum: NetworkLocationTag,
+    description: "Location tag",
+    required: false,
+  })
   @Column({ type: "enum", enum: NetworkLocationTag, nullable: true })
   locationTag: NetworkLocationTag;
 
-  @ApiProperty({ enum: NetworkRelationshipTag, description: "Relationship tag", required: false })
+  @ApiProperty({
+    enum: NetworkRelationshipTag,
+    description: "Relationship tag",
+    required: false,
+  })
   @Column({ type: "enum", enum: NetworkRelationshipTag, nullable: true })
   relationshipTag: NetworkRelationshipTag;
 

@@ -66,10 +66,17 @@ export class GroupCircleService {
     }
 
     const uniqueNetworkIds = [...new Set(createDto.networkIds || [])];
-    const uniqueReferredBusinessIds = [...new Set(createDto.referredBusinessIds || [])];
+    const uniqueReferredBusinessIds = [
+      ...new Set(createDto.referredBusinessIds || []),
+    ];
 
-    if (uniqueNetworkIds.length === 0 && uniqueReferredBusinessIds.length === 0) {
-      throw new BadRequestException("At least one network contact or referred business is required");
+    if (
+      uniqueNetworkIds.length === 0 &&
+      uniqueReferredBusinessIds.length === 0
+    ) {
+      throw new BadRequestException(
+        "At least one network contact or referred business is required",
+      );
     }
 
     // Validate Networks first
@@ -81,9 +88,9 @@ export class GroupCircleService {
           business: { id: business.id },
         },
       });
-      
+
       if (foundNetworks.length !== uniqueNetworkIds.length) {
-         throw new NotFoundException(
+        throw new NotFoundException(
           "Some network contacts were not found or do not belong to your business",
         );
       }
@@ -106,7 +113,7 @@ export class GroupCircleService {
           business,
           manager,
         );
-        
+
         // Add owner to networks if not already present
         const isOwnerPresent = networks.some((n) => n.id === ownerNetwork.id);
         if (!isOwnerPresent) {
@@ -669,7 +676,9 @@ export class GroupCircleService {
 
   async addMember(id: string, dto: AddMemberDto, businessId: string) {
     if (!dto.networkId && !dto.referredBusinessId) {
-      throw new BadRequestException("Either networkId or referredBusinessId must be provided");
+      throw new BadRequestException(
+        "Either networkId or referredBusinessId must be provided",
+      );
     }
 
     const circle = await this.findOne(id, businessId);
@@ -747,7 +756,7 @@ export class GroupCircleService {
     currentBusiness: Business,
   ): Promise<Network[]> {
     const networks: Network[] = [];
-    
+
     // 1. Fetch valid referrals
     const referrals = await this.referralRepo.find({
       where: {
@@ -758,34 +767,38 @@ export class GroupCircleService {
       relations: ["refereeBusiness"],
     });
 
-    const validReferralIds = referrals.map(r => r.refereeBusiness.id);
-    const invalidIds = referredBusinessIds.filter(id => !validReferralIds.includes(id));
+    const validReferralIds = referrals.map((r) => r.refereeBusiness.id);
+    const invalidIds = referredBusinessIds.filter(
+      (id) => !validReferralIds.includes(id),
+    );
 
     if (invalidIds.length > 0) {
-      throw new BadRequestException(`One or more businesses were not referred by you or the referral is not successful: ${invalidIds.join(', ')}`);
+      throw new BadRequestException(
+        `One or more businesses were not referred by you or the referral is not successful: ${invalidIds.join(", ")}`,
+      );
     }
 
     for (const referral of referrals) {
       const refereeBiz = referral.refereeBusiness;
-      
+
       // 2. Check if network exists
       let network = await this.networkRepo.findOne({
         where: {
           business: { id: currentBusiness.id },
           onboardedBusinessId: refereeBiz.id,
           isOnboarded: true,
-          onboardedType: "business"
-        }
+          onboardedType: "business",
+        },
       });
 
       if (!network) {
-         // Check by email as fallback
-         network = await this.networkRepo.findOne({
+        // Check by email as fallback
+        network = await this.networkRepo.findOne({
           where: {
             business: { id: currentBusiness.id },
-            email: refereeBiz.email
-          }
-         });
+            email: refereeBiz.email,
+          },
+        });
       }
 
       // 3. Create if not exists or update
@@ -800,17 +813,17 @@ export class GroupCircleService {
           isOnboarded: true,
           onboardedType: "business",
           onboardedBusinessId: refereeBiz.id,
-          relationshipTag: NetworkRelationshipTag.PARTNER // Default tag for referred business
+          relationshipTag: NetworkRelationshipTag.PARTNER, // Default tag for referred business
         });
         await this.networkRepo.save(network);
       } else {
         // Ensure it's linked correctly if found by email
         if (!network.isOnboarded || !network.onboardedBusinessId) {
-            network.isOnboarded = true;
-            network.onboardedType = "business";
-            network.onboardedBusinessId = refereeBiz.id;
-            network.businessName = refereeBiz.name; // Update name
-            await this.networkRepo.save(network);
+          network.isOnboarded = true;
+          network.onboardedType = "business";
+          network.onboardedBusinessId = refereeBiz.id;
+          network.businessName = refereeBiz.name; // Update name
+          await this.networkRepo.save(network);
         }
       }
       networks.push(network);
@@ -874,9 +887,9 @@ export class GroupCircleService {
 
     if (dto.recipientId) {
       const recipientMember = await this.memberRepo.findOne({
-        where: { 
-          groupCircle: { id }, 
-          network: { id: dto.recipientId } 
+        where: {
+          groupCircle: { id },
+          network: { id: dto.recipientId },
         },
         relations: ["network"],
       });

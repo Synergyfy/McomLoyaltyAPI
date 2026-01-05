@@ -62,7 +62,7 @@ export class PointEarningService {
     private readonly stampPackageService: StampPackageService,
     private readonly stampService: StampService,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   // Helper to find performer (Staff or Business)
   private async findPerformer(id: string, type: "Staff" | "Business") {
@@ -286,7 +286,7 @@ export class PointEarningService {
         if (
           activeCampaign.regular_points_threshold !== null &&
           activeCampaign.total_points_earned + points >
-          activeCampaign.regular_points_threshold
+            activeCampaign.regular_points_threshold
         ) {
           throw new BadRequestException(
             "Campaign regular points threshold reached.",
@@ -455,7 +455,7 @@ export class PointEarningService {
         if (
           activeCampaign.matching_points_threshold !== null &&
           activeCampaign.total_matching_points_earned + points >
-          activeCampaign.matching_points_threshold
+            activeCampaign.matching_points_threshold
         ) {
           throw new BadRequestException(
             "Campaign matching points threshold reached.",
@@ -645,7 +645,10 @@ export class PointEarningService {
       }
 
       participantCampaignBalance.stamp_balance += stamps;
-      await manager.save(ParticipantCampaignBalance, participantCampaignBalance);
+      await manager.save(
+        ParticipantCampaignBalance,
+        participantCampaignBalance,
+      );
 
       const stampHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.STAMP_EARN,

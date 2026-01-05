@@ -20,7 +20,6 @@ export class GetNetworkDto extends PaginationDto {
   @IsString()
   businessId?: string;
 
-
   @ApiPropertyOptional({ enum: NetworkStatus })
   @IsOptional()
   @IsEnum(NetworkStatus)

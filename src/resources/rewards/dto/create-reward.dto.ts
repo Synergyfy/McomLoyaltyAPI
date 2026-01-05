@@ -11,6 +11,7 @@ import {
 import { RewardType } from "../enums/reward-type.enum";
 import { RewardAudience } from "../enums/reward-audience.enum";
 import { RewardStatus } from "../enums/reward-status.enum";
+import { ImageSourceType } from "../enums/image-source-type.enum";
 
 export class CreateRewardDto {
   @ApiProperty({
@@ -158,4 +159,59 @@ export class CreateRewardDto {
   @IsString()
   @IsOptional()
   stamp_emoji?: string;
+
+  @ApiProperty({
+    description: "The source type of the image",
+    enum: ImageSourceType,
+    example: ImageSourceType.CUSTOM_URL,
+    required: false,
+  })
+  @IsEnum(ImageSourceType)
+  @IsOptional()
+  image_source_type?: ImageSourceType;
+
+  @ApiProperty({
+    description: "The ID of the library asset if source is LIBRARY_ASSET",
+    example: "uuid",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  library_asset_id?: string;
+
+  @ApiProperty({
+    description: "The ID of the sector if source is SECTOR_LOGO",
+    example: "uuid",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  sector_id?: string;
+
+  @ApiProperty({
+    description: "The ID of the category if source is CATEGORY_LOGO",
+    example: "uuid",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  category_id?: string;
+
+  @ApiProperty({
+    description: "The ID of the sub category if source is SUB_CATEGORY_LOGO",
+    example: "uuid",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  sub_category_id?: string;
+
+  @ApiProperty({
+    description: "The emoji character if source is EMOJI",
+    example: "🎁",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  emoji?: string;
 }

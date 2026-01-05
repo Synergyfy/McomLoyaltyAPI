@@ -25,7 +25,6 @@ export class Tier extends AbstractBaseEntity {
   })
   type: TierType;
 
-
   @ApiProperty({
     description: "Color code",
     required: false,

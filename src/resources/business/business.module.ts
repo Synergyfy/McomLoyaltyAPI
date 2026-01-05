@@ -51,4 +51,4 @@ import { WalletModule } from "../wallet/wallet.module";
   controllers: [BusinessController, AffiliateController],
   exports: [BusinessService],
 })
-export class BusinessModule { }
+export class BusinessModule {}

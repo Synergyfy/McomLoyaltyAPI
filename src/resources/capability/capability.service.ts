@@ -55,7 +55,7 @@ export class CapabilityService {
     private readonly stampEventRepository: Repository<StampEvent>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
-  ) { }
+  ) {}
 
   async checkPermission(
     userId: string,

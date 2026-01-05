@@ -14,6 +14,8 @@ import { CapabilityModule } from "../capability/capability.module";
 import { forwardRef } from "@nestjs/common";
 import { TierProgressionModule } from "../tier-progression/tier-progression.module";
 import { LibraryAsset } from "../library-assets/entities/library-asset.entity";
+import { Category } from "../category/entities/category.entity";
+import { SubCategory } from "../subcategory/entities/subcategory.entity";
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { LibraryAsset } from "../library-assets/entities/library-asset.entity";
       BusinessCampaign,
       PointHistory,
       LibraryAsset,
+      Category,
+      SubCategory,
     ]),
     forwardRef(() => CapabilityModule),
     forwardRef(() => TierProgressionModule),
@@ -35,4 +39,4 @@ import { LibraryAsset } from "../library-assets/entities/library-asset.entity";
   providers: [RewardsService],
   exports: [RewardsService],
 })
-export class RewardsModule { }
+export class RewardsModule {}

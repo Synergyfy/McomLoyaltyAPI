@@ -21,9 +21,11 @@ export class MallIntegrationService {
     this.apiKey =
       this.configService.get<string>("MALL_API_KEY") || "secret-system-key";
     this.ssoSecret =
-      this.configService.get<string>("SSO_SECRET") || "shared-sso-secret-key-123";
+      this.configService.get<string>("SSO_SECRET") ||
+      "shared-sso-secret-key-123";
     this.mallFrontendUrl =
-      this.configService.get<string>("MALL_FRONTEND_URL") || "http://localhost:3000";
+      this.configService.get<string>("MALL_FRONTEND_URL") ||
+      "http://localhost:3000";
   }
 
   async generateSsoToken(user: {
