@@ -497,26 +497,49 @@ export class BusinessService {
   }
 
   async getMonthlyStampBalance(businessId: string) {
-    const balance =
+    const payments =
+      await this.paymentHistoryService.findByBusiness(businessId);
+    const latestPayment = payments[0];
+
+    // Default to 0 allowance if no active membership
+    let monthlyAllowance = 0;
+    if (latestPayment && latestPayment.membership) {
+      const membership = latestPayment.membership;
+      const tierConfig = membership.tier.configuration;
+      monthlyAllowance = tierConfig?.quotas?.monthlyStampsAllowance || 0;
+    }
+
+    const packageBalance =
       await this.stampPackageService.getAggregateBalance(businessId);
 
     // Calculate start of current month
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const usedResult = await this.pointHistoryRepository.sum("stamps", {
+    const totalStampsAwardedResult = await this.pointHistoryRepository.sum("stamps", {
+      business: { id: businessId },
+      type: PointHistoryType.STAMP_EARN,
+      created_at: MoreThanOrEqual(startOfMonth),
+    });
+    const totalStampsAwarded = totalStampsAwardedResult || 0;
+
+    const packageStampsSpentResult = await this.pointHistoryRepository.sum("stamps", {
       business: { id: businessId },
       type: PointHistoryType.BUSINESS_STAMP_SPENT,
       created_at: MoreThanOrEqual(startOfMonth),
     });
+    const packageStampsSpent = packageStampsSpentResult || 0;
 
-    const used = usedResult || 0;
+    // Allowance used is total awarded minus what was covered by packages
+    const allowanceUsed = Math.max(0, totalStampsAwarded - packageStampsSpent);
+    const remainingAllowance = Math.max(0, monthlyAllowance - allowanceUsed);
 
     return {
-      monthlyLimit: -1, // No monthly limit for stamps (package based)
-      used: used,
-      remaining: balance.total_balance,
-      totalBalance: balance.total_balance,
+      monthlyLimit: monthlyAllowance,
+      used: allowanceUsed,
+      remaining: remainingAllowance + packageBalance.total_balance,
+      extraStamps: packageBalance.total_balance,
+      maxBuyable: 0, // Placeholder, logic for buying limits if needed
     };
   }
 
