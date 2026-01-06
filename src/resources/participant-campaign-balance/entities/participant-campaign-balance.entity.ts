@@ -21,7 +21,7 @@ export class ParticipantCampaignBalance extends AbstractBaseEntity {
 
   @ManyToOne(
     () => BusinessCampaign,
-    (businessCampaign) => businessCampaign.participants,
+    (businessCampaign) => businessCampaign.participantCampaignBalances,
     { nullable: true },
   )
   @JoinColumn({ name: "business_campaign_id" })

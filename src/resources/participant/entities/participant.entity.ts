@@ -38,10 +38,7 @@ export class Participant extends AbstractBaseEntity {
   @JoinTable()
   campaigns: Campaign[];
 
-  @ManyToMany(
-    () => BusinessCampaign,
-    (businessCampaign) => businessCampaign.participants,
-  )
+  @ManyToMany(() => BusinessCampaign)
   @JoinTable()
   businessCampaigns: BusinessCampaign[];
 
