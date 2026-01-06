@@ -97,7 +97,7 @@ export class SeederService {
     private readonly couponRepository: Repository<Coupon>,
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
-  ) {}
+  ) { }
 
   async seed() {
     await this.clearDatabase();
@@ -338,18 +338,22 @@ export class SeederService {
           })),
         );
 
-        // Link rewards to BusinessCampaign
-        customCampaign.rewards = customRewards;
-        await this.businessCampaignRepository.save(customCampaign);
-
-        // Also populate BusinessReward for legacy/metadata support if needed
+        // Create and link BusinessRewards to BusinessCampaign
+        const businessRewards = [];
         for (const reward of customRewards) {
-          await this.businessRewardRepository.save({
+          const br = await this.businessRewardRepository.save({
             business: business,
             reward: reward,
             points_required: reward.max_points,
+            title: reward.title,
+            description: reward.description,
+            reward_type: reward.reward_type as any,
+            image: reward.image,
           });
+          businessRewards.push(br);
         }
+        customCampaign.businessRewards = businessRewards;
+        await this.businessCampaignRepository.save(customCampaign);
 
         allBusinessCampaigns.push(customCampaign);
       }
@@ -379,8 +383,21 @@ export class SeederService {
         reward_type: template.reward_type,
       });
 
-      // Link template rewards to this BusinessCampaign
-      claimedCampaign.rewards = template.rewards; // Copy rewards from template
+      // Create and link BusinessRewards from template to this BusinessCampaign
+      const claimedBusinessRewards = [];
+      for (const reward of template.rewards) {
+        const br = await this.businessRewardRepository.save({
+          business: business,
+          reward: reward,
+          points_required: reward.max_points,
+          title: reward.title,
+          description: reward.description,
+          reward_type: reward.reward_type as any,
+          image: reward.image,
+        });
+        claimedBusinessRewards.push(br);
+      }
+      claimedCampaign.businessRewards = claimedBusinessRewards;
       await this.businessCampaignRepository.save(claimedCampaign);
 
       allBusinessCampaigns.push(claimedCampaign);
@@ -410,7 +427,7 @@ export class SeederService {
           participants[Math.floor(Math.random() * participants.length)];
         const bizCampaign =
           allBusinessCampaigns[
-            Math.floor(Math.random() * allBusinessCampaigns.length)
+          Math.floor(Math.random() * allBusinessCampaigns.length)
           ];
 
         // Check if already joined
@@ -486,7 +503,7 @@ export class SeederService {
         const balance = await this.participantCampaignBalanceRepository
           .createQueryBuilder("pcb")
           .leftJoinAndSelect("pcb.businessCampaign", "bc")
-          .leftJoinAndSelect("bc.rewards", "r")
+          .leftJoinAndSelect("bc.businessRewards", "br")
           .where("pcb.participantId = :pid", { pid: participant.id })
           .andWhere("pcb.campaign_balance > 0")
           .orderBy("RANDOM()")
@@ -495,27 +512,27 @@ export class SeederService {
         if (
           balance &&
           balance.businessCampaign &&
-          balance.businessCampaign.rewards.length > 0
+          balance.businessCampaign.businessRewards.length > 0
         ) {
-          const reward = balance.businessCampaign.rewards[0]; // Just pick the first available
-          if (balance.campaign_balance >= reward.max_points) {
+          const businessReward = balance.businessCampaign.businessRewards[0]; // Just pick the first available
+          if (balance.campaign_balance >= businessReward.points_required) {
             // Redeem
-            balance.campaign_balance -= reward.max_points;
+            balance.campaign_balance -= businessReward.points_required;
             await this.participantCampaignBalanceRepository.save(balance);
 
             const bizCampaign = balance.businessCampaign;
-            bizCampaign.total_points_redeemed += reward.max_points;
+            bizCampaign.total_points_redeemed += businessReward.points_required;
             await this.businessCampaignRepository.save(bizCampaign);
 
             await this.pointHistoryRepository.save({
               type: PointHistoryType.REDEEM,
-              points: reward.max_points,
+              points: businessReward.points_required,
               participant,
               businessCampaign: bizCampaign,
               campaign: bizCampaign.campaign,
               business: bizCampaign.business,
-              reward: reward,
-              description: `Redeemed ${reward.title}`,
+              reward: businessReward.reward,
+              description: `Redeemed ${businessReward.title}`,
               created_at: currentDate,
             });
           }
@@ -557,9 +574,10 @@ export class SeederService {
       "tier",
       "payment_histories",
       "coupon",
-      "business_campaigns_rewards_reward", // join tables
+      "business_campaign_rewards", // join tables
+      "campaign_target_tiers",
       "campaigns_rewards_reward",
-      "reward_sectors_sectors",
+      "reward_sectors_sector",
       "reward_tiers_tier",
       "participants_campaigns_campaigns",
       "participants_business_campaigns_business_campaigns",

@@ -1,4 +1,10 @@
-import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  Inject,
+  forwardRef,
+  NotFoundException,
+} from "@nestjs/common";
 // Force re-compile
 import { MembershipService } from "../membership/membership.service";
 import { CampaignService } from "../campaign/campaign.service";
@@ -9,6 +15,7 @@ import {
   TierConfig,
   SeasonalTierConfig,
   ProgressionConditions,
+  ProgressionLevelConfig,
 } from "../tier/interfaces/tier-config.interface";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Business } from "../business/entities/business.entity";
@@ -28,7 +35,7 @@ export class TierProgressionService {
     private readonly pointHistoryService: PointHistoryService,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
-  ) {}
+  ) { }
 
   async checkAndPromote(userId: string): Promise<void> {
     const membership = await this.membershipService.findOneByBusinessId(userId);
@@ -91,6 +98,134 @@ export class TierProgressionService {
     }
   }
 
+  async getDetailedProgression(userId: string) {
+    const membership = await this.membershipService.findOneByBusinessId(userId);
+    if (!membership) {
+      throw new NotFoundException("Membership not found");
+    }
+
+    const tierConfig = membership.tier.configuration;
+    const currentLevel = membership.progression_level || "basic";
+
+    const metrics = await this.getProgressionMetrics(
+      userId,
+      membership.starts_at,
+    );
+
+    const nextLevels = [];
+
+    const processLevel = (levelKey: string, config: ProgressionLevelConfig) => {
+      if (!config) return;
+
+      const requirements = [];
+      const conditions = config.conditions;
+
+      const addReq = (
+        name: string,
+        current: number | boolean,
+        target: number | boolean,
+        key: string,
+      ) => {
+        let remaining: any = 0;
+        let isCompleted = false;
+
+        if (typeof target === "number") {
+          remaining = Math.max(0, target - (current as number));
+          isCompleted = (current as number) >= target;
+        } else if (typeof target === "boolean") {
+          remaining = target && !current ? 1 : 0;
+          isCompleted = current === target;
+        }
+
+        requirements.push({
+          name,
+          key,
+          current,
+          target,
+          remaining,
+          isCompleted,
+        });
+      };
+
+      if (conditions.minCampaignsCreated) {
+        addReq(
+          "Campaigns Created",
+          metrics.campaignsCreated,
+          conditions.minCampaignsCreated,
+          "minCampaignsCreated",
+        );
+      }
+      if (conditions.minRewardsCreated) {
+        addReq(
+          "Rewards Created",
+          metrics.rewardsCreated,
+          conditions.minRewardsCreated,
+          "minRewardsCreated",
+        );
+      }
+      if (conditions.minPointsUsed) {
+        addReq(
+          "Points Used/Distributed",
+          metrics.pointsUsed,
+          conditions.minPointsUsed,
+          "minPointsUsed",
+        );
+      }
+      if (conditions.minPurchases) {
+        // minPurchases -> participantJoins
+        addReq(
+          "Customer Joins (Purchases)",
+          metrics.purchases,
+          conditions.minPurchases,
+          "minPurchases",
+        );
+      }
+      if (conditions.minDaysActive) {
+        addReq(
+          "Days Active",
+          metrics.daysActive,
+          conditions.minDaysActive,
+          "minDaysActive",
+        );
+      }
+      if (conditions.profileCompleted) {
+        addReq(
+          "Profile Completed",
+          metrics.profileCompleted,
+          conditions.profileCompleted,
+          "profileCompleted",
+        );
+      }
+
+      nextLevels.push({
+        level: levelKey,
+        isCurrent: currentLevel === levelKey,
+        requirements,
+        benefits: config.benefits,
+      });
+    };
+
+    // We show progress for Pro and Pro Plus
+    if (tierConfig.pro) {
+      processLevel("pro", tierConfig.pro);
+    }
+    if (tierConfig.pro_plus) {
+      processLevel("pro_plus", tierConfig.pro_plus);
+    }
+
+    return {
+      tierName: membership.tier.name,
+      currentLevel,
+      metrics,
+      nextLevels: nextLevels.filter(
+        (l) =>
+          (currentLevel === "basic" &&
+            (l.level === "pro" || l.level === "pro_plus")) ||
+          (currentLevel === "pro" && l.level === "pro_plus"),
+      ),
+    };
+  }
+
   private async getProgressionMetrics(
     userId: string,
     membershipStartDate: Date,
@@ -106,41 +241,25 @@ export class TierProgressionService {
     // Calculate days active
     const daysActive = Math.floor(
       (Date.now() - new Date(membershipStartDate).getTime()) /
-        (1000 * 60 * 60 * 24),
+      (1000 * 60 * 60 * 24),
     );
 
     // Check profile completion (ignore KYC)
     const business = await this.businessRepository.findOneBy({ id: userId });
     const profileCompleted = !!(
-      (
-        business &&
-        business.name &&
-        business.email &&
-        business.phone &&
-        business.address &&
-        business.website // Assuming website is part of "complete" profile, or maybe optional?
-      )
-      // Requirement says "check if profile is completed". Usually implies mandatory fields + some optional.
-      // I'll assume name, email, phone, address are core. Website might be optional.
-      // Let's check if website is nullable in entity. Yes it is.
-      // But for "completed" profile, maybe it should be filled?
-      // I'll stick to name, email, phone, address for now as "completed".
-      // Actually, let's include website if it's considered part of "profile completion" metrics usually.
-      // But to be safe and not block promotion too hard, I'll stick to core contact info.
+      business &&
+      business.name &&
+      business.email &&
+      business.phone &&
+      business.address
     );
-
-    // For now, let's assume I can access it. I'll add the repository to constructor in a separate edit if needed,
-    // or use what I have. I don't have Business access here yet.
-
-    // Let's return placeholders for now and I will add BusinessRepository injection in next step.
 
     return {
       campaignsCreated,
       rewardsCreated,
       pointsUsed,
       customerScans: 0, // Ignored
-      participants: 0, // Ignored or mapped? "minParticipants" -> maybe participantJoins?
-      // Requirement 7: "use the number of times a participant ... as the number of purchanges. so use that to compare minPurchases"
+      participants: 0, // Ignored
       purchases: participantJoins,
       tasksCompleted: 0, // Ignored
       daysActive,

@@ -94,7 +94,7 @@ export class CampaignService {
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly matchingPointService: MatchingPointService,
-  ) {}
+  ) { }
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -295,7 +295,7 @@ export class CampaignService {
           where: { id: In(business_reward_ids) },
           relations: ["reward"],
         });
-        businessCampaign.rewards = businessRewards.map((br) => br.reward);
+        businessCampaign.businessRewards = businessRewards;
       }
 
       createdCampaign =
@@ -340,7 +340,7 @@ export class CampaignService {
     if (currentUser.role === Role.Business) {
       const [data, total] = await this.businessCampaignRepository.findAndCount({
         where: { business: { id: currentUser.id } },
-        relations: ["business", "rewards"],
+        relations: ["business", "businessRewards"],
         skip,
         take: limit,
       });
@@ -514,7 +514,6 @@ export class CampaignService {
       where: { id },
       relations: [
         "business",
-        "rewards",
         "campaign",
         "businessRewards",
       ],
@@ -655,36 +654,22 @@ export class CampaignService {
             currentUser.id,
             ActionType.EDIT_TEMPLATE,
           );
+        }
 
-          if (business_reward_ids && business_reward_ids.length > 0) {
-            throw new BadRequestException(
-              "Cannot add business rewards to a claimed campaign template.",
-            );
-          }
-        } else {
-          // Created from Scratch
-          if (business_reward_ids) {
-            const businessRewards = await this.businessRewardRepository.find({
-              where: { id: In(business_reward_ids) },
-              relations: ["reward"],
-            });
-            campaign.businessRewards = businessRewards;
-          }
+        if (business_reward_ids) {
+          const businessRewards = await this.businessRewardRepository.find({
+            where: { id: In(business_reward_ids) },
+            relations: ["reward"],
+          });
+          campaign.businessRewards = businessRewards;
         }
 
         // Validation: Ensure at least one type of reward is present
-        const hasRewards = campaign.rewards && campaign.rewards.length > 0;
         const hasBusinessRewards =
           campaign.businessRewards && campaign.businessRewards.length > 0;
-        if (!hasRewards && !hasBusinessRewards) {
+        if (!hasBusinessRewards) {
           throw new BadRequestException(
             "Campaign must have at least one reward.",
-          );
-        }
-
-        if (hasRewards && hasBusinessRewards) {
-          throw new BadRequestException(
-            "Campaign cannot have both admin rewards and business rewards.",
           );
         }
       }
@@ -750,7 +735,7 @@ export class CampaignService {
     const qb = this.businessCampaignRepository
       .createQueryBuilder("bc")
       .leftJoinAndSelect("bc.business", "business")
-      .leftJoinAndSelect("bc.rewards", "rewards")
+      .leftJoinAndSelect("bc.businessRewards", "businessRewards")
       .where("bc.business_id = :businessId", { businessId })
       .andWhere("bc.start_date <= :now", { now })
       .andWhere("bc.end_date >= :now", { now })
@@ -1217,7 +1202,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-          100
+        100
         : 0;
 
     return {
@@ -1406,7 +1391,10 @@ export class CampaignService {
 
   async countRewards(campaignId: string): Promise<number> {
     const campaign = await this.findOne(campaignId);
-    return campaign.rewards ? campaign.rewards.length : 0;
+    if (campaign instanceof BusinessCampaign) {
+      return campaign.businessRewards ? campaign.businessRewards.length : 0;
+    }
+    return (campaign as Campaign).rewards ? (campaign as Campaign).rewards.length : 0;
   }
 
   async countTotalCampaigns(userId: string): Promise<number> {

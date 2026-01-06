@@ -72,8 +72,6 @@ export class Reward extends AbstractBaseEntity {
   })
   tiers: Tier[];
 
-  @ManyToMany(() => BusinessCampaign, (campaign) => campaign.rewards)
-  businessCampaigns: BusinessCampaign[];
 
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.reward)
   pointHistories: PointHistory[];
