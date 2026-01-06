@@ -25,6 +25,7 @@ import { CreateEarningActionDto } from "./dto/create-earning-action.dto";
 import { EarningAction } from "./entities/earning-action.entity";
 import { ManualPromoteDto } from "./dto/manual-promote.dto";
 import { TrackEventDto } from "./dto/track-event.dto";
+import { ParticipantProgressionResponseDto } from "./dto/participant-progression-response.dto";
 
 @ApiTags("Participant Progression")
 @Controller("participant-progression")
@@ -33,7 +34,7 @@ import { TrackEventDto } from "./dto/track-event.dto";
 export class ParticipantProgressionController {
   constructor(
     private readonly progressionService: ParticipantProgressionService,
-  ) {}
+  ) { }
 
   // --- Badges ---
 
@@ -124,5 +125,17 @@ export class ParticipantProgressionController {
   @ApiOperation({ summary: "Track app open event (Daily count & Streaks)" })
   async trackAppOpen(@Req() req) {
     return this.progressionService.trackAppOpen(req.user.id);
+  }
+
+  @Get("my-progression")
+  @Roles(Role.Participant)
+  @ApiOperation({ summary: "Get the current participant's progression details" })
+  @ApiResponse({
+    status: 200,
+    description: "Returns detailed badge progression and requirements.",
+    type: ParticipantProgressionResponseDto,
+  })
+  async getMyProgression(@Req() req) {
+    return this.progressionService.getMyDetailedProgression(req.user.id);
   }
 }

@@ -33,7 +33,7 @@ export class ParticipantProgressionService {
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   // --- Action Triggering ---
 
@@ -356,5 +356,55 @@ export class ParticipantProgressionService {
     if (participant.currentLoginStreak % 7 === 0) {
       await this.triggerAction(participantId, "STREAK_7_DAY");
     }
+  }
+
+  async getMyDetailedProgression(participantId: string) {
+    const participant = await this.participantRepository.findOne({
+      where: { id: participantId },
+      relations: ["currentBadge"],
+    });
+
+    if (!participant) {
+      throw new NotFoundException("Participant not found");
+    }
+
+    const currentPoints = participant.matching_points || 0;
+    const currentBadge = participant.currentBadge;
+
+    // Get all badges ordered by priority ASC
+    const badges = await this.badgeRepository.find({
+      order: { priority: "ASC" },
+    });
+
+    const currentBadgePriority = currentBadge ? currentBadge.priority : 0;
+
+    const nextBadge = badges.find((b) => b.priority > currentBadgePriority);
+
+    let progressPercentage = 100;
+    let pointsNeeded = 0;
+    let remainingPoints = 0;
+
+    if (nextBadge) {
+      const startPoints = currentBadge ? currentBadge.minPoints : 0;
+      const range = nextBadge.minPoints - startPoints;
+      const progressInRange = currentPoints - startPoints;
+
+      progressPercentage = Math.min(
+        100,
+        Math.max(0, Math.floor((progressInRange / range) * 100)),
+      );
+      pointsNeeded = nextBadge.minPoints;
+      remainingPoints = Math.max(0, pointsNeeded - currentPoints);
+    }
+
+    return {
+      currentPoints,
+      currentBadge,
+      nextBadge,
+      pointsNeeded,
+      remainingPoints,
+      progressPercentage,
+      allBadges: badges,
+    };
   }
 }

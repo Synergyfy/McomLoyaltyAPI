@@ -9,6 +9,7 @@ import { CapabilityModule } from "../capability/capability.module";
 
 import { AnalyticsModule } from "../analytics/analytics.module";
 import { TierProgressionService } from "./tier-progression.service";
+import { TierProgressionController } from "./tier-progression.controller";
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { TierProgressionService } from "./tier-progression.service";
     AnalyticsModule,
     TypeOrmModule.forFeature([Business]),
   ],
+  controllers: [TierProgressionController],
   providers: [TierProgressionService],
   exports: [TierProgressionService],
 })
-export class TierProgressionModule {}
+export class TierProgressionModule { }
