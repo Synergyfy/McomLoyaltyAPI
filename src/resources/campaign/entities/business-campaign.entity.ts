@@ -57,13 +57,6 @@ export class BusinessCampaign extends AbstractBaseEntity {
   })
   businessRewards: BusinessReward[];
 
-  @ManyToMany(() => Reward, (reward) => reward.businessCampaigns)
-  @JoinTable({
-    name: "business_campaign_platform_rewards",
-    joinColumn: { name: "business_campaign_id", referencedColumnName: "id" },
-    inverseJoinColumn: { name: "reward_id", referencedColumnName: "id" },
-  })
-  rewards: Reward[];
 
   @ManyToMany(() => Deal, (deal) => deal.businessCampaigns)
   @JoinTable({

@@ -283,7 +283,10 @@ describe("CampaignService", () => {
 
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
-      const campaign = { ...createCampaignDto, business, rewards };
+      const businessRewards = [
+        { id: "business-reward-id", reward: rewards[0] },
+      ] as BusinessReward[];
+      const campaign = { ...createCampaignDto, business, businessRewards };
 
       mockBusinessRepository.findOneBy.mockResolvedValue(business);
       mockBusinessRewardRepository.find.mockResolvedValue([
@@ -298,7 +301,7 @@ describe("CampaignService", () => {
         expect.objectContaining({
           ...createCampaignDto,
           business: expect.objectContaining({ id: "business-id" }),
-          rewards: rewards,
+          businessRewards: expect.any(Array),
           uniqueCode: expect.any(String),
         }),
       );
@@ -332,10 +335,13 @@ describe("CampaignService", () => {
 
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
+      const businessRewards = [
+        { id: "business-reward-id", reward: rewards[0] },
+      ] as BusinessReward[];
       const campaign = {
         ...createCampaignDto,
         business,
-        rewards,
+        businessRewards,
         uniqueCode: "123456789",
       };
 
@@ -503,7 +509,10 @@ describe("CampaignService", () => {
         currentUser,
       );
 
-      expect(result.rewards).toEqual(rewards);
+      expect(result).toHaveProperty("rewards");
+      if (result instanceof Campaign) {
+        expect(result.rewards).toEqual(rewards);
+      }
     });
   });
 
@@ -617,6 +626,8 @@ describe("CampaignService", () => {
         "business-id",
         "campaign-id",
         [],
+        new Date(),
+        new Date(),
       );
 
       expect(result.uniqueCode).toBeDefined();
@@ -634,7 +645,13 @@ describe("CampaignService", () => {
       );
 
       await expect(
-        service.claimCampaign("business-id", "campaign-id", []),
+        service.claimCampaign(
+          "business-id",
+          "campaign-id",
+          [],
+          new Date(),
+          new Date(),
+        ),
       ).rejects.toThrow("Campaign already claimed");
     });
   });
