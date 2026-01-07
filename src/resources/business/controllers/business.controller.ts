@@ -26,9 +26,7 @@ import { Roles } from "../../../common/decorators/roles.decorator";
 import { Role } from "../../../common/role.enum";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { SkipMembershipCheck } from "../../../common/decorators/skip-membership-check.decorator";
-import { BuyPointsDto } from "../dto/buy-points.dto";
 import { PointPurchaseConfigDto } from "../dto/point-purchase-config.dto";
-import { ConfirmPointPurchaseDto } from "../dto/confirm-point-purchase.dto";
 import { ReferralStatsResponseDto } from "../dto/referral-stats-response.dto";
 
 @ApiTags("Business Lifecycle")
@@ -36,7 +34,7 @@ import { ReferralStatsResponseDto } from "../dto/referral-stats-response.dto";
 @UseGuards(RolesGuard)
 @ApiBearerAuth()
 export class BusinessController {
-  constructor(private readonly businessService: BusinessService) {}
+  constructor(private readonly businessService: BusinessService) { }
 
   @Public()
   @Post("signup")
