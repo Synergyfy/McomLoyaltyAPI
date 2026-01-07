@@ -18,11 +18,9 @@ import { MembershipStatus } from "../membership/entities/membership.entity";
 import { RewardsService } from "../rewards/services/rewards.service";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Between } from "typeorm";
-import {
-  PointHistory,
-  PointHistoryType,
-} from "../participant-campaign-balance/entities/point-history.entity";
+import { PointHistory, PointHistoryType } from "../participant-campaign-balance/entities/point-history.entity";
 import { Staff } from "../staff/entities/staff.entity";
+import { BusinessService } from "../business/services/business.service";
 import moment from "moment";
 
 export enum ActionType {
@@ -52,6 +50,8 @@ export class CapabilityService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @Inject(forwardRef(() => BusinessService))
+    private readonly businessService: BusinessService,
   ) {}
 
   async checkPermission(
@@ -59,6 +59,12 @@ export class CapabilityService {
     action: ActionType,
     context?: any,
   ): Promise<void> {
+    // 0. Check for Super Business
+    const business = await this.businessService.findById(userId);
+    if (business && business.isSuperBusiness) {
+      return; // Super Business has no limitations
+    }
+
     // 1. Fetch User's Active Memberships
     const memberships =
       await this.membershipService.findActiveMemberships(userId);
