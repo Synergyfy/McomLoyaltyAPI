@@ -3,6 +3,7 @@ export enum CampaignType {
   REFERRAL = "referral",
   SOCIAL_OR_EMAIL = "social_or_email",
   SPECIAL_OCCASION = "special_occasion",
+  MATCHING_POINT = "matching_point",
 }
 
 export enum AudienceType {

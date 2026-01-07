@@ -70,6 +70,10 @@ export class PointHistory extends AbstractBaseEntity {
   @JoinColumn({ name: "business_id" })
   business: Business;
 
+  @ManyToOne(() => Business, { nullable: true })
+  @JoinColumn({ name: "beneficiary_business_id" })
+  beneficiary_business: Business;
+
   @Column({ nullable: true })
   actionKey: string;
 

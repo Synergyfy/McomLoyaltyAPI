@@ -47,6 +47,11 @@ import {
   CampaignSortOrder,
 } from "./dto/public-campaign-query.dto";
 
+import {
+  CampaignType,
+  RewardType,
+  CampaignRewardMode,
+} from "./entities/campaign-enums";
 import { WishlistAggregate } from "../wishlist/entities/wishlist-aggregate.entity";
 import { WishlistItem } from "../wishlist/entities/wishlist-item.entity";
 import { MailService } from "src/mail/mail.service";
@@ -160,6 +165,19 @@ export class CampaignService {
     } else {
       const { business_reward_ids, ...campaignData } =
         createCampaignDto as CreateCampaignDto;
+
+      // Handle MATCHING_POINT campaign creation
+      if (campaignData.campaign_type === CampaignType.MATCHING_POINT) {
+        if (!(currentUser as Business).isSuperBusiness) {
+          throw new UnauthorizedException(
+            "Only Super Businesses can create Matching Point Campaigns.",
+          );
+        }
+        // Force settings for matching point campaign
+        campaignData.reward_type = RewardType.MATCHING;
+        campaignData.reward_mode = CampaignRewardMode.POINTS;
+      }
+
       // Business creating a campaign -> BusinessCampaign
       const businessCampaign =
         this.businessCampaignRepository.create(campaignData);
