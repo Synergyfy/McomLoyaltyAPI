@@ -66,6 +66,14 @@ export class BusinessCampaign extends AbstractBaseEntity {
   })
   deals: Deal[];
 
+  @ManyToMany(() => Business, (business) => business.joinedCampaigns)
+  @JoinTable({
+    name: "business_campaign_participants",
+    joinColumn: { name: "business_campaign_id", referencedColumnName: "id" },
+    inverseJoinColumn: { name: "business_id", referencedColumnName: "id" },
+  })
+  participatingBusinesses: Business[];
+
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.businessCampaign)
   pointHistories: PointHistory[];
 

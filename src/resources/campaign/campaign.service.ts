@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -47,6 +48,11 @@ import {
   CampaignSortOrder,
 } from "./dto/public-campaign-query.dto";
 
+import {
+  CampaignType,
+  RewardType,
+  CampaignRewardMode,
+} from "./entities/campaign-enums";
 import { WishlistAggregate } from "../wishlist/entities/wishlist-aggregate.entity";
 import { WishlistItem } from "../wishlist/entities/wishlist-item.entity";
 import { MailService } from "src/mail/mail.service";
@@ -160,6 +166,17 @@ export class CampaignService {
     } else {
       const { business_reward_ids, ...campaignData } =
         createCampaignDto as CreateCampaignDto;
+
+      // Handle MATCHING_POINT campaign creation
+      if (campaignData.campaign_type === CampaignType.MATCHING_POINT) {
+        if (!(currentUser as Business).isSuperBusiness) {
+          throw new UnauthorizedException(
+            "Only Super Businesses can create Matching Point Campaigns.",
+          );
+        }
+        // Super Businesses can specify reward_type and reward_mode in the DTO, so we don't force it here.
+      }
+
       // Business creating a campaign -> BusinessCampaign
       const businessCampaign =
         this.businessCampaignRepository.create(campaignData);
@@ -328,6 +345,89 @@ export class CampaignService {
     }
 
     return createdCampaign;
+  }
+
+  async joinCampaign(
+    businessId: string,
+    campaignId: string,
+  ): Promise<BusinessCampaign> {
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+      relations: ["joinedCampaigns"],
+    });
+
+    if (!business) {
+      throw new NotFoundException("Business not found");
+    }
+
+    const campaign = await this.businessCampaignRepository.findOne({
+      where: { id: campaignId },
+      relations: ["participatingBusinesses", "business"],
+    });
+
+    if (!campaign) {
+      throw new NotFoundException("Campaign not found");
+    }
+
+    // Optional: Check if campaign allows joining.
+    // Assuming only Matching Point campaigns (usually Super Business ones) are joinable for now.
+    if (campaign.campaign_type !== CampaignType.MATCHING_POINT) {
+      throw new BadRequestException(
+        "Only Matching Point campaigns can be joined by other businesses.",
+      );
+    }
+
+    if (campaign.disabled) {
+      throw new BadRequestException("Campaign is disabled.");
+    }
+
+    const isAlreadyJoined = campaign.participatingBusinesses.some(
+      (b) => b.id === businessId,
+    );
+
+    if (isAlreadyJoined) {
+      throw new ConflictException("Business has already joined this campaign.");
+    }
+
+    // If the campaign owner tries to join (should ideally be implicit, but let's check)
+    if (campaign.business.id === businessId) {
+      throw new ConflictException("You are the owner of this campaign.");
+    }
+
+    campaign.participatingBusinesses.push(business);
+    return this.businessCampaignRepository.save(campaign);
+  }
+
+  async findJoinedCampaigns(
+    businessId: string,
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedCampaignResponseDto> {
+    const { page, limit } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.businessCampaignRepository
+      .createQueryBuilder("bc")
+      .leftJoinAndSelect("bc.business", "owner")
+      .innerJoin("bc.participatingBusinesses", "pb")
+      .where("pb.id = :businessId", { businessId })
+      .skip(skip)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data: data as any,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 
   async findAll(
