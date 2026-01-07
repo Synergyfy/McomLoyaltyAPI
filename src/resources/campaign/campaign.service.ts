@@ -848,6 +848,7 @@ export class CampaignService {
     const limit = query.limit || 10;
     const skip = (page - 1) * limit;
     const sortOrder = query.sort || CampaignSortOrder.DESC;
+    const now = new Date();
 
     // 1. Query for BusinessCampaign IDs
     const qbBusiness = this.businessCampaignRepository
@@ -856,11 +857,11 @@ export class CampaignService {
       .innerJoin("campaign.businessRewards", "businessRewards")
       .select(["campaign.id", "campaign.created_at"])
       .where("campaign.disabled = :disabled", { disabled: false })
-      .andWhere("campaign.start_date <= :now", { now: new Date() })
-      .andWhere("campaign.end_date >= :now", { now: new Date() })
-      .andWhere(
-        "(businessRewards.remaining_quantity > 0 OR businessRewards.remaining_quantity IS NULL)",
-      );
+      .andWhere("campaign.start_date IS NOT NULL")
+      .andWhere("campaign.end_date IS NOT NULL")
+      .andWhere("campaign.start_date <= :now", { now })
+      .andWhere("campaign.end_date >= :now", { now })
+      .andWhere("businessRewards.remaining_quantity > 1");
 
     if (query.sectorId) {
       qbBusiness.andWhere("business.sector = :sectorId", {
@@ -883,39 +884,13 @@ export class CampaignService {
       });
     }
 
-    // 2. Query for Admin Campaign IDs (only if no category filters, as Admin campaigns are generic)
-    let adminCampaignsRaw: { id: string; created_at: Date }[] = [];
-    const hasCategoryFilters =
-      query.sectorId || query.categoryId || query.subCategoryId;
-
-    if (!hasCategoryFilters) {
-      const qbAdmin = this.campaignRepository
-        .createQueryBuilder("campaign")
-        .select(["campaign.id", "campaign.created_at"])
-        .where("campaign.business_id IS NULL")
-        .andWhere("campaign.disabled = :disabled", { disabled: false });
-
-      if (query.search) {
-        qbAdmin.andWhere("campaign.name ILIKE :search", {
-          search: `%${query.search}%`,
-        });
-      }
-      adminCampaignsRaw = await qbAdmin.getMany();
-    }
-
     const businessCampaignsRaw = await qbBusiness.getMany();
 
-    // 3. Combine and Sort
+    // 2. Sort
     const combined = [
       ...businessCampaignsRaw.map((c) => ({
         id: c.id,
         created_at: c.created_at,
-        type: "business",
-      })),
-      ...adminCampaignsRaw.map((c) => ({
-        id: c.id,
-        created_at: c.created_at,
-        type: "admin",
       })),
     ];
 
@@ -930,16 +905,10 @@ export class CampaignService {
     const total = combined.length;
     const paginatedIds = combined.slice(skip, skip + limit);
 
-    // 4. Fetch Full Entities
-    const businessIds = paginatedIds
-      .filter((i) => i.type === "business")
-      .map((i) => i.id);
-    const adminIds = paginatedIds
-      .filter((i) => i.type === "admin")
-      .map((i) => i.id);
+    // 3. Fetch Full Entities
+    const businessIds = paginatedIds.map((i) => i.id);
 
     let businessCampaigns: BusinessCampaign[] = [];
-    let adminCampaigns: Campaign[] = [];
 
     if (businessIds.length > 0) {
       businessCampaigns = await this.businessCampaignRepository.find({
@@ -954,21 +923,13 @@ export class CampaignService {
       });
     }
 
-    if (adminIds.length > 0) {
-      adminCampaigns = await this.campaignRepository.find({
-        where: { id: In(adminIds) },
-        relations: ["rewards"], // Admin campaigns use 'rewards'
-      });
-    }
-
-    // 5. Merge and Restore Order
+    // 4. Restore Order
     const resultMap = new Map<string, any>();
     businessCampaigns.forEach((c) => resultMap.set(c.id, c));
-    adminCampaigns.forEach((c) => resultMap.set(c.id, c));
 
     const data = paginatedIds
       .map((item) => resultMap.get(item.id))
-      .filter(Boolean) // Remove any undefined (shouldn't happen)
+      .filter(Boolean)
       .map((campaign: any) => {
         // Flatten Business Info
         if (campaign.business) {
