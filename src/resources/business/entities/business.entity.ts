@@ -226,6 +226,13 @@ export class Business extends AbstractBaseEntity {
   isEmailVerified: boolean;
 
   @ApiProperty({
+    description: "Whether the business is a super business (platform owned)",
+    default: false,
+  })
+  @Column({ default: false })
+  isSuperBusiness: boolean;
+
+  @ApiProperty({
     enum: NetworkLocationTag,
     description: "Location tag",
     required: false,

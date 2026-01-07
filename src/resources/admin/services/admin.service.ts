@@ -12,6 +12,7 @@ import { StaffService } from "../../staff/services/staff.service";
 import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
 import { Membership } from "../../membership/entities/membership.entity";
 import { CreateAdminDto } from "../dto/create-admin.dto";
+import { CreateSuperBusinessDto } from "../dto/create-super-business.dto";
 import { HashService } from "../../../common/hash/hash.service";
 import { Campaign } from "src/resources/campaign/entities/campaign.entity";
 import { CampaignService } from "../../campaign/campaign.service";
@@ -50,6 +51,10 @@ export class AdminService {
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
   ) {}
+
+  async createSuperBusiness(createSuperBusinessDto: CreateSuperBusinessDto) {
+    return this.businessService.create(createSuperBusinessDto, true);
+  }
 
   async create(createAdminDto: CreateAdminDto): Promise<Admin> {
     const existingAdmin = await this.findByEmail(createAdminDto.email);

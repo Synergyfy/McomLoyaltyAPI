@@ -18,6 +18,7 @@ import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
+import { ImpersonationGuard } from "./common/guards/impersonation.guard";
 import { MembershipGuard } from "./common/guards/membership.guard";
 import { CampaignModule } from "./resources/campaign/campaign.module";
 import { ParticipantModule } from "./resources/participant/participant.module";
@@ -124,6 +125,10 @@ import { WalletModule } from "./resources/wallet/wallet.module";
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ImpersonationGuard,
     },
     {
       provide: APP_GUARD,

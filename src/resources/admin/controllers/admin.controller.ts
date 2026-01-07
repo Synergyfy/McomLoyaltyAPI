@@ -34,6 +34,7 @@ import { UpdateBusinessDto } from "../../business/dto/update-business.dto";
 import { Staff } from "../../staff/entities/staff.entity";
 import { UpdateStaffDto } from "../../staff/dto/update-staff.dto";
 import { UpdateCampaignDto } from "../../campaign/dto/update-campaign.dto";
+import { CreateSuperBusinessDto } from "../dto/create-super-business.dto";
 
 @ApiTags("admin")
 @Controller("admin")
@@ -56,6 +57,18 @@ export class AdminController {
   @ApiBody({ type: CreateAdminDto })
   create(@Body() createAdminDto: CreateAdminDto) {
     return this.adminService.create(createAdminDto);
+  }
+
+  @Roles(Role.Admin)
+  @Post("create-super-business")
+  @ApiOperation({ summary: "Admin: Create a super business (platform owned)" })
+  @ApiResponse({
+    status: 201,
+    description: "The super business has been successfully created.",
+  })
+  @ApiBody({ type: CreateSuperBusinessDto })
+  createSuperBusiness(@Body() createSuperBusinessDto: CreateSuperBusinessDto) {
+    return this.adminService.createSuperBusiness(createSuperBusinessDto);
   }
 
   @Get("search")
