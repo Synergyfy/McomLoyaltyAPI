@@ -102,6 +102,7 @@ export class PointEarningService {
     sourceDescription?: string,
     transactionManager?: any, // EntityManager
     recipientType: "Participant" | "Business" = "Participant",
+    idempotencyKey?: string,
   ): Promise<Participant | Business> {
     // 1. Velocity Check (Outside Transaction for speed, tolerant to race)
     const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000);
@@ -131,6 +132,24 @@ export class PointEarningService {
     const notificationsToSend: Array<() => Promise<void>> = [];
 
     const execute = async (manager: EntityManager) => {
+      // Idempotency Check
+      if (idempotencyKey) {
+        const existingHistory = await manager.findOne(PointHistory, {
+          where: { actionKey: idempotencyKey },
+          relations: ["participant", "beneficiary_business"],
+        });
+
+        if (existingHistory) {
+          if (recipientType === "Participant" && existingHistory.participant) {
+            return existingHistory.participant;
+          }
+          if (recipientType === "Business" && existingHistory.beneficiary_business) {
+            return existingHistory.beneficiary_business;
+          }
+          // If type mismatch or data inconsistent, proceed (or throw, but proceeding is safer if key collision is accidental)
+        }
+      }
+
       const { staff, business } = await this.findPerformer(
         performerId,
         performerType,
@@ -316,6 +335,7 @@ export class PointEarningService {
           description:
             sourceDescription ||
             `Matching points for campaign: ${activeCampaign.name} `,
+          actionKey: idempotencyKey, // Set action key
         });
 
         if (businessCampaign) {
@@ -435,6 +455,7 @@ export class PointEarningService {
             initiated_by_staff: staff,
             business: business,
             description: sourceDescription,
+            actionKey: idempotencyKey, // Set action key
             });
 
             if (businessCampaign) {
@@ -538,6 +559,7 @@ export class PointEarningService {
             description:
                 sourceDescription ||
                 `Matching points for campaign: ${activeCampaign.name} `,
+            actionKey: idempotencyKey, // Set action key
             });
 
             if (businessCampaign) {
