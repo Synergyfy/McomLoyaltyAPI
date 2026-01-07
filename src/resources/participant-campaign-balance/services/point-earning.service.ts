@@ -296,12 +296,19 @@ export class PointEarningService {
 
       // Handle Recipient Logic
       if (recipientType === "Business") {
-        // Business Receiving Points (Must be Matching Points)
-        if (activeCampaign.reward_type !== "matching") {
-             // For now, strict: Businesses usually join Super Business campaigns for matching points.
-             // If regular points allowed, where do they go? Business doesn't have regular points wallet.
-             // So we enforce matching points only for Business recipients.
-             throw new BadRequestException("Businesses can only earn Matching Points.");
+        // Verify Business has joined the campaign
+        const isJoined = await manager
+          .createQueryBuilder()
+          .select("1")
+          .from("business_campaign_participants", "bcp")
+          .where("bcp.business_campaign_id = :campaignId", { campaignId })
+          .andWhere("bcp.business_id = :recipientId", { recipientId })
+          .getRawOne();
+
+        if (!isJoined) {
+          throw new BadRequestException(
+            "Recipient Business has not joined this campaign.",
+          );
         }
 
         const recipientBusiness = await manager.findOne(Business, {
@@ -313,6 +320,8 @@ export class PointEarningService {
             throw new NotFoundException("Recipient Business not found");
         }
 
+        // Business always earns matching points in this context
+        // Check threshold if applicable
         if (
           activeCampaign.matching_points_threshold !== null &&
           activeCampaign.total_matching_points_earned + points >
