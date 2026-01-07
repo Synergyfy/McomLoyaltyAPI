@@ -55,6 +55,7 @@ import { LibraryAssetsModule } from "./resources/library-assets/library-assets.m
 
 import { MallIntegrationModule } from "./resources/mall-integration/mall-integration.module";
 import { WalletModule } from "./resources/wallet/wallet.module";
+import { TrainingSupportModule } from "./resources/training-support/training-support.module";
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { WalletModule } from "./resources/wallet/wallet.module";
         limit: 100,
       },
     ]),
+    TrainingSupportModule,
   ],
   controllers: [AppController],
   providers: [
