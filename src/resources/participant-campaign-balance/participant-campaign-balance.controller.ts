@@ -304,6 +304,7 @@ export class ParticipantCampaignBalanceController {
         dto.participantCode,
         dto.campaignId,
         dto.points,
+        dto.idempotencyKey,
       );
     } else if (dto.type === TransactionType.STAMP_EARN) {
       return this.pointEarningService.awardStampsByScan(
@@ -312,6 +313,7 @@ export class ParticipantCampaignBalanceController {
         dto.participantCode,
         dto.campaignId,
         dto.stamps,
+        dto.idempotencyKey,
       );
     } else {
       if (!dto.rewardId)
@@ -324,6 +326,7 @@ export class ParticipantCampaignBalanceController {
         dto.campaignId,
         dto.redemptionCode,
         dto.redemptionMethod,
+        dto.idempotencyKey,
       );
     }
   }

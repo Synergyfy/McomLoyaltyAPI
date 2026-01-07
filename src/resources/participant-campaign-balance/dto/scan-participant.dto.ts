@@ -70,4 +70,13 @@ export class ScanParticipantDto {
   @IsOptional()
   @IsString()
   redemptionCode?: string;
+
+  @ApiProperty({
+    description: "Unique key to ensure idempotency (prevent duplicates on retry)",
+    required: false,
+    example: "uuid-v4-string",
+  })
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
 }

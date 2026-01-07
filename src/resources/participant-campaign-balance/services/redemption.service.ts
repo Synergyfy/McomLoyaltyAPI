@@ -92,8 +92,23 @@ export class RedemptionService {
     sourceDescription?: string,
     redemptionMethod: "points" | "stamps" | "auto" = "auto",
     transactionManager?: EntityManager,
+    idempotencyKey?: string,
   ): Promise<ParticipantCampaignBalance> {
     const execute = async (manager: any) => {
+      // Idempotency Check
+      if (idempotencyKey) {
+        const existingHistory = await manager.findOne(PointHistory, {
+          where: { actionKey: idempotencyKey },
+        });
+
+        if (existingHistory) {
+           const balance = await manager.findOne(ParticipantCampaignBalance, {
+             where: { participant: { id: participantId }, businessCampaign: { id: campaignId } }
+           });
+           return balance;
+        }
+      }
+
       let staff: Staff | null = null;
       let business: Business | null = null;
 
@@ -392,6 +407,7 @@ export class RedemptionService {
         business: business,
         redemption_code: voucherCode || redemptionCode,
         description: sourceDescription,
+        actionKey: idempotencyKey,
       });
 
       if (businessReward) {
@@ -492,6 +508,7 @@ export class RedemptionService {
     campaignId: string,
     redemptionCode: string | null,
     redemptionMethod: "points" | "stamps" | "auto" = "auto",
+    idempotencyKey?: string,
   ) {
     const participant = await this.participantRepository.findOne({
       where: { uniqueCode: participantCode },
@@ -507,6 +524,8 @@ export class RedemptionService {
       redemptionCode,
       "Redeemed by scan",
       redemptionMethod,
+      undefined,
+      idempotencyKey,
     );
   }
 

@@ -627,8 +627,27 @@ export class PointEarningService {
     stamps: number = 1,
     sourceDescription?: string,
     transactionManager?: any,
+    idempotencyKey?: string,
   ): Promise<any> {
     const execute = async (manager: EntityManager) => {
+      // Idempotency Check
+      if (idempotencyKey) {
+        const existingHistory = await manager.findOne(PointHistory, {
+          where: { actionKey: idempotencyKey },
+          relations: ["participant", "beneficiary_business"],
+        });
+
+        // Since awardStamps returns participantCampaignBalance usually, we might need to fetch it to return.
+        // Or just return the existing history? The controller returns the result.
+        // Let's try to return consistent data.
+        if (existingHistory) {
+           const balance = await manager.findOne(ParticipantCampaignBalance, {
+             where: { participant: { id: participantId }, businessCampaign: { id: campaignId } }
+           });
+           return balance;
+        }
+      }
+
       const { staff, business } = await this.findPerformer(
         performerId,
         performerType,
@@ -732,6 +751,7 @@ export class PointEarningService {
         businessCampaign: businessCampaign,
         campaign: businessCampaign.campaign,
         description: sourceDescription || "Stamps Awarded",
+        actionKey: idempotencyKey,
       });
 
       await manager.save(PointHistory, stampHistory);
@@ -775,6 +795,7 @@ export class PointEarningService {
     recipientCode: string,
     campaignId: string,
     points: number,
+    idempotencyKey?: string,
   ) {
     // Try finding Participant
     const participant = await this.participantRepository.findOne({
@@ -790,7 +811,8 @@ export class PointEarningService {
             points,
             "Awarded by scan",
             undefined,
-            "Participant"
+            "Participant",
+            idempotencyKey,
         );
     }
 
@@ -808,7 +830,8 @@ export class PointEarningService {
             points,
             "Awarded by scan",
             undefined,
-            "Business"
+            "Business",
+            idempotencyKey,
         );
     }
 
@@ -873,6 +896,7 @@ export class PointEarningService {
     participantCode: string,
     campaignId: string,
     stamps: number = 1,
+    idempotencyKey?: string,
   ) {
     const participant = await this.participantRepository.findOne({
       where: { uniqueCode: participantCode },
@@ -886,6 +910,8 @@ export class PointEarningService {
       campaignId,
       stamps,
       "Awarded by stamp scan",
+      undefined,
+      idempotencyKey,
     );
   }
 
