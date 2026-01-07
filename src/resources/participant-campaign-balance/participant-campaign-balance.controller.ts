@@ -190,6 +190,10 @@ export class ParticipantCampaignBalanceController {
       awardPointsDto.participantId,
       awardPointsDto.campaignId,
       awardPointsDto.points,
+      undefined,
+      undefined,
+      "Participant",
+      awardPointsDto.idempotencyKey,
     );
   }
 

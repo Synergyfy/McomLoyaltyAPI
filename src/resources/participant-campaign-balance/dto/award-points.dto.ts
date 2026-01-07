@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsNotEmpty } from "class-validator";
+import { IsString, IsNumber, IsNotEmpty, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 export class AwardPointsDto {
@@ -33,4 +33,14 @@ export class AwardPointsDto {
   @IsNumber()
   @IsNotEmpty()
   points: number;
+
+  @ApiProperty({
+    description: "Unique key to ensure idempotency (prevent duplicates on retry)",
+    required: false,
+    example: "uuid-v4-string",
+  })
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
 }
+
