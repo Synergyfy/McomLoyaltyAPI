@@ -68,6 +68,17 @@ export class DealController {
     return this.dealService.findAll(filterDealDto, user);
   }
 
+  @Get("my-deals")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Get all deals for the current logged in business" })
+  @ApiResponse({
+    status: 200,
+    description: "Return a paginated list of deals for the business.",
+  })
+  getMyDeals(@Query() filterDealDto: FilterDealDto, @CurrentUser() user: User) {
+    return this.dealService.findAllBusiness(filterDealDto, user);
+  }
+
   @Get(":id")
   @Roles(Role.Admin, Role.Business)
   @ApiOperation({ summary: "Get a deal by ID" })
@@ -159,17 +170,6 @@ export class DealController {
       body.type,
       user,
     );
-  }
-
-  @Get("my-deals")
-  @Roles(Role.Business)
-  @ApiOperation({ summary: "Get all deals for the current logged in business" })
-  @ApiResponse({
-    status: 200,
-    description: "Return a paginated list of deals for the business.",
-  })
-  getMyDeals(@Query() filterDealDto: FilterDealDto, @CurrentUser() user: User) {
-    return this.dealService.findAllBusiness(filterDealDto, user);
   }
 
   @Public()
