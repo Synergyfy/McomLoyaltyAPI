@@ -16,7 +16,6 @@ import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 
 @ApiTags("Wallet")
 @Controller("wallet")
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class WalletController {
   constructor(private readonly walletService: WalletService) {}

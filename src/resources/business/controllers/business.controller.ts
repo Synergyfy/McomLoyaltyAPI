@@ -31,7 +31,6 @@ import { ReferralStatsResponseDto } from "../dto/referral-stats-response.dto";
 
 @ApiTags("Business Lifecycle")
 @Controller("business")
-@UseGuards(RolesGuard)
 @ApiBearerAuth()
 export class BusinessController {
   constructor(private readonly businessService: BusinessService) { }

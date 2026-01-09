@@ -15,11 +15,10 @@ import {
 } from "@nestjs/swagger";
 import { ReferralAnalyticsDto } from "../../referral/dto/referral-analytics.dto";
 
-@ApiTags("Affiliate")
+@ApiTags("Business Affiliate")
 @ApiBearerAuth()
-@Controller("business/affiliate")
-@UseGuards(AuthGuard("jwt"), RolesGuard)
 @Roles(Role.Business)
+@Controller("business/affiliate")
 export class AffiliateController {
   constructor(
     private readonly businessService: BusinessService,

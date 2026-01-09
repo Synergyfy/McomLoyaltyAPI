@@ -39,7 +39,6 @@ export class DealController {
 
   @Post()
   @Roles(Role.Admin, Role.Business)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Create a new deal" })
   @ApiResponse({
     status: 201,
@@ -52,7 +51,6 @@ export class DealController {
 
   @Get("admin/all")
   @Roles(Role.Admin)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Get all deals (Admin)" })
   @ApiResponse({
     status: 200,
@@ -72,7 +70,6 @@ export class DealController {
 
   @Get(":id")
   @Roles(Role.Admin, Role.Business)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Get a deal by ID" })
   @ApiResponse({ status: 200, description: "Return the deal." })
   @ApiResponse({ status: 404, description: "Deal not found." })
@@ -82,7 +79,6 @@ export class DealController {
 
   @Patch(":id")
   @Roles(Role.Admin, Role.Business)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Update a deal" })
   @ApiResponse({
     status: 200,
@@ -99,7 +95,6 @@ export class DealController {
 
   @Delete(":id")
   @Roles(Role.Admin, Role.Business)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Delete a deal" })
   @ApiResponse({
     status: 200,
@@ -112,7 +107,6 @@ export class DealController {
 
   @Patch(":id/status")
   @Roles(Role.Admin)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Update a deal status (Admin only)" })
   @ApiResponse({
     status: 200,
@@ -128,7 +122,6 @@ export class DealController {
 
   @Patch(":id/deactivate")
   @Roles(Role.Admin, Role.Business)
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @ApiOperation({ summary: "Deactivate a deal" })
   @ApiResponse({
     status: 200,

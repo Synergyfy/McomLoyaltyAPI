@@ -21,7 +21,6 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get()
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({
@@ -38,7 +37,6 @@ export class AnalyticsController {
   }
 
   @Get("chart")
-  @UseGuards(AuthGuard("jwt"), RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({
