@@ -2,7 +2,7 @@ import { PartialType } from "@nestjs/swagger";
 import { CreateCampaignDto } from "./create-campaign.dto";
 import { CreateCampaignAdminDto } from "./create-campaign-admin.dto";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsOptional, IsUUID } from "class-validator";
+import { IsArray, IsOptional, IsUUID, IsInt } from "class-validator";
 
 export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   @ApiProperty({
@@ -14,6 +14,11 @@ export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   @IsArray()
   @IsUUID("all", { each: true })
   business_reward_ids?: string[];
+
+  @ApiProperty({ description: "The remaining number of slots available for the campaign.", required: false })
+  @IsOptional()
+  @IsInt()
+  remaining_slots?: number;
 }
 
 export class UpdateCampaignAdminDto extends PartialType(

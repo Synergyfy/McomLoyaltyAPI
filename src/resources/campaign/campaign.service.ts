@@ -64,7 +64,7 @@ import {
   ActionType,
 } from "../capability/capability.service";
 import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
-import { MembershipStatus } from "../membership/entities/membership.entity";
+import { Membership, MembershipStatus } from "../membership/entities/membership.entity";
 import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
 
 @Injectable()
@@ -94,6 +94,8 @@ export class CampaignService {
     private readonly tierRepository: Repository<Tier>,
     @InjectRepository(ParticipantCampaignBalance)
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
     private readonly mailService: MailService,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
@@ -177,11 +179,21 @@ export class CampaignService {
         // Super Businesses can specify reward_type and reward_mode in the DTO, so we don't force it here.
       }
 
+      if (campaignData.total_slots === undefined || campaignData.total_slots === null) {
+        throw new BadRequestException("Total slots must be defined for a business campaign.");
+      }
+
+      if (campaignData.end_date) {
+        await this.validateCampaignEndDate(currentUser.id, campaignData.end_date);
+      }
+
       // Business creating a campaign -> BusinessCampaign
       const businessCampaign =
         this.businessCampaignRepository.create(campaignData);
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
+
+      businessCampaign.remaining_slots = campaignData.total_slots;
 
       if (!business_reward_ids || business_reward_ids.length === 0) {
         throw new BadRequestException(
@@ -773,11 +785,82 @@ export class CampaignService {
           );
         }
       }
+
+      // --- Business Logic Restrictions ---
+      if (currentUser.role === Role.Business && campaign instanceof BusinessCampaign) {
+        const now = new Date();
+        const isExpired = new Date(campaign.end_date) < now;
+
+        if (campaignData.end_date) {
+          await this.validateCampaignEndDate(currentUser.id, campaignData.end_date);
+        }
+
+        if (campaignData.remaining_slots !== undefined) {
+          throw new BadRequestException("Businesses cannot edit remaining_slots directly.");
+        }
+
+        const participantCount = await this.participantCampaignBalanceRepository.count({
+          where: { businessCampaign: { id } },
+        });
+        const hasParticipants = participantCount > 0;
+
+        if (campaignData.total_slots !== undefined) {
+          if (campaignData.total_slots < participantCount) {
+            throw new BadRequestException(
+              `Total slots cannot be less than the current participant count (${participantCount}).`,
+            );
+          }
+        }
+
+        if (isExpired) {
+          // If campaign end date has passed, they can edit the start and end date but the start date must not be in the past
+          if (campaignData.start_date) {
+            const nextStartDate = new Date(campaignData.start_date);
+            if (nextStartDate < now) {
+              throw new BadRequestException("New start date must not be in the past.");
+            }
+          }
+        } else {
+          // If the campaign has start date they can't edit it if the campaign has participant but they can edit end date
+          if (campaign.start_date && hasParticipants) {
+            const allowedKeys = [
+              "end_date",
+              "total_slots",
+              "business_reward_ids",
+              // remaining_slots removed from allowed as it's handled above
+            ];
+            const updateKeys = Object.keys(campaignData);
+            const disallowedKeys = updateKeys.filter(
+              (key) => !allowedKeys.includes(key),
+            );
+
+            if (disallowedKeys.length > 0) {
+              throw new BadRequestException(
+                `Cannot edit ${disallowedKeys.join(", ")} because the campaign has participants. Only 'end_date' and 'total_slots' can be updated.`,
+              );
+            }
+          }
+        }
+      }
     }
+
+    // Capture old total slots for sync
+    const oldTotalSlots = campaign instanceof BusinessCampaign ? campaign.total_slots : 0;
 
     Object.assign(campaign, campaignData);
 
     if (campaign instanceof BusinessCampaign) {
+      if (campaignData.total_slots !== undefined) {
+        if (campaign.remaining_slots === null || campaign.remaining_slots === undefined) {
+          campaign.remaining_slots = campaignData.total_slots;
+        } else {
+          // Sync remaining_slots if total_slots changed
+          const diff = campaignData.total_slots - oldTotalSlots;
+          if (diff !== 0) {
+            campaign.remaining_slots += diff;
+          }
+        }
+      }
       return this.businessCampaignRepository.save(campaign);
     } else {
       return this.campaignRepository.save(campaign);
@@ -786,6 +869,22 @@ export class CampaignService {
 
   async remove(id: string, currentUser: Business | Admin): Promise<void> {
     const campaign = await this.findOne(id, currentUser);
+
+    if (currentUser.role === Role.Business && campaign instanceof BusinessCampaign) {
+      const participantCount = await this.participantCampaignBalanceRepository.count({
+        where: { businessCampaign: { id } },
+      });
+
+      const now = new Date();
+      const isExpired = new Date(campaign.end_date) < now;
+
+      if (participantCount > 0 && !isExpired) {
+        throw new BadRequestException(
+          "Cannot delete a campaign that has participants and has not ended yet.",
+        );
+      }
+    }
+
     if (campaign instanceof BusinessCampaign) {
       await this.businessCampaignRepository.remove(campaign);
     } else {
@@ -1101,7 +1200,9 @@ export class CampaignService {
     businessRewardIds: string[],
     startDate: Date,
     endDate: Date,
+    total_slots?: number,
   ): Promise<BusinessCampaign> {
+    await this.validateCampaignEndDate(businessId, endDate);
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
       relations: ["rewards"],
@@ -1149,6 +1250,10 @@ export class CampaignService {
       }
     }
 
+    if (total_slots === undefined || total_slots === null) {
+      throw new BadRequestException("Total slots must be defined when claiming a campaign.");
+    }
+
     // Optional: Check if the number of rewards exceeds the template's reward count?
     // The user requirement was about tier limits mostly.
     // But if the template has 3 rewards, should the business be allowed to add 5?
@@ -1183,6 +1288,8 @@ export class CampaignService {
       contact_email: campaign.contact_email,
       contact_phone_number: campaign.contact_phone_number,
       footer_text: campaign.footer_text,
+      total_slots: total_slots,
+      remaining_slots: total_slots,
     });
 
     // Link business rewards
@@ -1523,5 +1630,26 @@ export class CampaignService {
     }));
 
     return { data };
+  }
+
+  private async validateCampaignEndDate(businessId: string, endDate: Date) {
+    const activeMemberships = await this.membershipRepository.find({
+      where: {
+        business: { id: businessId },
+        status: MembershipStatus.ACTIVE,
+      },
+      order: { expires_at: "DESC" },
+    });
+
+    if (activeMemberships.length === 0) {
+      throw new BadRequestException("Business has no active tier membership.");
+    }
+
+    const latestExpiry = activeMemberships[0].expires_at;
+    if (new Date(endDate) > new Date(latestExpiry)) {
+      throw new BadRequestException(
+        `Campaign end date cannot exceed your tier membership expiration date (${latestExpiry.toISOString().split("T")[0]}).`,
+      );
+    }
   }
 }

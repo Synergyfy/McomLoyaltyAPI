@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Query,
+  Delete,
   UseGuards,
   ParseUUIDPipe,
 } from "@nestjs/common";
@@ -35,7 +36,7 @@ export class BusinessCampaignController {
   constructor(
     private readonly campaignService: CampaignService,
     private readonly capabilityService: CapabilityService,
-  ) {}
+  ) { }
 
   @Get("claimable")
   @ApiOperation({ summary: "Get all claimable campaigns for a business" })
@@ -80,6 +81,7 @@ export class BusinessCampaignController {
       claimCampaignDto.business_reward_ids,
       claimCampaignDto.start_date,
       claimCampaignDto.end_date,
+      claimCampaignDto.total_slots,
     );
   }
 
@@ -160,5 +162,14 @@ export class BusinessCampaignController {
   ) {
     // We reuse the campaignService.update which now has the logic
     return this.campaignService.update(id, updateCampaignDto, business);
+  }
+
+  @Delete(":id")
+  @ApiOperation({ summary: "Delete a business campaign" })
+  async remove(
+    @Param("id", ParseUUIDPipe) id: string,
+    @CurrentUser() business: Business,
+  ) {
+    return this.campaignService.remove(id, business);
   }
 }

@@ -193,4 +193,10 @@ export class BusinessCampaign extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   footer_text: string;
+
+  @Column({ type: "int", nullable: true })
+  total_slots: number;
+
+  @Column({ type: "int", nullable: true })
+  remaining_slots: number;
 }
