@@ -102,6 +102,16 @@ export class CreateDealDto {
   images?: string[];
 
   @ApiProperty({
+    example: ["https://example.com/gallery1.jpg"],
+    description: "Array of gallery image URLs",
+    required: false,
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  galleryImages?: string[];
+
+  @ApiProperty({
     example: 100.0,
     description: "The original price before discount",
     required: false,

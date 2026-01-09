@@ -79,6 +79,14 @@ export class Deal extends AbstractBaseEntity {
   images: string[];
 
   @ApiProperty({
+    description: "Array of gallery image URLs",
+    type: [String],
+    required: false,
+  })
+  @Column("text", { array: true, default: [] })
+  galleryImages: string[];
+
+  @ApiProperty({
     description: "Original price before discount",
     required: false,
   })

@@ -35,7 +35,7 @@ import { Public } from "../../common/decorators/public.decorator";
 @ApiBearerAuth()
 @Controller("deals")
 export class DealController {
-  constructor(private readonly dealService: DealService) {}
+  constructor(private readonly dealService: DealService) { }
 
   @Post()
   @Roles(Role.Admin, Role.Business)
@@ -159,6 +159,17 @@ export class DealController {
       body.type,
       user,
     );
+  }
+
+  @Get("my-deals")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Get all deals for the current logged in business" })
+  @ApiResponse({
+    status: 200,
+    description: "Return a paginated list of deals for the business.",
+  })
+  getMyDeals(@Query() filterDealDto: FilterDealDto, @CurrentUser() user: User) {
+    return this.dealService.findAllBusiness(filterDealDto, user);
   }
 
   @Public()

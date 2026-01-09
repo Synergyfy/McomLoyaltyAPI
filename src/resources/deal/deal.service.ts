@@ -27,7 +27,7 @@ export class DealService {
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
-  ) {}
+  ) { }
 
   async create(createDealDto: CreateDealDto, user: User) {
     const { categoryId, ...rest } = createDealDto;
@@ -355,6 +355,83 @@ export class DealService {
     }
 
     return deal;
+  }
+
+  async findAllBusiness(filterDealDto: FilterDealDto, user: User) {
+    const {
+      limit,
+      page,
+      search,
+      status,
+      categoryId,
+      location,
+      minPrice,
+      maxPrice,
+      type,
+    } = filterDealDto;
+    const query = this.dealRepository.createQueryBuilder("deal");
+
+    query.leftJoinAndSelect("deal.category", "category");
+
+    query.where("deal.businessId = :businessId", { businessId: user.id });
+
+    if (status) {
+      query.andWhere("deal.status = :status", { status });
+    }
+
+    if (categoryId) {
+      query.andWhere("deal.categoryId = :categoryId", { categoryId });
+    }
+
+    if (search) {
+      query.andWhere(
+        "(deal.title ILIKE :search OR deal.description ILIKE :search)",
+        { search: `%${search}%` },
+      );
+    }
+
+    if (location) {
+      query.andWhere("deal.location ILIKE :location", {
+        location: `%${location}%`,
+      });
+    }
+
+    if (minPrice !== undefined) {
+      query.andWhere("deal.dealPrice >= :minPrice", { minPrice });
+    }
+
+    if (maxPrice !== undefined) {
+      query.andWhere("deal.dealPrice <= :maxPrice", { maxPrice });
+    }
+
+    if (type) {
+      query.andWhere("deal.type = :type", { type });
+    }
+
+    query.orderBy("deal.created_at", "DESC");
+
+    const offset = (page - 1) * limit;
+    query.skip(offset).take(limit);
+
+    const [deals, total] = await query.getManyAndCount();
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrevious = page > 1;
+
+    return {
+      data: deals,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNext,
+        hasPrevious,
+        next: hasNext ? page + 1 : null,
+        previous: hasPrevious ? page - 1 : null,
+      },
+    };
   }
 
   async linkToCampaign(
