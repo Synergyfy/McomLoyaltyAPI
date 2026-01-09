@@ -22,8 +22,7 @@ export class CreateCampaignDto extends BaseCampaignDto {
   @IsUUID("all", { each: true })
   business_reward_ids: string[];
 
-  @ApiProperty({ description: "The total number of slots available for the campaign.", required: false })
-  @IsOptional()
+  @ApiProperty({ description: "The total number of slots available for the campaign.", required: true })
   @IsInt()
-  total_slots?: number;
+  total_slots: number;
 }
