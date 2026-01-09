@@ -177,11 +177,17 @@ export class CampaignService {
         // Super Businesses can specify reward_type and reward_mode in the DTO, so we don't force it here.
       }
 
+      if (campaignData.total_slots === undefined || campaignData.total_slots === null) {
+        throw new BadRequestException("Total slots must be defined for a business campaign.");
+      }
+
       // Business creating a campaign -> BusinessCampaign
       const businessCampaign =
         this.businessCampaignRepository.create(campaignData);
       businessCampaign.business = currentUser as Business;
       businessCampaign.uniqueCode = nanoid(9);
+
+      businessCampaign.remaining_slots = campaignData.total_slots;
 
       if (!business_reward_ids || business_reward_ids.length === 0) {
         throw new BadRequestException(
@@ -778,6 +784,21 @@ export class CampaignService {
     Object.assign(campaign, campaignData);
 
     if (campaign instanceof BusinessCampaign) {
+      if (campaignData.total_slots !== undefined && (campaignData as any).remaining_slots === undefined) {
+        // If total_slots is updated, we might want to reset or adjust remaining_slots?
+        // Usually, if a business increases total_slots, remaining_slots should increase too.
+        // For simplicity, if total_slots is provided but remaining_slots isn't, 
+        // we'll assume they are setting a new limit.
+        // But wait, if they say "I want 100 people total" and they already had 50 joined, 
+        // remaining should be 50.
+        // However, if they are calling update, they might just want to set remaining_slots directly.
+        // I'll leave it to Object.assign if remaining_slots is in DTO.
+        // If only total_slots is in DTO, I'll set remaining_slots to total_slots for first time?
+        // Actually, if it was null before (unlimited), setting it now should initialize remaining.
+        if (campaign.remaining_slots === null || campaign.remaining_slots === undefined) {
+          campaign.remaining_slots = campaignData.total_slots;
+        }
+      }
       return this.businessCampaignRepository.save(campaign);
     } else {
       return this.campaignRepository.save(campaign);
@@ -1101,6 +1122,7 @@ export class CampaignService {
     businessRewardIds: string[],
     startDate: Date,
     endDate: Date,
+    total_slots?: number,
   ): Promise<BusinessCampaign> {
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
@@ -1149,6 +1171,10 @@ export class CampaignService {
       }
     }
 
+    if (total_slots === undefined || total_slots === null) {
+      throw new BadRequestException("Total slots must be defined when claiming a campaign.");
+    }
+
     // Optional: Check if the number of rewards exceeds the template's reward count?
     // The user requirement was about tier limits mostly.
     // But if the template has 3 rewards, should the business be allowed to add 5?
@@ -1183,6 +1209,8 @@ export class CampaignService {
       contact_email: campaign.contact_email,
       contact_phone_number: campaign.contact_phone_number,
       footer_text: campaign.footer_text,
+      total_slots: total_slots,
+      remaining_slots: total_slots,
     });
 
     // Link business rewards

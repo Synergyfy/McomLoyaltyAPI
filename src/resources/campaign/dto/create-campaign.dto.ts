@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsUUID, IsDate } from "class-validator";
+import { IsArray, IsUUID, IsDate, IsOptional, IsInt } from "class-validator";
 import { Type } from "class-transformer";
 import { BaseCampaignDto } from "./base-campaign.dto";
 
@@ -21,4 +21,9 @@ export class CreateCampaignDto extends BaseCampaignDto {
   @IsArray()
   @IsUUID("all", { each: true })
   business_reward_ids: string[];
+
+  @ApiProperty({ description: "The total number of slots available for the campaign.", required: false })
+  @IsOptional()
+  @IsInt()
+  total_slots?: number;
 }

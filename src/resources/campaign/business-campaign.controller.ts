@@ -35,7 +35,7 @@ export class BusinessCampaignController {
   constructor(
     private readonly campaignService: CampaignService,
     private readonly capabilityService: CapabilityService,
-  ) {}
+  ) { }
 
   @Get("claimable")
   @ApiOperation({ summary: "Get all claimable campaigns for a business" })
@@ -80,6 +80,7 @@ export class BusinessCampaignController {
       claimCampaignDto.business_reward_ids,
       claimCampaignDto.start_date,
       claimCampaignDto.end_date,
+      claimCampaignDto.total_slots,
     );
   }
 

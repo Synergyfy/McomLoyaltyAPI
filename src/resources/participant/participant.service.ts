@@ -44,7 +44,7 @@ export class ParticipantService {
     private readonly otpService: OtpService,
     private readonly progressionService: ParticipantProgressionService,
     private readonly referralService: ReferralService,
-  ) {}
+  ) { }
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
@@ -151,12 +151,31 @@ export class ParticipantService {
         throw new BadRequestException("Campaign has expired");
       }
 
+      // Check for available slots
+      if (
+        businessCampaign.total_slots !== null &&
+        businessCampaign.total_slots !== undefined
+      ) {
+        if (businessCampaign.remaining_slots <= 0) {
+          throw new BadRequestException("No more slots available for this campaign");
+        }
+      }
+
       // Check if already joined
       const alreadyJoined = participant.businessCampaigns.some(
         (bc) => bc.id === businessCampaign.id,
       );
       if (!alreadyJoined) {
         participant.businessCampaigns.push(businessCampaign);
+
+        // Decrement slots if applicable
+        if (
+          businessCampaign.total_slots !== null &&
+          businessCampaign.total_slots !== undefined
+        ) {
+          businessCampaign.remaining_slots -= 1;
+        }
+
         await this.participantRepository.save(participant);
 
         // Send email notification
