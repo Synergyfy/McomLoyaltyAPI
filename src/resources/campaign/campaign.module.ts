@@ -19,6 +19,7 @@ import { MailModule } from "src/mail/mail.module";
 import { CapabilityModule } from "../capability/capability.module";
 import { forwardRef } from "@nestjs/common";
 import { TierProgressionModule } from "../tier-progression/tier-progression.module";
+import { Membership } from "../membership/entities/membership.entity";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
       WishlistItem,
       Tier,
       ParticipantCampaignBalance,
+      Membership,
     ]),
     MailModule,
     forwardRef(() => CapabilityModule),
@@ -44,4 +46,4 @@ import { TierProgressionModule } from "../tier-progression/tier-progression.modu
   providers: [CampaignService],
   exports: [CampaignService],
 })
-export class CampaignModule {}
+export class CampaignModule { }

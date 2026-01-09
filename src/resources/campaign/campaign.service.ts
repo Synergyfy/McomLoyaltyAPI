@@ -64,7 +64,7 @@ import {
   ActionType,
 } from "../capability/capability.service";
 import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
-import { MembershipStatus } from "../membership/entities/membership.entity";
+import { Membership, MembershipStatus } from "../membership/entities/membership.entity";
 import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
 
 @Injectable()
@@ -94,6 +94,8 @@ export class CampaignService {
     private readonly tierRepository: Repository<Tier>,
     @InjectRepository(ParticipantCampaignBalance)
     private readonly participantCampaignBalanceRepository: Repository<ParticipantCampaignBalance>,
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
     private readonly mailService: MailService,
     @Inject(forwardRef(() => TierProgressionService))
     private readonly tierProgressionService: TierProgressionService,
@@ -179,6 +181,10 @@ export class CampaignService {
 
       if (campaignData.total_slots === undefined || campaignData.total_slots === null) {
         throw new BadRequestException("Total slots must be defined for a business campaign.");
+      }
+
+      if (campaignData.end_date) {
+        await this.validateCampaignEndDate(currentUser.id, campaignData.end_date);
       }
 
       // Business creating a campaign -> BusinessCampaign
@@ -785,6 +791,10 @@ export class CampaignService {
         const now = new Date();
         const isExpired = new Date(campaign.end_date) < now;
 
+        if (campaignData.end_date) {
+          await this.validateCampaignEndDate(currentUser.id, campaignData.end_date);
+        }
+
         if (campaignData.remaining_slots !== undefined) {
           throw new BadRequestException("Businesses cannot edit remaining_slots directly.");
         }
@@ -1192,6 +1202,7 @@ export class CampaignService {
     endDate: Date,
     total_slots?: number,
   ): Promise<BusinessCampaign> {
+    await this.validateCampaignEndDate(businessId, endDate);
     const campaign = await this.campaignRepository.findOne({
       where: { id: campaignId, business: IsNull() },
       relations: ["rewards"],
@@ -1619,5 +1630,26 @@ export class CampaignService {
     }));
 
     return { data };
+  }
+
+  private async validateCampaignEndDate(businessId: string, endDate: Date) {
+    const activeMemberships = await this.membershipRepository.find({
+      where: {
+        business: { id: businessId },
+        status: MembershipStatus.ACTIVE,
+      },
+      order: { expires_at: "DESC" },
+    });
+
+    if (activeMemberships.length === 0) {
+      throw new BadRequestException("Business has no active tier membership.");
+    }
+
+    const latestExpiry = activeMemberships[0].expires_at;
+    if (new Date(endDate) > new Date(latestExpiry)) {
+      throw new BadRequestException(
+        `Campaign end date cannot exceed your tier membership expiration date (${latestExpiry.toISOString().split("T")[0]}).`,
+      );
+    }
   }
 }
