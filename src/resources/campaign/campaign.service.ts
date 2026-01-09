@@ -779,24 +779,76 @@ export class CampaignService {
           );
         }
       }
+
+      // --- Business Logic Restrictions ---
+      if (currentUser.role === Role.Business && campaign instanceof BusinessCampaign) {
+        const now = new Date();
+        const isExpired = new Date(campaign.end_date) < now;
+
+        if (campaignData.remaining_slots !== undefined) {
+          throw new BadRequestException("Businesses cannot edit remaining_slots directly.");
+        }
+
+        const participantCount = await this.participantCampaignBalanceRepository.count({
+          where: { businessCampaign: { id } },
+        });
+        const hasParticipants = participantCount > 0;
+
+        if (campaignData.total_slots !== undefined) {
+          if (campaignData.total_slots < participantCount) {
+            throw new BadRequestException(
+              `Total slots cannot be less than the current participant count (${participantCount}).`,
+            );
+          }
+        }
+
+        if (isExpired) {
+          // If campaign end date has passed, they can edit the start and end date but the start date must not be in the past
+          if (campaignData.start_date) {
+            const nextStartDate = new Date(campaignData.start_date);
+            if (nextStartDate < now) {
+              throw new BadRequestException("New start date must not be in the past.");
+            }
+          }
+        } else {
+          // If the campaign has start date they can't edit it if the campaign has participant but they can edit end date
+          if (campaign.start_date && hasParticipants) {
+            const allowedKeys = [
+              "end_date",
+              "total_slots",
+              "business_reward_ids",
+              // remaining_slots removed from allowed as it's handled above
+            ];
+            const updateKeys = Object.keys(campaignData);
+            const disallowedKeys = updateKeys.filter(
+              (key) => !allowedKeys.includes(key),
+            );
+
+            if (disallowedKeys.length > 0) {
+              throw new BadRequestException(
+                `Cannot edit ${disallowedKeys.join(", ")} because the campaign has participants. Only 'end_date' and 'total_slots' can be updated.`,
+              );
+            }
+          }
+        }
+      }
     }
+
+    // Capture old total slots for sync
+    const oldTotalSlots = campaign instanceof BusinessCampaign ? campaign.total_slots : 0;
 
     Object.assign(campaign, campaignData);
 
     if (campaign instanceof BusinessCampaign) {
-      if (campaignData.total_slots !== undefined && (campaignData as any).remaining_slots === undefined) {
-        // If total_slots is updated, we might want to reset or adjust remaining_slots?
-        // Usually, if a business increases total_slots, remaining_slots should increase too.
-        // For simplicity, if total_slots is provided but remaining_slots isn't, 
-        // we'll assume they are setting a new limit.
-        // But wait, if they say "I want 100 people total" and they already had 50 joined, 
-        // remaining should be 50.
-        // However, if they are calling update, they might just want to set remaining_slots directly.
-        // I'll leave it to Object.assign if remaining_slots is in DTO.
-        // If only total_slots is in DTO, I'll set remaining_slots to total_slots for first time?
-        // Actually, if it was null before (unlimited), setting it now should initialize remaining.
+      if (campaignData.total_slots !== undefined) {
         if (campaign.remaining_slots === null || campaign.remaining_slots === undefined) {
           campaign.remaining_slots = campaignData.total_slots;
+        } else {
+          // Sync remaining_slots if total_slots changed
+          const diff = campaignData.total_slots - oldTotalSlots;
+          if (diff !== 0) {
+            campaign.remaining_slots += diff;
+          }
         }
       }
       return this.businessCampaignRepository.save(campaign);
@@ -807,6 +859,22 @@ export class CampaignService {
 
   async remove(id: string, currentUser: Business | Admin): Promise<void> {
     const campaign = await this.findOne(id, currentUser);
+
+    if (currentUser.role === Role.Business && campaign instanceof BusinessCampaign) {
+      const participantCount = await this.participantCampaignBalanceRepository.count({
+        where: { businessCampaign: { id } },
+      });
+
+      const now = new Date();
+      const isExpired = new Date(campaign.end_date) < now;
+
+      if (participantCount > 0 && !isExpired) {
+        throw new BadRequestException(
+          "Cannot delete a campaign that has participants and has not ended yet.",
+        );
+      }
+    }
+
     if (campaign instanceof BusinessCampaign) {
       await this.businessCampaignRepository.remove(campaign);
     } else {

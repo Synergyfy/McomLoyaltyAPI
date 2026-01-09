@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Query,
+  Delete,
   UseGuards,
   ParseUUIDPipe,
 } from "@nestjs/common";
@@ -161,5 +162,14 @@ export class BusinessCampaignController {
   ) {
     // We reuse the campaignService.update which now has the logic
     return this.campaignService.update(id, updateCampaignDto, business);
+  }
+
+  @Delete(":id")
+  @ApiOperation({ summary: "Delete a business campaign" })
+  async remove(
+    @Param("id", ParseUUIDPipe) id: string,
+    @CurrentUser() business: Business,
+  ) {
+    return this.campaignService.remove(id, business);
   }
 }
