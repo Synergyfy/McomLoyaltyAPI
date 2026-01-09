@@ -26,7 +26,6 @@ import { PaginationDto } from "../../../common/dto/pagination.dto";
 
 @ApiTags("Admin Analytics")
 @Controller("admin/analytics")
-@UseGuards(AuthGuard("jwt"), RolesGuard)
 @Roles(Role.Admin)
 @ApiBearerAuth()
 export class AdminAnalyticsController {

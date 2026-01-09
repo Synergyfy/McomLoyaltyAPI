@@ -29,7 +29,6 @@ import { ClaimCampaignDto } from "./dto/claim-campaign.dto";
 
 @ApiTags("Business Campaigns")
 @ApiBearerAuth()
-@UseGuards(AuthGuard("jwt"), RolesGuard)
 @Roles(Role.Business)
 @Controller("business/campaigns")
 export class BusinessCampaignController {

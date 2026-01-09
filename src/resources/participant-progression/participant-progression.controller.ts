@@ -29,7 +29,6 @@ import { ParticipantProgressionResponseDto } from "./dto/participant-progression
 
 @ApiTags("Participant Progression")
 @Controller("participant-progression")
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ParticipantProgressionController {
   constructor(

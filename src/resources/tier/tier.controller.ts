@@ -33,7 +33,6 @@ import { TierType } from "./entities/tier-type.enum";
 
 @ApiTags("Tier")
 @Controller("tier")
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class TierController {
   constructor(private readonly tierService: TierService) {}

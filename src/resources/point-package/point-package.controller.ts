@@ -41,7 +41,6 @@ export class PointPackageController {
   ) {}
 
   @Post("admin")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Create a new point package (Admin)" })
@@ -59,7 +58,6 @@ export class PointPackageController {
   }
 
   @Get("admin/:id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get a point package by ID (Admin)" })
@@ -68,7 +66,6 @@ export class PointPackageController {
   }
 
   @Patch("admin/:id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Update a point package (Admin)" })
@@ -80,7 +77,6 @@ export class PointPackageController {
   }
 
   @Delete("admin/:id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete a point package (Admin)" })
@@ -91,7 +87,6 @@ export class PointPackageController {
   // Business Endpoints
 
   @Get("business/available")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({
@@ -128,7 +123,6 @@ export class PointPackageController {
   }
 
   @Post("business/buy")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Buy a point package" })
@@ -144,7 +138,6 @@ export class PointPackageController {
   }
 
   @Post("business/confirm-purchase")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Confirm a point package purchase" })
@@ -166,7 +159,6 @@ export class PointPackageController {
   }
 
   @Get("business/my-packages")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get my purchased point packages" })
@@ -175,7 +167,6 @@ export class PointPackageController {
   }
 
   @Get("business/balance")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Business)
   @ApiBearerAuth()
   @ApiOperation({
