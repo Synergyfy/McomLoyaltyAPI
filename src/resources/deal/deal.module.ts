@@ -16,6 +16,7 @@ import { ParticipantCampaignBalance } from "../participant-campaign-balance/enti
 import { Participant } from "../participant/entities/participant.entity";
 import { AuthModule } from "src/auth/auth.module";
 import { ParticipantProgressionModule } from "../participant-progression/participant-progression.module";
+import { DealAnalytics } from "./entities/deal-analytics.entity";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ParticipantProgressionModule } from "../participant-progression/partici
       PointHistory,
       ParticipantCampaignBalance,
       Participant,
+      DealAnalytics,
     ]),
     CategoryModule,
     AuthModule,

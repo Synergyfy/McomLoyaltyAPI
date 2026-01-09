@@ -16,6 +16,10 @@ import { FilterDealDto } from "./dto/filter-deal.dto";
 import { UpdateDealDto } from "./dto/update-deal.dto";
 import { Campaign } from "../campaign/entities/campaign.entity";
 import { BusinessCampaign } from "../campaign/entities/business-campaign.entity";
+import { DealAnalytics } from "./entities/deal-analytics.entity";
+import { DealAnalyticsDto } from "./dto/deal-analytics.dto";
+import * as crypto from 'crypto';
+import { UAParser } from 'ua-parser-js';
 
 @Injectable()
 export class DealService {
@@ -27,6 +31,8 @@ export class DealService {
     private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
+    @InjectRepository(DealAnalytics)
+    private readonly dealAnalyticsRepository: Repository<DealAnalytics>,
   ) { }
 
   async create(createDealDto: CreateDealDto, user: User) {
@@ -334,7 +340,7 @@ export class DealService {
     };
   }
 
-  async findOnePublic(id: string) {
+  async findOnePublic(id: string, ip?: string, userAgent?: string) {
     const query = this.dealRepository.createQueryBuilder("deal");
     query.leftJoinAndSelect("deal.business", "business");
     query.leftJoinAndSelect("business.sector", "sector");
@@ -354,7 +360,28 @@ export class DealService {
       throw new NotFoundException(`Deal with ID ${id} not found`);
     }
 
-    return deal;
+    let analyticsId = null;
+    if (ip && userAgent) {
+        try {
+            const parser = new UAParser(userAgent);
+            const result = parser.getResult();
+            const ipHash = crypto.createHash('sha256').update(ip).digest('hex');
+
+            const analytics = this.dealAnalyticsRepository.create({
+                deal,
+                os: result.os.name || 'Unknown',
+                device: result.device.type || 'desktop',
+                browser: result.browser.name || 'Unknown',
+                ip_hash: ipHash
+            });
+            const saved = await this.dealAnalyticsRepository.save(analytics);
+            analyticsId = saved.id;
+        } catch (error) {
+            console.error('Error tracking deal view', error);
+        }
+    }
+
+    return { ...deal, analyticsId };
   }
 
   async findAllBusiness(filterDealDto: FilterDealDto, user: User) {
@@ -492,4 +519,85 @@ export class DealService {
     }
     return { message: "Deal linked successfully" };
   }
+
+  async recordTimeSpent(analyticsId: string, durationSeconds: number) {
+      const record = await this.dealAnalyticsRepository.findOne({ where: { id: analyticsId } });
+      if (record) {
+          record.time_spent_seconds = durationSeconds;
+          await this.dealAnalyticsRepository.save(record);
+      }
+  }
+
+  async getDealAnalytics(dealId: string, user: User): Promise<DealAnalyticsDto> {
+        // Verify ownership
+        const deal = await this.dealRepository.findOne({ where: { id: dealId }, relations: ['business'] });
+        if (!deal) throw new NotFoundException('Deal not found');
+
+        if (user.role === Role.Business && deal.business.id !== user.id) {
+            throw new NotFoundException('Deal not found');
+        }
+        
+        // Aggregate
+        const totalViews = await this.dealAnalyticsRepository.count({ where: { deal: { id: dealId } } });
+        
+        const uniqueViewsResult = await this.dealAnalyticsRepository
+            .createQueryBuilder('da')
+            .select('COUNT(DISTINCT da.ip_hash)', 'count')
+            .where('da.deal_id = :dealId', { dealId })
+            .getRawOne();
+        const uniqueViews = parseInt(uniqueViewsResult?.count || 0, 10);
+
+        const avgTimeResult = await this.dealAnalyticsRepository
+            .createQueryBuilder('da')
+            .select('AVG(da.time_spent_seconds)', 'avg')
+            .where('da.deal_id = :dealId', { dealId })
+            .andWhere('da.time_spent_seconds > 0') 
+            .getRawOne();
+        const averageTimeSpentSeconds = parseFloat(avgTimeResult?.avg || 0);
+
+        // Group bys
+        const osBreakdown = await this.getBreakdown(dealId, 'os');
+        const deviceBreakdown = await this.getBreakdown(dealId, 'device');
+        const browserBreakdown = await this.getBreakdown(dealId, 'browser');
+
+        // Recent views (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const recentViews = await this.dealAnalyticsRepository
+            .createQueryBuilder('da')
+            .select("to_char(da.created_at, 'YYYY-MM-DD')", 'date')
+            .addSelect("COUNT(*)", 'count')
+            .where('da.deal_id = :dealId', { dealId })
+            .andWhere('da.created_at >= :date', { date: sevenDaysAgo })
+            .groupBy("to_char(da.created_at, 'YYYY-MM-DD')")
+            .orderBy('date', 'ASC')
+            .getRawMany();
+
+        return {
+            totalViews,
+            uniqueViews,
+            averageTimeSpentSeconds,
+            osBreakdown,
+            deviceBreakdown,
+            browserBreakdown,
+            recentViews: recentViews.map(r => ({ date: r.date, count: parseInt(r.count, 10) }))
+        };
+    }
+
+    private async getBreakdown(dealId: string, field: string) {
+        const result = await this.dealAnalyticsRepository
+            .createQueryBuilder('da')
+            .select(`da.${field}`, 'name')
+            .addSelect('COUNT(*)', 'count')
+            .where('da.deal_id = :dealId', { dealId })
+            .groupBy(`da.${field}`)
+            .getRawMany();
+            
+        const breakdown: Record<string, number> = {};
+        result.forEach(r => {
+            breakdown[r.name || 'Unknown'] = parseInt(r.count, 10);
+        });
+        return breakdown;
+    }
 }

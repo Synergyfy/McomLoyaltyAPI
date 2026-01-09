@@ -9,12 +9,15 @@ import {
   Patch,
   Delete,
   ParseUUIDPipe,
+  Ip,
+  Headers,
 } from "@nestjs/common";
 import { DealService } from "./deal.service";
 import { CreateDealDto } from "./dto/create-deal.dto";
 import { UpdateDealDto } from "./dto/update-deal.dto";
 import { UpdateDealStatusDto } from "./dto/update-deal-status.dto";
 import { DeactivateDealDto } from "./dto/deactivate-deal.dto";
+import { RecordTimeSpentDto, DealAnalyticsDto } from "./dto/deal-analytics.dto";
 import {
   ApiTags,
   ApiOperation,
@@ -77,6 +80,14 @@ export class DealController {
   })
   getMyDeals(@Query() filterDealDto: FilterDealDto, @CurrentUser() user: User) {
     return this.dealService.findAllBusiness(filterDealDto, user);
+  }
+
+  @Get("my-deals/:id/analytics")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Get analytics for a specific deal" })
+  @ApiResponse({ status: 200, type: DealAnalyticsDto })
+  getDealAnalytics(@Param("id", ParseUUIDPipe) id: string, @CurrentUser() user: User) {
+      return this.dealService.getDealAnalytics(id, user);
   }
 
   @Get(":id")
@@ -172,23 +183,68 @@ export class DealController {
     );
   }
 
-  @Public()
-  @Get("public/all")
-  @ApiOperation({ summary: "Get all public deals" })
-  @ApiResponse({
-    status: 200,
-    description: "Return a paginated list of public deals.",
-  })
-  findAllPublic(@Query() filterDealDto: FilterDealDto) {
-    return this.dealService.findAllPublic(filterDealDto);
+      @Public()
+
+      @Post("public/analytics/time")
+
+      @ApiOperation({ summary: "Record time spent on a deal page" })
+
+      @ApiResponse({ status: 200, description: "Time recorded successfully" })
+
+      recordTimeSpent(@Body() body: RecordTimeSpentDto) {
+
+          return this.dealService.recordTimeSpent(body.analyticsId, body.durationSeconds);
+
+      }
+
+  
+
+    @Public()
+
+    @Get("public/all")
+
+    @ApiOperation({ summary: "Get all public deals" })
+
+    @ApiResponse({
+
+      status: 200,
+
+      description: "Return a paginated list of public deals.",
+
+    })
+
+    findAllPublic(@Query() filterDealDto: FilterDealDto) {
+
+      return this.dealService.findAllPublic(filterDealDto);
+
+    }
+
+  
+
+    @Public()
+
+    @Get("public/:id")
+
+    @ApiOperation({ summary: "Get a public deal by ID" })
+
+    @ApiResponse({ status: 200, description: "Return the deal." })
+
+    @ApiResponse({ status: 404, description: "Deal not found." })
+
+    findOnePublic(
+
+      @Param("id", ParseUUIDPipe) id: string,
+
+      @Ip() ip: string,
+
+      @Headers('user-agent') userAgent: string,
+
+    ) {
+
+      return this.dealService.findOnePublic(id, ip, userAgent);
+
+    }
+
   }
 
-  @Public()
-  @Get("public/:id")
-  @ApiOperation({ summary: "Get a public deal by ID" })
-  @ApiResponse({ status: 200, description: "Return the deal." })
-  @ApiResponse({ status: 404, description: "Deal not found." })
-  findOnePublic(@Param("id", ParseUUIDPipe) id: string) {
-    return this.dealService.findOnePublic(id);
-  }
-}
+  

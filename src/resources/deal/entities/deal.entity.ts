@@ -18,6 +18,7 @@ import { DealRedemption } from "./deal-redemption.entity";
 import { DealReview } from "./deal-review.entity";
 import { Campaign } from "../../campaign/entities/campaign.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
+import { DealAnalytics } from "./deal-analytics.entity";
 
 @Entity("deals")
 export class Deal extends AbstractBaseEntity {
@@ -179,4 +180,7 @@ export class Deal extends AbstractBaseEntity {
     (businessCampaign) => businessCampaign.deals,
   )
   businessCampaigns: BusinessCampaign[];
+
+  @OneToMany(() => DealAnalytics, (analytics) => analytics.deal)
+  analytics: DealAnalytics[];
 }
