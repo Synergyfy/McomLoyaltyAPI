@@ -22,6 +22,10 @@ export class TrainingVideo extends AbstractBaseEntity {
     @Column()
     video_url: string;
 
+    @ApiProperty({ required: false })
+    @Column({ nullable: true })
+    cover_image: string;
+
     @ApiProperty({ type: () => Tier, isArray: true })
     @ManyToMany(() => Tier)
     @JoinTable({ name: "training_video_tiers" })

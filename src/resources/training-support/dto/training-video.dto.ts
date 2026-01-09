@@ -20,6 +20,11 @@ export class CreateTrainingVideoDto {
     @IsUrl()
     video_url: string;
 
+    @ApiPropertyOptional({ example: "https://example.com/image.png" })
+    @IsUrl()
+    @IsOptional()
+    cover_image?: string;
+
     @ApiPropertyOptional({ type: [String], description: "IDs of Targeted Tiers" })
     @IsArray()
     @IsUUID("4", { each: true })
