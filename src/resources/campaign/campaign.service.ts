@@ -868,50 +868,68 @@ export class CampaignService {
   }
 
   async remove(id: string, currentUser: Business | Admin): Promise<void> {
-    const campaign = await this.findOne(id, currentUser);
+    if (currentUser.role === Role.Admin) {
+      return this.removeTemplate(id, currentUser as Admin);
+    } else {
+      return this.removeBusinessCampaign(id, currentUser as Business);
+    }
+  }
 
-    if (currentUser.role === Role.Business && campaign instanceof BusinessCampaign) {
-      const participantCount = await this.participantCampaignBalanceRepository.count({
-        where: { businessCampaign: { id } },
+  async removeTemplate(id: string, admin: Admin): Promise<void> {
+    const campaign = await this.campaignRepository.findOne({
+      where: { id, business: IsNull() },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException("Campaign template not found");
+    }
+
+    const now = new Date();
+    const claimedCampaigns = await this.businessCampaignRepository.find({
+      where: { campaign: { id } },
+    });
+
+    if (claimedCampaigns.length > 0) {
+      const runningCampaigns = claimedCampaigns.filter((bc) => {
+        if (!bc.start_date || !bc.end_date) return false;
+        const startDate = new Date(bc.start_date);
+        const endDate = new Date(bc.end_date);
+        return startDate <= now && endDate >= now;
       });
 
-      const now = new Date();
-      const isExpired = new Date(campaign.end_date) < now;
-
-      if (participantCount > 0 && !isExpired) {
+      if (runningCampaigns.length > 0) {
         throw new BadRequestException(
-          "Cannot delete a campaign that has participants and has not ended yet.",
+          "Cannot delete this campaign template because it is currently running in one or more businesses.",
         );
       }
     }
 
-    if (currentUser.role === Role.Admin && campaign instanceof Campaign) {
-      const now = new Date();
-      const claimedCampaigns = await this.businessCampaignRepository.find({
-        where: { campaign: { id } },
-      });
+    await this.campaignRepository.remove(campaign);
+  }
 
-      if (claimedCampaigns.length > 0) {
-        const runningCampaigns = claimedCampaigns.filter((bc) => {
-          if (!bc.start_date || !bc.end_date) return false;
-          const startDate = new Date(bc.start_date);
-          const endDate = new Date(bc.end_date);
-          return startDate <= now && endDate >= now;
-        });
+  async removeBusinessCampaign(id: string, business: Business): Promise<void> {
+    const businessCampaign = await this.businessCampaignRepository.findOne({
+      where: { id, business: { id: business.id } },
+    });
 
-        if (runningCampaigns.length > 0) {
-          throw new BadRequestException(
-            "Cannot delete this campaign template because it is currently running in one or more businesses.",
-          );
-        }
-      }
+    if (!businessCampaign) {
+      throw new NotFoundException("Business campaign not found");
     }
 
-    if (campaign instanceof BusinessCampaign) {
-      await this.businessCampaignRepository.remove(campaign);
-    } else {
-      await this.campaignRepository.remove(campaign);
+    const participantCount = await this.participantCampaignBalanceRepository.count({
+      where: { businessCampaign: { id } },
+    });
+
+    const now = new Date();
+    const isExpired = new Date(businessCampaign.end_date) < now;
+
+    if (participantCount > 0 && !isExpired) {
+      throw new BadRequestException(
+        "Cannot delete a campaign that has participants and has not ended yet.",
+      );
     }
+
+    await this.businessCampaignRepository.remove(businessCampaign);
   }
 
   async findOngoingCampaigns(): Promise<BusinessCampaign[]> {

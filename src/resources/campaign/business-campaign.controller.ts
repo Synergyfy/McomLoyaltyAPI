@@ -170,6 +170,6 @@ export class BusinessCampaignController {
     @Param("id", ParseUUIDPipe) id: string,
     @CurrentUser() business: Business,
   ) {
-    return this.campaignService.remove(id, business);
+    return this.campaignService.removeBusinessCampaign(id, business);
   }
 }

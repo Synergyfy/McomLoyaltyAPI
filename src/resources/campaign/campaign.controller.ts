@@ -51,7 +51,7 @@ import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
 @ApiTags("Campaigns")
 @Controller("campaigns")
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
 
   @Post()
   @ApiBearerAuth()
@@ -434,19 +434,19 @@ export class CampaignController {
   @Delete(":id")
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
-  @Roles(Role.Admin, Role.Business)
-  @ApiOperation({ summary: "Delete a campaign" })
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: "Delete a campaign template" })
   @ApiResponse({
     status: 200,
-    description: "The campaign has been successfully deleted.",
+    description: "The campaign template has been successfully deleted.",
   })
   @ApiResponse({ status: 401, description: "Unauthorized." })
-  @ApiResponse({ status: 404, description: "Campaign not found." })
+  @ApiResponse({ status: 404, description: "Campaign template not found." })
   remove(
     @Param("id", ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: Business | Admin,
+    @CurrentUser() currentUser: Admin,
   ) {
-    return this.campaignService.remove(id, currentUser);
+    return this.campaignService.removeTemplate(id, currentUser);
   }
 
   @Patch(":id/toggle")
