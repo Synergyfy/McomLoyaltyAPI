@@ -885,6 +885,28 @@ export class CampaignService {
       }
     }
 
+    if (currentUser.role === Role.Admin && campaign instanceof Campaign) {
+      const now = new Date();
+      const claimedCampaigns = await this.businessCampaignRepository.find({
+        where: { campaign: { id } },
+      });
+
+      if (claimedCampaigns.length > 0) {
+        const runningCampaigns = claimedCampaigns.filter((bc) => {
+          if (!bc.start_date || !bc.end_date) return false;
+          const startDate = new Date(bc.start_date);
+          const endDate = new Date(bc.end_date);
+          return startDate <= now && endDate >= now;
+        });
+
+        if (runningCampaigns.length > 0) {
+          throw new BadRequestException(
+            "Cannot delete this campaign template because it is currently running in one or more businesses.",
+          );
+        }
+      }
+    }
+
     if (campaign instanceof BusinessCampaign) {
       await this.businessCampaignRepository.remove(campaign);
     } else {

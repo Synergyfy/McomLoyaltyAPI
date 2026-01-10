@@ -151,21 +151,22 @@ export class ParticipantService {
         throw new BadRequestException("Campaign has expired");
       }
 
-      // Check for available slots
-      if (
-        businessCampaign.total_slots !== null &&
-        businessCampaign.total_slots !== undefined
-      ) {
-        if (businessCampaign.remaining_slots <= 0) {
-          throw new BadRequestException("No more slots available for this campaign");
-        }
-      }
-
       // Check if already joined
       const alreadyJoined = participant.businessCampaigns.some(
         (bc) => bc.id === businessCampaign.id,
       );
+
       if (!alreadyJoined) {
+        // Check for available slots
+        if (
+          businessCampaign.total_slots !== null &&
+          businessCampaign.total_slots !== undefined
+        ) {
+          if (businessCampaign.remaining_slots <= 0) {
+            throw new BadRequestException("No more slots available for this campaign");
+          }
+        }
+
         participant.businessCampaigns.push(businessCampaign);
 
         // Decrement slots if applicable
