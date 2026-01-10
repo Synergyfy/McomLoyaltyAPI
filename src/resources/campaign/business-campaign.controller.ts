@@ -25,7 +25,6 @@ import {
   ActionType,
 } from "../capability/capability.service";
 import { UpdateCampaignDto } from "./dto/update-campaign.dto";
-import { Campaign } from "./entities/campaign.entity";
 import { ClaimCampaignDto } from "./dto/claim-campaign.dto";
 
 @ApiTags("Business Campaigns")

@@ -9,6 +9,7 @@ import { LoggingInterceptor } from "./interceptors/logging.interceptor";
 import { LoggingMiddleware } from "./middleware/logging.middleware";
 import { ConfigModule } from "@nestjs/config";
 import commissionConfig from "./config/commission.config";
+import redisConfig from "./config/redis.config";
 import { BusinessModule } from "./resources/business/business.module";
 import { SectorModule } from "./resources/sector/sector.module";
 import { AdminModule } from "./resources/admin/admin.module";
@@ -56,6 +57,7 @@ import { LibraryAssetsModule } from "./resources/library-assets/library-assets.m
 import { MallIntegrationModule } from "./resources/mall-integration/mall-integration.module";
 import { WalletModule } from "./resources/wallet/wallet.module";
 import { TrainingSupportModule } from "./resources/training-support/training-support.module";
+import { RedisModule } from "./common/redis/redis.module";
 
 @Module({
   imports: [
@@ -76,9 +78,10 @@ import { TrainingSupportModule } from "./resources/training-support/training-sup
     UserModule,
     WalletModule,
     MallIntegrationModule,
+    RedisModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [commissionConfig],
+      load: [commissionConfig, redisConfig],
     }),
     TypeOrmModule.forRootAsync({
       useFactory: async () => ({
