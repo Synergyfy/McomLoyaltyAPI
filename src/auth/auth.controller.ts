@@ -83,6 +83,44 @@ export class AuthController {
   }
 
   @Public()
+  @Post("login/network")
+  @ApiOperation({ summary: "Login for Network Contacts" })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        identifier: { type: "string", example: "john@example.com" },
+        password: { type: "string", example: "pass123" },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: "Network user logged in successfully.",
+    schema: {
+      example: {
+        user: {
+          name: "John Doe",
+          role: "Network",
+          email: "john@example.com",
+          isEmailVerified: true,
+        },
+        access_token: "ey...",
+        refresh_token: "ey...",
+      },
+    },
+  })
+  async loginNetwork(@Body() body: any) {
+    // Handling if client sends 'email' instead of 'identifier' for backward compat or 'identifier'
+    const identifier = body.identifier || body.email;
+    const user = await this.authService.validateNetworkUser(
+      identifier,
+      body.password,
+    );
+    return this.authService.loginNetworkUser(user);
+  }
+
+  @Public()
   @Post("forgot-password")
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({ status: 200, description: "OTP sent successfully." })
@@ -124,7 +162,6 @@ export class AuthController {
 
   @Get("unique-code")
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
   @Roles(Role.Business, Role.Staff, Role.Participant)
   @ApiOperation({
     summary: "Get the unique code for the current user",
@@ -174,6 +211,69 @@ export class AuthController {
       throw new UnauthorizedException("User email not found");
     }
     return this.authService.resendVerificationOtp(user.email);
+  }
+
+  @Public()
+  @Post("network/setup/request")
+  @ApiOperation({
+    summary: "Request OTP to setup network login",
+    description:
+      "Public endpoint. Checks if identifier (email or phone) exists. If phone and no email on file, requires 'email' field to set up.",
+  })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        identifier: {
+          type: "string",
+          example: "contact@example.com or +1234567890",
+        },
+        email: {
+          type: "string",
+          example: "new@example.com (Required if phone login with no email)",
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: "OTP sent successfully." })
+  async requestNetworkSetup(@Body() body: any) {
+    return this.authService.requestNetworkSetup(body.identifier, body.email);
+  }
+
+  @Public()
+  @Post("network/setup/complete")
+  @ApiOperation({
+    summary: "Verify OTP and set password for network login",
+    description:
+      "Public endpoint. Verifies OTP, sets password, and ensures email is set/verified.",
+  })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        identifier: {
+          type: "string",
+          example: "contact@example.com or +1234567890",
+        },
+        email: { type: "string", example: "new@example.com" },
+        otp: { type: "string", example: "123456" },
+        password: { type: "string", example: "newPassword123" },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: "Setup complete and logged in.",
+    schema: {
+      example: {
+        user: { role: "Network" },
+        access_token: "...",
+        refresh_token: "...",
+      },
+    },
+  })
+  async completeNetworkSetup(@Body() dto: any) {
+    return this.authService.completeNetworkSetup(dto);
   }
 
   @Public()

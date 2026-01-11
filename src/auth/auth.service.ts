@@ -3,6 +3,8 @@ import {
   UnauthorizedException,
   Inject,
   forwardRef,
+  NotFoundException,
+  BadRequestException,
 } from "@nestjs/common";
 import { UserService } from "../user/user.service";
 import { HashService } from "../common/hash/hash.service";
@@ -21,8 +23,10 @@ import { Repository } from "typeorm";
 import { PartnerService } from "../resources/partner/partner.service";
 import { Business } from "../resources/business/entities/business.entity";
 import { Staff } from "../resources/staff/entities/staff.entity";
+import { Partner } from "../resources/partner/entities/partner.entity";
 import { Participant } from "../resources/participant/entities/participant.entity";
 import { User } from "src/common/interfaces/user.interface";
+import { Network } from "../resources/network/entities/network.entity";
 
 import { ParticipantProgressionService } from "../resources/participant-progression/participant-progression.service";
 
@@ -45,6 +49,8 @@ export class AuthService {
     private readonly staffRepository: Repository<Staff>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
+    @InjectRepository(Network)
+    private readonly networkRepository: Repository<Network>,
     private readonly progressionService: ParticipantProgressionService,
   ) {}
 
@@ -311,6 +317,23 @@ export class AuthService {
     };
   }
 
+  async loginNetwork(network: Network) {
+    const payload = {
+      username: network.email,
+      sub: network.id,
+      role: Role.Network,
+    };
+    return {
+      user: {
+        name: network.fullName,
+        role: Role.Network,
+        email: network.email,
+      },
+      access_token: this.jwtService.sign(payload, { expiresIn: "1h" }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: "7d" }),
+    };
+  }
+
   async getUniqueCode(currentUser: User): Promise<{ uniqueCode: string }> {
     let user: Business | Staff | Participant;
 
@@ -372,6 +395,161 @@ export class AuthService {
     return {
       sso_token: this.jwtService.sign(payload, { secret, expiresIn: "5m" }),
       redirect_url: `${process.env.MALL_APP_URL || "http://localhost:3001"}/sso/callback`,
+    };
+  }
+
+  async requestNetworkSetup(identifier: string, email?: string) {
+    let emailToSendTo = identifier;
+    let isPhone = false;
+
+    // Check if identifier is email or phone
+    const isEmail = identifier.includes("@");
+
+    if (isEmail) {
+      const network = await this.networkRepository.findOne({
+        where: { email: identifier },
+      });
+      if (!network) {
+        throw new NotFoundException("No network contact found with this email");
+      }
+    } else {
+      isPhone = true;
+      const network = await this.networkRepository.findOne({
+        where: { phone: identifier },
+      });
+      if (!network) {
+        throw new NotFoundException(
+          "No network contact found with this phone number",
+        );
+      }
+
+      if (network.email) {
+        emailToSendTo = network.email;
+      } else {
+        if (!email) {
+          throw new BadRequestException(
+            "This account has no email. Please provide an email to verify.",
+          );
+        }
+        emailToSendTo = email;
+      }
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Store OTP against the email we are verifying
+    await this.otpService.create(emailToSendTo, otp);
+    await this.mailService.sendOtp(emailToSendTo, otp);
+
+    return {
+      message: `OTP sent to ${emailToSendTo === identifier ? "email" : "linked email"}`,
+      emailUsed: emailToSendTo, // Return this so client knows where to expect OTP
+    };
+  }
+
+  async completeNetworkSetup(dto: {
+    identifier: string; // Email or Phone
+    email?: string; // The email to verify (if phone login with no existing email, or updating)
+    otp: string;
+    password: string;
+  }) {
+    let targetEmail = dto.identifier;
+    let isPhone = false;
+
+    if (!dto.identifier.includes("@")) {
+      isPhone = true;
+      const network = await this.networkRepository.findOne({
+        where: { phone: dto.identifier },
+      });
+      if (!network) throw new NotFoundException("Network contact not found");
+
+      if (network.email) {
+        targetEmail = network.email;
+      } else {
+        if (!dto.email) {
+          throw new BadRequestException("Email is required for verification");
+        }
+        targetEmail = dto.email;
+      }
+    }
+
+    const validOtp = await this.otpService.findOne(targetEmail, dto.otp);
+    if (!validOtp) throw new UnauthorizedException("Invalid OTP");
+    if (validOtp.expiresAt < new Date())
+      throw new UnauthorizedException("OTP expired");
+
+    const hashedPassword = await this.hashService.hashPassword(dto.password);
+
+    if (isPhone) {
+      // Update all records with this phone
+      // AND set the email if we just verified a new one
+      await this.networkRepository.update(
+        { phone: dto.identifier },
+        {
+          password: hashedPassword,
+          isEmailVerified: true,
+          isOnboarded: true,
+          email: targetEmail, // Ensure email is set/consistent
+        },
+      );
+    } else {
+      // Update by email
+      await this.networkRepository.update(
+        { email: dto.identifier },
+        {
+          password: hashedPassword,
+          isEmailVerified: true,
+          isOnboarded: true,
+        },
+      );
+    }
+
+    await this.otpService.remove(validOtp.id);
+
+    // Login
+    // Fetch fresh record
+    const updatedNetwork = await this.networkRepository.findOne({
+      where: isPhone ? { phone: dto.identifier } : { email: dto.identifier },
+    });
+
+    return this.loginNetworkUser(updatedNetwork);
+  }
+
+  async validateNetworkUser(identifier: string, pass: string): Promise<any> {
+    const isEmail = identifier.includes("@");
+    const network = await this.networkRepository.findOne({
+      where: isEmail ? { email: identifier } : { phone: identifier },
+    });
+
+    if (
+      network &&
+      network.password &&
+      network.isEmailVerified &&
+      (await this.hashService.comparePassword(pass, network.password))
+    ) {
+      const { password, ...result } = network;
+      return result;
+    }
+    throw new UnauthorizedException(
+      "Invalid login credentials or email not verified",
+    );
+  }
+
+  async loginNetworkUser(network: Network) {
+    const payload = {
+      username: network.email,
+      sub: network.id,
+      role: Role.Network,
+      isEmailVerified: network.isEmailVerified,
+    };
+    return {
+      user: {
+        name: network.fullName,
+        role: Role.Network,
+        email: network.email,
+        isEmailVerified: network.isEmailVerified,
+      },
+      access_token: this.jwtService.sign(payload, { expiresIn: "1h" }),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: "7d" }),
     };
   }
 }

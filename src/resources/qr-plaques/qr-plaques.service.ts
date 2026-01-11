@@ -2,9 +2,10 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Brackets } from "typeorm";
+import { Repository, Brackets, In } from "typeorm";
 import { QrPlaque, QrPlaqueStatus } from "./entities/qr-plaque.entity";
 import { Business } from "../business/entities/business.entity";
 import { Partner } from "../partner/entities/partner.entity";
@@ -470,8 +471,17 @@ export class QrPlaquesService {
       throw new NotFoundException("Invalid assignment code");
     }
 
+    if (plaque.status === QrPlaqueStatus.ASSIGNED) {
+      throw new BadRequestException("This plaque has already been assigned");
+    }
+
+    if (!plaque.networkContact) {
+      throw new InternalServerErrorException(
+        "Plaque data corrupted: No network contact linked",
+      );
+    }
+
     if (
-      plaque.networkContact &&
       plaque.networkContact.email &&
       email &&
       plaque.networkContact.email !== email
@@ -485,15 +495,37 @@ export class QrPlaquesService {
     plaque.assignmentCode = null;
 
     // Update network status if needed
-    if (
-      plaque.networkContact &&
-      plaque.networkContact.status === NetworkStatus.PENDING
-    ) {
+    if (plaque.networkContact.status === NetworkStatus.PENDING) {
       plaque.networkContact.status = NetworkStatus.ACCEPTED;
       await this.networkRepository.save(plaque.networkContact);
     }
 
     await this.qrPlaqueRepository.save(plaque);
-    return { message: "Assignment accepted", plaque };
+    return {
+      message: "Assignment accepted",
+      plaque,
+      networkContact: plaque.networkContact,
+    };
+  }
+
+  async findAllNetwork(userId: string, email: string, role?: string) {
+    let networkIds = [userId];
+
+    if (role === "Network") {
+      if (!email) return [];
+      
+      const networks = await this.networkRepository.find({
+        where: { email: email },
+      });
+      networkIds = networks.map((n) => n.id);
+    }
+    
+    if (networkIds.length === 0) return [];
+
+    return this.qrPlaqueRepository.find({
+      where: { networkContact: { id: In(networkIds) } },
+      relations: ["assignedBusiness"],
+      order: { created_at: "DESC" },
+    });
   }
 }

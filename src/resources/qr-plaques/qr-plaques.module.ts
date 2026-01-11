@@ -9,11 +9,13 @@ import { Business } from "../business/entities/business.entity";
 import { Network } from "../network/entities/network.entity";
 import { Referral } from "../referral/entities/referral.entity";
 import { MailModule } from "../../mail/mail.module";
+import { AuthModule } from "../../auth/auth.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([QrPlaque, Partner, Business, Network, Referral]),
     MailModule,
+    AuthModule,
   ],
   controllers: [QrPlaquesController],
   providers: [QrPlaquesService],

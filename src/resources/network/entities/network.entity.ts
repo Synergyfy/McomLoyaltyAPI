@@ -14,6 +14,8 @@ export enum NetworkStatus {
   REJECTED = "rejected",
 }
 
+import { Exclude } from "class-transformer";
+
 @Entity("networks")
 @Index(["business", "email"], { unique: true, where: '"email" IS NOT NULL' })
 @Index(["business", "phone"], { unique: true })
@@ -33,8 +35,17 @@ export class Network extends AbstractBaseEntity {
   businessName: string;
 
   @ApiProperty({ description: "Email address (optional)", required: false })
+  @Index({ where: '"email" IS NOT NULL' })
   @Column({ nullable: true })
   email: string;
+
+  @Exclude()
+  @Column({ nullable: true })
+  password: string;
+
+  @ApiProperty({ default: false })
+  @Column({ default: false })
+  isEmailVerified: boolean;
 
   @ApiProperty({ description: "Phone number" })
   @Column()

@@ -1014,4 +1014,162 @@ export class GroupCircleService {
     });
     await repo.save(activity);
   }
+
+  // Network Contact Specific Methods
+
+  private async resolveNetworkIds(
+    userId: string,
+    email: string,
+    role: string,
+  ): Promise<string[]> {
+    if (role === "Network") {
+      if (!email) {
+        // Should not happen with valid JWT, but safe guard
+        return [];
+      }
+      const networks = await this.networkRepo.find({
+        where: { email: email },
+      });
+      return networks.map((n) => n.id);
+    }
+    // Fallback or other roles
+    return [userId];
+  }
+
+  async findAllNetwork(userId: string, email: string, role: string) {
+    const networkIds = await this.resolveNetworkIds(userId, email, role);
+
+    if (networkIds.length === 0) return [];
+
+    return this.circleRepo
+      .createQueryBuilder("circle")
+      .innerJoin("circle.members", "member")
+      .innerJoin("member.network", "network")
+      .where("network.id IN (:...networkIds)", { networkIds })
+      .leftJoinAndSelect("circle.members", "members")
+      .leftJoinAndSelect("members.network", "n")
+      .orderBy("circle.created_at", "DESC")
+      .getMany();
+  }
+
+  async findOneNetwork(id: string, userId: string, email: string, role: string) {
+    const networkIds = await this.resolveNetworkIds(userId, email, role);
+    const circle = await this.circleRepo.findOne({
+      where: { id },
+      relations: ["members", "members.network"],
+    });
+
+    if (!circle) throw new NotFoundException("Group Circle not found");
+
+    const isMember = circle.members.some((m) =>
+      networkIds.includes(m.network.id),
+    );
+    if (!isMember) {
+      throw new BadRequestException("You are not a member of this circle");
+    }
+
+    return circle;
+  }
+
+  async sendMessageAsNetwork(
+    id: string,
+    dto: SendMessageDto,
+    userId: string,
+    email: string,
+    role: string,
+  ) {
+    const networkIds = await this.resolveNetworkIds(userId, email, role);
+    // Reuse finding logic which validates membership
+    const circle = await this.findOneNetwork(id, userId, email, role);
+
+    // Identify which network ID is the sender in THIS circle
+    const senderMember = circle.members.find((m) =>
+      networkIds.includes(m.network.id),
+    );
+    
+    if (!senderMember)
+        throw new BadRequestException("You are not a member of this circle");
+
+    let type = GroupMessageType.GROUP;
+    let recipientName = null;
+
+    if (dto.recipientId) {
+      const recipientMember = circle.members.find(
+        (m) => m.network.id === dto.recipientId,
+      );
+      if (!recipientMember) {
+        throw new NotFoundException("Recipient not found in this group circle");
+      }
+      type = GroupMessageType.DIRECT;
+      recipientName = recipientMember.network.fullName;
+    }
+
+    const message = this.messageRepo.create({
+      groupCircle: circle,
+      content: dto.content,
+      senderName: senderMember.network.fullName,
+      senderId: senderMember.network.id, // Use actual network ID
+      type: type,
+      recipientId: dto.recipientId || null,
+      recipientName: recipientName,
+    });
+
+    return await this.messageRepo.save(message);
+  }
+
+  async getMessagesNetwork(
+    id: string,
+    userId: string,
+    email: string,
+    page: number = 1,
+    limit: number = 20,
+    type?: GroupMessageType,
+    role?: string,
+  ) {
+    const networkIds = await this.resolveNetworkIds(userId, email, role || "");
+    await this.findOneNetwork(id, userId, email, role || ""); // Check access
+
+    const pageNum = Math.max(1, page || 1);
+    const limitNum = Math.min(100, Math.max(1, limit || 20));
+
+    const qb = this.messageRepo.createQueryBuilder("message");
+    qb.where("message.groupCircleId = :id", { id });
+
+    if (type === GroupMessageType.GROUP) {
+      qb.andWhere("message.type = :type", { type: GroupMessageType.GROUP });
+    } else if (type === GroupMessageType.DIRECT) {
+      qb.andWhere("message.type = :type", { type: GroupMessageType.DIRECT });
+      qb.andWhere(
+        "(message.senderId IN (:...networkIds) OR message.recipientId IN (:...networkIds))",
+        { networkIds },
+      );
+    } else {
+      qb.andWhere(
+        "(message.type = :groupType OR (message.type = :directType AND (message.senderId IN (:...networkIds) OR message.recipientId IN (:...networkIds))))",
+        {
+          groupType: GroupMessageType.GROUP,
+          directType: GroupMessageType.DIRECT,
+          networkIds,
+        },
+      );
+    }
+
+    qb.orderBy("message.created_at", "DESC");
+    qb.take(limitNum).skip((pageNum - 1) * limitNum);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    const lastPage = Math.ceil(total / limitNum);
+    return {
+      data,
+      meta: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        lastPage,
+        nextPage: pageNum < lastPage ? pageNum + 1 : null,
+        prevPage: pageNum > 1 ? pageNum - 1 : null,
+      },
+    };
+  }
 }

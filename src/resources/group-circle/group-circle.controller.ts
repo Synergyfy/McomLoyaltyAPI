@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   ValidationPipe,
+  Req,
 } from "@nestjs/common";
 import { GroupCircleService } from "./group-circle.service";
 import { CreateGroupCircleDto } from "./dto/create-group-circle.dto";
@@ -33,6 +34,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiQuery,
+  ApiBody,
 } from "@nestjs/swagger";
 import { GroupCircle } from "./entities/group-circle.entity";
 import { GroupCircleMember } from "./entities/group-circle-member.entity";
@@ -43,7 +45,6 @@ import { GroupMessageType } from "./enums/group-circle.enums";
 
 @ApiTags("Group Circles")
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller("group-circles")
 export class GroupCircleController {
   constructor(private readonly service: GroupCircleService) {}
@@ -294,5 +295,98 @@ export class GroupCircleController {
   @ApiResponse({ status: 200, description: "Activity log." })
   getActivities(@Param("id") id: string, @CurrentUser() business: Business) {
     return this.service.getActivities(id, business.id);
+  }
+
+  // Network Endpoints
+
+  @Get("network/list")
+  @Roles(Role.Network, Role.Partner)
+  @ApiOperation({
+    summary: "List Group Circles for Network Contact",
+    description:
+      "Returns all Group Circles where the authenticated user (Network/Partner) is a member.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "List of Group Circles",
+    type: [GroupCircle],
+  })
+  findAllNetwork(@Req() req) {
+    return this.service.findAllNetwork(
+      req.user.id,
+      req.user.email,
+      req.user.role,
+    );
+  }
+
+  @Get("network/:id")
+  @Roles(Role.Network, Role.Partner)
+  @ApiOperation({
+    summary: "Get Group Circle details for Network Contact",
+    description:
+      "Returns details of a specific Group Circle if the authenticated user is a member.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Group Circle details",
+    type: GroupCircle,
+  })
+  @ApiResponse({ status: 403, description: "Not a member of this circle" })
+  findOneNetwork(@Param("id") id: string, @Req() req) {
+    return this.service.findOneNetwork(
+      id,
+      req.user.id,
+      req.user.email,
+      req.user.role,
+    );
+  }
+
+  @Post("network/:id/messages")
+  @Roles(Role.Network, Role.Partner)
+  @ApiOperation({
+    summary: "Send message as Network Contact",
+    description:
+      "Sends a message to the group or a direct message to another member.",
+  })
+  @ApiBody({ type: SendMessageDto })
+  @ApiResponse({ status: 201, description: "Message sent", type: GroupMessage })
+  sendMessageNetwork(
+    @Param("id") id: string,
+    @Body() dto: SendMessageDto,
+    @Req() req,
+  ) {
+    return this.service.sendMessageAsNetwork(
+      id,
+      dto,
+      req.user.id,
+      req.user.email,
+      req.user.role,
+    );
+  }
+
+  @Get("network/:id/messages")
+  @Roles(Role.Network, Role.Partner)
+  @ApiOperation({
+    summary: "Get messages as Network Contact",
+    description:
+      "Retrieves messages for the circle. Filters out Direct Messages not involving the user.",
+  })
+  @ApiQuery({ name: "type", enum: GroupMessageType, required: false })
+  @ApiResponse({ status: 200, description: "List of messages" })
+  getMessagesNetwork(
+    @Param("id") id: string,
+    @Req() req,
+    @Query(new ValidationPipe({ transform: true })) query: PaginationDto,
+    @Query("type") type?: GroupMessageType,
+  ) {
+    return this.service.getMessagesNetwork(
+      id,
+      req.user.id,
+      req.user.email,
+      query.page,
+      query.limit,
+      type,
+      req.user.role,
+    );
   }
 }

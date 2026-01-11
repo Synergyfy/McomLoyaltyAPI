@@ -20,6 +20,8 @@ import { Business } from "../resources/business/entities/business.entity";
 import { Staff } from "../resources/staff/entities/staff.entity";
 import { Participant } from "../resources/participant/entities/participant.entity";
 import { ParticipantProgressionModule } from "../resources/participant-progression/participant-progression.module";
+import { Network } from "../resources/network/entities/network.entity";
+import { Partner } from "../resources/partner/entities/partner.entity";
 
 @Module({
   imports: [
@@ -38,7 +40,14 @@ import { ParticipantProgressionModule } from "../resources/participant-progressi
     OtpModule,
     MailModule,
     forwardRef(() => BusinessModule),
-    TypeOrmModule.forFeature([Membership, Business, Staff, Participant]),
+    TypeOrmModule.forFeature([
+      Membership,
+      Business,
+      Staff,
+      Participant,
+      Network,
+      Partner,
+    ]),
     PartnerModule,
     ParticipantProgressionModule,
   ],

@@ -18,18 +18,21 @@ export class Partner extends AbstractBaseEntity {
   @Column()
   phoneNumber: string;
 
-  @ManyToOne(() => Sector)
+  @ManyToOne(() => Sector, { nullable: true })
   @JoinColumn({ name: "sector_id" })
   sector: Sector;
 
-  @ManyToOne(() => Category)
+  @ManyToOne(() => Category, { nullable: true })
   @JoinColumn({ name: "category_id" })
   category: Category;
 
-  @ManyToOne(() => SubCategory)
+  @ManyToOne(() => SubCategory, { nullable: true })
   @JoinColumn({ name: "sub_category_id" })
   subCategory: SubCategory;
 
   @Column()
   password: string;
+
+  @Column({ default: false })
+  isEmailVerified: boolean;
 }

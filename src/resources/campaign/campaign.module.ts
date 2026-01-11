@@ -20,6 +20,7 @@ import { CapabilityModule } from "../capability/capability.module";
 import { forwardRef } from "@nestjs/common";
 import { TierProgressionModule } from "../tier-progression/tier-progression.module";
 import { Membership } from "../membership/entities/membership.entity";
+import { RedisModule } from "../../common/redis/redis.module";
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { Membership } from "../membership/entities/membership.entity";
     MailModule,
     forwardRef(() => CapabilityModule),
     forwardRef(() => TierProgressionModule),
+    RedisModule,
   ],
   controllers: [CampaignController, BusinessCampaignController],
   providers: [CampaignService],

@@ -12,6 +12,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { QrPlaquesService } from "./qr-plaques.service";
+import { AuthService } from "../../auth/auth.service";
 import {
   ApiTags,
   ApiOperation,
@@ -33,7 +34,60 @@ import { QrPlaque } from "./entities/qr-plaque.entity";
 @ApiTags("QR Plaques")
 @Controller("qr-plaques")
 export class QrPlaquesController {
-  constructor(private readonly qrPlaquesService: QrPlaquesService) {}
+  constructor(
+    private readonly qrPlaquesService: QrPlaquesService,
+    private readonly authService: AuthService,
+  ) {}
+
+  @Post("network/accept")
+  @Roles(Role.Network, Role.Partner)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Accept plaque assignment (Requires Login)",
+    description:
+      "Verifies the invite code against the authenticated user's email. If valid, assigns the plaque.",
+  })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: { code: { type: "string", example: "123456" } },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: "Assignment accepted successfully.",
+    type: QrPlaque,
+  })
+  async acceptAssignment(@Req() req, @Body() body: { code: string }) {
+    // User must be logged in now. We verify against their authenticated email.
+    const { plaque } = await this.qrPlaquesService.verifyInvite(
+      body.code,
+      req.user.email,
+    );
+
+    return {
+      message: "Assignment accepted successfully",
+      plaque,
+    };
+  }
+
+  @Get("network/list")
+  @UseGuards(AuthGuard("jwt"), RolesGuard)
+  @Roles(Role.Network, Role.Partner)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get plaques assigned to the current network contact or partner",
+    description:
+      "Returns all plaques assigned to any network profile associated with the authenticated user's email.",
+  })
+  @ApiResponse({ status: 200, type: [QrPlaque] })
+  async getNetworkPlaques(@Req() req) {
+    return this.qrPlaquesService.findAllNetwork(
+      req.user.id,
+      req.user.email,
+      req.user.role,
+    );
+  }
 
   @Post()
   @UseGuards(AuthGuard("jwt"), RolesGuard)

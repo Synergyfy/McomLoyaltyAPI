@@ -17,6 +17,7 @@ import { Participant } from "../participant/entities/participant.entity";
 import { AuthModule } from "src/auth/auth.module";
 import { ParticipantProgressionModule } from "../participant-progression/participant-progression.module";
 import { DealAnalytics } from "./entities/deal-analytics.entity";
+import { RedisModule } from "../../common/redis/redis.module";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { DealAnalytics } from "./entities/deal-analytics.entity";
     CategoryModule,
     AuthModule,
     ParticipantProgressionModule,
+    RedisModule,
   ],
   controllers: [DealController, DealRedemptionController],
   providers: [DealService, DealRedemptionService, IsDateAfter],
