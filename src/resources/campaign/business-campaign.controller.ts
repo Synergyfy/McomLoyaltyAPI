@@ -7,12 +7,9 @@ import {
   Param,
   Query,
   Delete,
-  UseGuards,
   ParseUUIDPipe,
 } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
-import { AuthGuard } from "@nestjs/passport";
-import { RolesGuard } from "src/common/guards/roles.guard";
 import { Roles } from "src/common/decorators/roles.decorator";
 import { Role } from "src/common/role.enum";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";

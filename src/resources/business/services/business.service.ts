@@ -76,7 +76,7 @@ export class BusinessService {
     private readonly mailService: MailService,
     private readonly walletService: WalletService,
     private readonly stampPackageService: StampPackageService,
-  ) {}
+  ) { }
 
   private async generateAffiliateCode(): Promise<string> {
     let affiliateCode: string;
@@ -270,6 +270,33 @@ export class BusinessService {
     limit: number,
   ): Promise<PaginationResult<Business>> {
     const [data, total] = await this.businessRepository.findAndCount({
+      order: { created_at: "DESC" },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: ["sector", "category", "subCategory"],
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
+  }
+
+  async findAllSuperBusinesses(
+    page: number,
+    limit: number,
+  ): Promise<PaginationResult<Business>> {
+    const [data, total] = await this.businessRepository.findAndCount({
+      where: { isSuperBusiness: true },
       order: { created_at: "DESC" },
       skip: (page - 1) * limit,
       take: limit,

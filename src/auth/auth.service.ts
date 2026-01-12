@@ -52,7 +52,7 @@ export class AuthService {
     @InjectRepository(Network)
     private readonly networkRepository: Repository<Network>,
     private readonly progressionService: ParticipantProgressionService,
-  ) {}
+  ) { }
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.userService.findOne(email);
@@ -90,6 +90,8 @@ export class AuthService {
     if (user.role === Role.Business) {
       const business = await this.businessService.findById(user.id, ["sector"]);
       // Graceful fallback if business record is missing but auth user exists (e.g. inconsistency)
+      const isSuperBusiness = business?.isSuperBusiness || false;
+
       if (business) {
         response.user.isOnboarded = !!business.sector;
       } else {
@@ -97,27 +99,35 @@ export class AuthService {
         // Log inconsistency? console.warn(`Business record missing for user ${user.id}`);
       }
 
-      const membership = await this.membershipRepository.findOne({
-        where: { business: { id: user.id } },
-        order: { created_at: "DESC" },
-      });
+      response.user.isSuperBusiness = isSuperBusiness;
+      payload.isSuperBusiness = isSuperBusiness;
 
-      const isTrialValid =
-        membership &&
-        membership.is_trial &&
-        new Date(membership.expires_at) > new Date();
-      const isActive =
-        membership && membership.status === MembershipStatus.ACTIVE;
+      if (isSuperBusiness) {
+        // Super businesses don't need subscription checks
+        payload.hasActiveSubscription = true;
+      } else {
+        const membership = await this.membershipRepository.findOne({
+          where: { business: { id: user.id } },
+          order: { created_at: "DESC" },
+        });
 
-      const hasActiveSubscription = isActive || isTrialValid;
+        const isTrialValid =
+          membership &&
+          membership.is_trial &&
+          new Date(membership.expires_at) > new Date();
+        const isActive =
+          membership && membership.status === MembershipStatus.ACTIVE;
 
-      response.user.subscription = {
-        isActive: isActive,
-        isTrial: membership ? membership.is_trial : false,
-      };
+        const hasActiveSubscription = isActive || isTrialValid;
 
-      // Add subscription status to payload for Business users
-      payload.hasActiveSubscription = hasActiveSubscription;
+        response.user.subscription = {
+          isActive: isActive,
+          isTrial: membership ? membership.is_trial : false,
+        };
+
+        // Add subscription status to payload for Business users
+        payload.hasActiveSubscription = hasActiveSubscription;
+      }
     }
 
     // Sign tokens once with the final payload

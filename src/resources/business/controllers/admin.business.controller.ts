@@ -34,7 +34,7 @@ export class AdminBusinessController {
     private readonly businessService: BusinessService,
     private readonly staffService: StaffService,
     private readonly adminService: AdminService,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: "Get all businesses (admin only)" })
@@ -45,6 +45,20 @@ export class AdminBusinessController {
   })
   async findAll(@Query() paginationDto: PaginationDto) {
     return this.adminService.getBusinesses(
+      paginationDto.page,
+      paginationDto.limit,
+    );
+  }
+
+  @Get("super")
+  @ApiOperation({ summary: "Get all super businesses (admin only)" })
+  @ApiResponse({
+    status: 200,
+    description: "A paginated list of all super businesses.",
+    type: PageDto,
+  })
+  async findSuperBusinesses(@Query() paginationDto: PaginationDto) {
+    return this.adminService.getSuperBusinesses(
       paginationDto.page,
       paginationDto.limit,
     );

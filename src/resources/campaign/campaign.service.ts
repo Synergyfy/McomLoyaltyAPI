@@ -1723,6 +1723,9 @@ export class CampaignService {
   }
 
   private async validateCampaignEndDate(businessId: string, endDate: Date) {
+    const business = await this.businessRepository.findOneBy({ id: businessId });
+    if (business && business.isSuperBusiness) return;
+
     const activeMemberships = await this.membershipRepository.find({
       where: {
         business: { id: businessId },

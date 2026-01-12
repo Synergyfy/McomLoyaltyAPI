@@ -50,7 +50,7 @@ export class AdminService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
-  ) {}
+  ) { }
 
   async createSuperBusiness(createSuperBusinessDto: CreateSuperBusinessDto) {
     return this.businessService.create(createSuperBusinessDto, true);
@@ -145,74 +145,7 @@ export class AdminService {
 
     const enrichedBusinesses = await Promise.all(
       result.data.map(async (business) => {
-        // 1. Get Latest Membership (Tier)
-        const membership = await this.membershipRepository.findOne({
-          where: { business: { id: business.id } },
-          order: { created_at: "DESC" },
-          relations: ["tier"],
-        });
-
-        // Attach membership to business for response (if needed by frontend, though not strictly on entity)
-        // Since we removed 'tier' from Business entity, we can't assign it there.
-        // We can assign the membership to the memberships array if we want to return it.
-        if (membership) {
-          business.memberships = [membership];
-        }
-
-        // 2. Calculate Remaining Point Balance
-        let remainingPointBalance = 0;
-        const tierConfig = membership?.tier?.configuration;
-
-        if (tierConfig) {
-          const monthlyPointsAllowance =
-            tierConfig.quotas.monthlyPointsAllowance;
-
-          if (monthlyPointsAllowance === -1) {
-            remainingPointBalance = -1; // Unlimited
-          } else {
-            // Calculate points used this month
-            const startOfMonth = new Date();
-            startOfMonth.setDate(1);
-            startOfMonth.setHours(0, 0, 0, 0);
-
-            const pointsUsed = await this.pointHistoryRepository
-              .createQueryBuilder("pointHistory")
-              .where("pointHistory.business_id = :businessId", {
-                businessId: business.id,
-              })
-              .andWhere("pointHistory.created_at >= :startOfMonth", {
-                startOfMonth,
-              })
-              .andWhere("pointHistory.type IN (:...types)", {
-                types: ["EARN", "MATCHING"],
-              })
-              .select("SUM(pointHistory.points)", "total")
-              .getRawOne();
-
-            const totalPointsUsed =
-              pointsUsed && pointsUsed.total ? Number(pointsUsed.total) : 0;
-            remainingPointBalance = Math.max(
-              0,
-              monthlyPointsAllowance - totalPointsUsed,
-            );
-          }
-        } else {
-          remainingPointBalance = 0;
-        }
-
-        business.remainingPointBalance = remainingPointBalance;
-
-        if (business.sector) {
-          (business as any).sector = business.sector.name;
-        }
-
-        if (membership && membership.tier) {
-          (business as any).tier = membership.tier.name;
-        } else {
-          (business as any).tier = null;
-        }
-
-        return business;
+        return this.enrichBusinessRecord(business);
       }),
     );
 
@@ -220,6 +153,94 @@ export class AdminService {
       ...result,
       data: enrichedBusinesses,
     };
+  }
+
+  async getSuperBusinesses(
+    page: number,
+    limit: number,
+  ): Promise<PaginationResult<Business>> {
+    const result = await this.businessService.findAllSuperBusinesses(
+      page,
+      limit,
+    );
+
+    const enrichedBusinesses = await Promise.all(
+      result.data.map(async (business) => {
+        return this.enrichBusinessRecord(business);
+      }),
+    );
+
+    return {
+      ...result,
+      data: enrichedBusinesses,
+    };
+  }
+
+  private async enrichBusinessRecord(business: Business): Promise<Business> {
+    // 1. Get Latest Membership (Tier)
+    const membership = await this.membershipRepository.findOne({
+      where: { business: { id: business.id } },
+      order: { created_at: "DESC" },
+      relations: ["tier"],
+    });
+
+    if (membership) {
+      business.memberships = [membership];
+    }
+
+    // 2. Calculate Remaining Point Balance
+    let remainingPointBalance = 0;
+    const tierConfig = membership?.tier?.configuration;
+
+    if (tierConfig) {
+      const monthlyPointsAllowance = tierConfig.quotas.monthlyPointsAllowance;
+
+      if (monthlyPointsAllowance === -1) {
+        remainingPointBalance = -1; // Unlimited
+      } else {
+        // Calculate points used this month
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const pointsUsed = await this.pointHistoryRepository
+          .createQueryBuilder("pointHistory")
+          .where("pointHistory.business_id = :businessId", {
+            businessId: business.id,
+          })
+          .andWhere("pointHistory.created_at >= :startOfMonth", {
+            startOfMonth,
+          })
+          .andWhere("pointHistory.type IN (:...types)", {
+            types: ["EARN", "MATCHING"],
+          })
+          .select("SUM(pointHistory.points)", "total")
+          .getRawOne();
+
+        const totalPointsUsed =
+          pointsUsed && pointsUsed.total ? Number(pointsUsed.total) : 0;
+        remainingPointBalance = Math.max(
+          0,
+          monthlyPointsAllowance - totalPointsUsed,
+        );
+      }
+    } else {
+      remainingPointBalance = 0;
+    }
+
+    business.remainingPointBalance = remainingPointBalance;
+
+    if (business.sector) {
+      (business as any).sector = business.sector.name;
+    }
+
+    if (membership && membership.tier) {
+      (business as any).tier = membership.tier.name;
+    } else {
+      (business as any).tier = null;
+    }
+
+    return business;
   }
 
   async getStaffs(businessId: string, page: number, limit: number) {
