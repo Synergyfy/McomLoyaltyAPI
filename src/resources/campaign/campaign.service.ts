@@ -66,12 +66,9 @@ import {
 import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
 import { Membership, MembershipStatus } from "../membership/entities/membership.entity";
 import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
-import { RedisService } from '@liaoliaots/nestjs-redis';
-import { Redis } from 'ioredis';
 
 @Injectable()
 export class CampaignService {
-  private readonly redis: Redis;
 
   constructor(
     @InjectRepository(Campaign)
@@ -106,9 +103,7 @@ export class CampaignService {
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly matchingPointService: MatchingPointService,
-    private readonly redisService: RedisService,
   ) {
-    this.redis = this.redisService.getOrThrow();
   }
 
   async create(
@@ -172,7 +167,6 @@ export class CampaignService {
 
       campaign.rewards = rewards;
       const saved = await this.campaignRepository.save(campaign);
-      await this.invalidatePublicCache();
       return saved;
     } else {
       const { business_reward_ids, ...campaignData } =
@@ -258,7 +252,6 @@ export class CampaignService {
         `Campaign Created: ${savedCampaign.name}`,
       );
 
-      await this.invalidatePublicCache();
       return savedCampaign;
     }
   }
@@ -872,11 +865,9 @@ export class CampaignService {
         }
       }
       const saved = await this.businessCampaignRepository.save(campaign);
-      await this.invalidatePublicCache();
       return saved;
     } else {
       const saved = await this.campaignRepository.save(campaign);
-      await this.invalidatePublicCache();
       return saved;
     }
   }
@@ -919,7 +910,6 @@ export class CampaignService {
     }
 
     await this.campaignRepository.remove(campaign);
-    await this.invalidatePublicCache();
   }
 
   async removeBusinessCampaign(id: string, business: Business): Promise<void> {
@@ -945,7 +935,6 @@ export class CampaignService {
     }
 
     await this.businessCampaignRepository.remove(businessCampaign);
-    await this.invalidatePublicCache();
   }
 
   async findOngoingCampaigns(): Promise<BusinessCampaign[]> {
@@ -1096,7 +1085,6 @@ export class CampaignService {
     } else {
       saved = await this.campaignRepository.save(campaign);
     }
-    await this.invalidatePublicCache();
     return saved;
   }
 
@@ -1110,14 +1098,6 @@ export class CampaignService {
     const categoryId = query.categoryId || '';
     const subCategoryId = query.subCategoryId || '';
     const search = query.search || '';
-
-    const cacheVersion = await this.redis.get('campaigns:public:version') || '1';
-    const cacheKey = `campaigns:public:${cacheVersion}:${page}:${limit}:${sort}:${sectorId}:${categoryId}:${subCategoryId}:${search}`;
-
-    const cachedData = await this.redis.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
 
     const skip = (page - 1) * limit;
     const sortOrder = query.sort || CampaignSortOrder.DESC;
@@ -1237,8 +1217,6 @@ export class CampaignService {
       next,
       previous,
     };
-
-    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', 1800); // Cache for 30 minutes
 
     return result;
   }
@@ -1380,7 +1358,6 @@ export class CampaignService {
     businessCampaign.businessRewards = businessRewards;
 
     const saved = await this.businessCampaignRepository.save(businessCampaign);
-    await this.invalidatePublicCache();
     return saved;
   }
 
@@ -1716,10 +1693,6 @@ export class CampaignService {
     }));
 
     return { data };
-  }
-
-  private async invalidatePublicCache() {
-    await this.redis.incr('campaigns:public:version');
   }
 
   private async validateCampaignEndDate(businessId: string, endDate: Date) {

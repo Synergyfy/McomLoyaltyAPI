@@ -20,12 +20,9 @@ import { DealAnalytics } from "./entities/deal-analytics.entity";
 import { DealAnalyticsDto } from "./dto/deal-analytics.dto";
 import * as crypto from 'crypto';
 import { UAParser } from 'ua-parser-js';
-import { RedisService } from '@liaoliaots/nestjs-redis';
-import { Redis } from 'ioredis';
 
 @Injectable()
 export class DealService {
-  private readonly redis: Redis;
 
   constructor(
     @InjectRepository(Deal)
@@ -37,14 +34,7 @@ export class DealService {
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
     @InjectRepository(DealAnalytics)
     private readonly dealAnalyticsRepository: Repository<DealAnalytics>,
-    private readonly redisService: RedisService,
-  ) {
-    this.redis = this.redisService.getOrThrow();
-  }
-
-  private async invalidatePublicCache() {
-    await this.redis.incr('deals:public:version');
-  }
+  ) {}
 
   async create(createDealDto: CreateDealDto, user: User) {
     const { categoryId, ...rest } = createDealDto;
@@ -64,7 +54,6 @@ export class DealService {
     });
 
     const saved = await this.dealRepository.save(deal);
-    await this.invalidatePublicCache();
     return saved;
   }
 
@@ -250,14 +239,12 @@ export class DealService {
 
     Object.assign(deal, rest);
     const saved = await this.dealRepository.save(deal);
-    await this.invalidatePublicCache();
     return saved;
   }
 
   async remove(id: string, user: User) {
     const deal = await this.findOne(id, user);
     await this.dealRepository.remove(deal);
-    await this.invalidatePublicCache();
     return { message: "Deal removed successfully" };
   }
 
@@ -269,7 +256,6 @@ export class DealService {
     deal.status = status;
     deal.isApproved = status === DealStatus.APPROVED;
     const saved = await this.dealRepository.save(deal);
-    await this.invalidatePublicCache();
     return saved;
   }
 
@@ -277,7 +263,6 @@ export class DealService {
     const deal = await this.findOne(id, user);
     deal.isActive = isActive;
     const saved = await this.dealRepository.save(deal);
-    await this.invalidatePublicCache();
     return saved;
   }
 
@@ -292,26 +277,6 @@ export class DealService {
       maxPrice,
       type,
     } = filterDealDto;
-
-    const cacheVersion = await this.redis.get('deals:public:version') || '1';
-    // Create a stable cache key
-    const cacheKeyParts = [
-      cacheVersion,
-      limit,
-      page,
-      search || '',
-      categoryId || '',
-      location || '',
-      minPrice || '',
-      maxPrice || '',
-      type || ''
-    ];
-    const cacheKey = `deals:public:${cacheKeyParts.join(':')}`;
-
-    const cachedData = await this.redis.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
 
     const query = this.dealRepository.createQueryBuilder("deal");
 
@@ -380,7 +345,6 @@ export class DealService {
       },
     };
 
-    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', 1800);
     return result;
   }
 
