@@ -39,10 +39,15 @@ describe("RewardsService", () => {
   const mockBusinessRewardRepository = {
     findOne: jest.fn(),
     save: jest.fn(),
+    create: jest.fn(),
   };
 
-  const mockBusinessRepository = {};
-  const mockMembershipRepository = {};
+  const mockBusinessRepository = {
+    findOne: jest.fn(),
+  };
+  const mockMembershipRepository = {
+    findOne: jest.fn(),
+  };
 
   const mockSectorRepository = {
     findBy: jest.fn(),
@@ -291,7 +296,7 @@ describe("RewardsService", () => {
       const reward = { max_stamps_required: 10 } as Reward;
       const br = {
         id: rewardId,
-        business: { id: businessId },
+        business: { id: businessId, isSuperBusiness: false },
         reward,
       } as BusinessReward;
       mockBusinessRewardRepository.findOne.mockResolvedValue(br);
@@ -301,6 +306,48 @@ describe("RewardsService", () => {
           stamps_required: 11,
         }),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe("createBusinessReward", () => {
+    it("should throw ForbiddenException if non-super business tries to create matching points reward", async () => {
+      const businessId = "biz-1";
+      const business = { id: businessId, isSuperBusiness: false };
+      
+      mockBusinessRepository.findOne.mockResolvedValue(business);
+      
+      const dto: any = {
+        title: "Matching Reward",
+        is_matching_points_enabled: true,
+        matching_points_required: 100,
+        reward_type: RewardType.VOUCHER,
+      };
+
+      await expect(service.createBusinessReward(businessId, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it("should allow super business to create matching points reward", async () => {
+      const businessId = "biz-super";
+      const business = { id: businessId, isSuperBusiness: true };
+      
+      mockBusinessRepository.findOne.mockResolvedValue(business);
+      // Mock membership to avoid BadRequest
+      mockMembershipRepository.findOne.mockResolvedValue(null);
+      
+      const dto: any = {
+        title: "Matching Reward",
+        is_matching_points_enabled: true,
+        matching_points_required: 100,
+        reward_type: RewardType.VOUCHER,
+      };
+
+      mockBusinessRewardRepository.create.mockReturnValue({ ...dto, business });
+      mockBusinessRewardRepository.save.mockResolvedValue({ ...dto, business, id: "new-reward" });
+
+      const result = await service.createBusinessReward(businessId, dto);
+      expect(result).toBeDefined();
     });
   });
 });

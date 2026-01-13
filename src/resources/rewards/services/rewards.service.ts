@@ -607,15 +607,10 @@ export class RewardsService {
       });
     }
 
-    // Filter Matching Point Rewards:
-    // Show if NOT matching points enabled OR (matching points enabled AND created by this business)
-    queryBuilder.andWhere(
-      new Brackets((qb) => {
-        qb.where("reward.is_matching_points_enabled = :falseVal", {
-          falseVal: false,
-        }).orWhere("reward.business_id = :businessId", { businessId });
-      }),
-    );
+    // Filter out Matching Point Rewards from global list
+    queryBuilder.andWhere("reward.is_matching_points_enabled = :falseVal", {
+      falseVal: false,
+    });
 
     if (search) {
       queryBuilder.andWhere("reward.title ILIKE :search", {
@@ -844,5 +839,36 @@ export class RewardsService {
     return this.businessRewardRepository.count({
       where: { business: { id: businessId }, disabled: false },
     });
+  }
+
+  async getMatchingPointRewards(
+    businessId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginationResult<BusinessReward>> {
+    const [data, total] = await this.businessRewardRepository.findAndCount({
+      where: {
+        business: { id: businessId },
+        is_matching_points_enabled: true,
+      },
+      relations: ["reward"],
+      order: { created_at: "DESC" },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
   }
 }

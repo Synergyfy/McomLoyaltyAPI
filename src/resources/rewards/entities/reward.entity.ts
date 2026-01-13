@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToMany, JoinTable, OneToMany, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, Column, ManyToMany, JoinTable, OneToMany } from "typeorm";
 import { AbstractBaseEntity } from "../../../database/entities/base.entity";
 import { RewardType } from "../enums/reward-type.enum";
 import { RewardAudience } from "../enums/reward-audience.enum";
@@ -8,15 +8,10 @@ import { Tier } from "../../tier/entities/tier.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
 
-import { Business } from "../../business/entities/business.entity";
 import { RewardSource } from "../enums/reward-source.enum";
 
 @Entity()
 export class Reward extends AbstractBaseEntity {
-  @ManyToOne(() => Business, { nullable: true })
-  @JoinColumn({ name: "business_id" })
-  business: Business;
-
   @Column()
   title: string;
 
