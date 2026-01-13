@@ -607,6 +607,16 @@ export class RewardsService {
       });
     }
 
+    // Filter Matching Point Rewards:
+    // Show if NOT matching points enabled OR (matching points enabled AND created by this business)
+    queryBuilder.andWhere(
+      new Brackets((qb) => {
+        qb.where("reward.is_matching_points_enabled = :falseVal", {
+          falseVal: false,
+        }).orWhere("reward.business_id = :businessId", { businessId });
+      }),
+    );
+
     if (search) {
       queryBuilder.andWhere("reward.title ILIKE :search", {
         search: `%${search}%`,
