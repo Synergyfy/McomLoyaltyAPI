@@ -6,4 +6,5 @@ export interface User {
   email?: string;
   isEmailVerified?: boolean;
   hasActiveSubscription?: boolean;
+  isSuperBusiness?: boolean;
 }

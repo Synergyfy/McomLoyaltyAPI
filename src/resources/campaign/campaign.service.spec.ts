@@ -14,11 +14,13 @@ import { Admin } from "../admin/entities/admin.entity";
 import { PaginationDto } from "src/common/dto/pagination.dto";
 import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
 import { Participant } from "../participant/entities/participant.entity";
+import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
 import { Staff } from "../staff/entities/staff.entity";
 import { WishlistAggregate } from "../wishlist/entities/wishlist-aggregate.entity";
 import { WishlistItem } from "../wishlist/entities/wishlist-item.entity";
 import { MailService } from "src/mail/mail.service";
-import { BusinessStampReward } from "../stamp/entities/business-stamp-reward.entity";
+import { Membership, MembershipStatus } from "../membership/entities/membership.entity";
+
 import { Tier } from "../tier/entities/tier.entity";
 import { TierProgressionService } from "../tier-progression/tier-progression.service";
 import { CapabilityService } from "../capability/capability.service";
@@ -75,12 +77,24 @@ describe("CampaignService", () => {
     find: jest.fn(),
   };
 
+  const mockBusinessCampaignRepository = {
+    find: jest.fn().mockResolvedValue([]),
+    findAndCount: jest.fn(),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+    findOne: jest.fn(),
+  };
+
   const mockPointHistoryRepository = {
     createQueryBuilder: jest.fn(() => ({
       leftJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      setParameters: jest.fn().mockReturnThis(),
       getRawOne: jest.fn().mockResolvedValue({}),
       getCount: jest.fn().mockResolvedValue(0),
       getMany: jest.fn().mockResolvedValue([]),
@@ -101,9 +115,21 @@ describe("CampaignService", () => {
     })),
   };
 
-  const mockBusinessStampRewardRepository = {
+  const mockParticipantCampaignBalanceRepository = {
+    find: jest.fn(),
     findOne: jest.fn(),
+    save: jest.fn(),
+    create: jest.fn(),
   };
+
+  const mockMembershipRepository = {
+    findOne: jest.fn(),
+    find: jest.fn().mockResolvedValue([
+      { status: MembershipStatus.ACTIVE, expires_at: new Date(Date.now() + 10000000) }
+    ]),
+  };
+
+
 
   const mockTierRepository = {
     findOneBy: jest.fn(),
@@ -146,6 +172,10 @@ describe("CampaignService", () => {
           useValue: mockBusinessRewardRepository,
         },
         {
+          provide: getRepositoryToken(BusinessCampaign),
+          useValue: mockBusinessCampaignRepository,
+        },
+        {
           provide: getRepositoryToken(Participant),
           useValue: mockParticipantRepository,
         },
@@ -167,13 +197,18 @@ describe("CampaignService", () => {
           provide: MailService,
           useValue: { sendWishlistCampaignEmail: jest.fn() },
         },
-        {
-          provide: getRepositoryToken(BusinessStampReward),
-          useValue: mockBusinessStampRewardRepository,
-        },
+
         {
           provide: getRepositoryToken(Tier),
           useValue: mockTierRepository,
+        },
+        {
+          provide: getRepositoryToken(ParticipantCampaignBalance),
+          useValue: mockParticipantCampaignBalanceRepository,
+        },
+        {
+          provide: getRepositoryToken(Membership),
+          useValue: mockMembershipRepository,
         },
         {
           provide: TierProgressionService,
@@ -210,23 +245,16 @@ describe("CampaignService", () => {
   });
 
   describe("create", () => {
-    it("should create a campaign for an admin", async () => {
-      const createCampaignDto: CreateCampaignAdminDto = {
-        name: "Test Campaign",
-        campaign_type: "qr_code" as any,
-        campaign_message: "Test Message",
-        start_date: new Date(),
-        end_date: new Date(),
-        quantity: 10,
-        audience_type: "members" as any,
+        it("should create a campaign for an admin", async () => {
+          const createCampaignDto: CreateCampaignAdminDto = {
+            name: "Test Campaign",
+            campaign_type: "qr_code" as any,
+            campaign_message: "Test Message",
+            audience_type: "members" as any,
         banner_url: "test.jpg",
-        cta_text: "Click Me",
-        cta_background_color: "#000000",
-        cta_text_color: "#ffffff",
-        text_color: "#000000",
-        background_color: "#ffffff",
         reward_ids: ["reward-id"],
         reward_type: "regular" as any,
+        reward_mode: "points" as any,
         regular_points_threshold: 100,
         matching_points_threshold: 100,
       };
@@ -257,21 +285,18 @@ describe("CampaignService", () => {
 
     it("should create a campaign for a business", async () => {
       const createCampaignDto: CreateCampaignDto = {
+        total_slots: 100,
         name: "Test Campaign",
         campaign_type: "qr_code" as any,
         campaign_message: "Test Message",
         start_date: new Date(),
         end_date: new Date(),
-        quantity: 10,
+
         audience_type: "members" as any,
         banner_url: "test.jpg",
-        cta_text: "Click Me",
-        cta_background_color: "#000000",
-        cta_text_color: "#ffffff",
-        text_color: "#000000",
-        background_color: "#ffffff",
         business_reward_ids: ["reward-id"],
         reward_type: "regular" as any,
+        reward_mode: "points" as any,
         regular_points_threshold: 100,
         matching_points_threshold: 100,
       };
@@ -284,22 +309,21 @@ describe("CampaignService", () => {
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
       const businessRewards = [
-        { id: "business-reward-id", reward: rewards[0] },
-      ] as BusinessReward[];
+        { id: "business-reward-id", reward: rewards[0], business: { id: "business-id" } },
+      ] as any[];
       const campaign = { ...createCampaignDto, business, businessRewards };
 
       mockBusinessRepository.findOneBy.mockResolvedValue(business);
-      mockBusinessRewardRepository.find.mockResolvedValue([
-        { id: "business-reward-id", reward: rewards[0] },
-      ] as BusinessReward[]);
+      mockBusinessRewardRepository.find.mockResolvedValue(businessRewards);
       mockCampaignRepository.create.mockReturnValue(campaign);
       mockCampaignRepository.save.mockResolvedValue(campaign);
 
       const result = await service.create(createCampaignDto, currentUser);
 
+      const { business_reward_ids, ...expectedData } = createCampaignDto;
       expect(result).toEqual(
         expect.objectContaining({
-          ...createCampaignDto,
+          ...expectedData,
           business: expect.objectContaining({ id: "business-id" }),
           businessRewards: expect.any(Array),
           uniqueCode: expect.any(String),
@@ -309,21 +333,18 @@ describe("CampaignService", () => {
 
     it("should generate a unique code for a business-created campaign", async () => {
       const createCampaignDto: CreateCampaignDto = {
+        total_slots: 100,
         name: "Test Campaign",
         campaign_type: "qr_code" as any,
         campaign_message: "Test Message",
         start_date: new Date(),
         end_date: new Date(),
-        quantity: 10,
+
         audience_type: "members" as any,
         banner_url: "test.jpg",
-        cta_text: "Click Me",
-        cta_background_color: "#000000",
-        cta_text_color: "#ffffff",
-        text_color: "#000000",
-        background_color: "#ffffff",
         business_reward_ids: ["reward-id"],
         reward_type: "regular" as any,
+        reward_mode: "points" as any,
         regular_points_threshold: 100,
         matching_points_threshold: 100,
       };
@@ -336,8 +357,8 @@ describe("CampaignService", () => {
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
       const businessRewards = [
-        { id: "business-reward-id", reward: rewards[0] },
-      ] as BusinessReward[];
+        { id: "business-reward-id", reward: rewards[0], business: { id: "business-id" } },
+      ] as any[];
       const campaign = {
         ...createCampaignDto,
         business,
@@ -346,9 +367,7 @@ describe("CampaignService", () => {
       };
 
       mockBusinessRepository.findOneBy.mockResolvedValue(business);
-      mockBusinessRewardRepository.find.mockResolvedValue([
-        { id: "business-reward-id", reward: rewards[0] },
-      ] as BusinessReward[]);
+      mockBusinessRewardRepository.find.mockResolvedValue(businessRewards);
       mockCampaignRepository.create.mockReturnValue(campaign);
       mockCampaignRepository.save.mockResolvedValue(campaign);
 
@@ -356,6 +375,82 @@ describe("CampaignService", () => {
 
       expect(result.uniqueCode).toBeDefined();
       expect(result.uniqueCode).toHaveLength(9);
+    });
+
+    it("should allow a Super Business to create a Matching Point campaign", async () => {
+      const createCampaignDto: CreateCampaignDto = {
+        total_slots: 100,
+        name: "Matching Point Campaign",
+        campaign_type: "matching_point" as any,
+        campaign_message: "Test Message",
+        start_date: new Date(),
+        end_date: new Date(),
+
+        audience_type: "members" as any,
+        banner_url: "test.jpg",
+        business_reward_ids: ["reward-id"],
+        reward_type: "regular" as any,
+        reward_mode: "points" as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
+      };
+
+      const currentUser = {
+        id: "super-business-id",
+        role: Role.Business,
+        isSuperBusiness: true,
+      } as Business;
+
+      const business = { id: "super-business-id", isSuperBusiness: true } as Business;
+      const rewards = [{ id: "reward-id" }] as Reward[];
+      const businessRewards = [
+        { id: "business-reward-id", reward: rewards[0], business: { id: "super-business-id" } },
+      ] as any[];
+      const campaign = { ...createCampaignDto, business, businessRewards };
+
+      mockBusinessRepository.findOneBy.mockResolvedValue(business);
+      mockBusinessRewardRepository.find.mockResolvedValue(businessRewards);
+      mockCampaignRepository.create.mockReturnValue(campaign);
+      mockCampaignRepository.save.mockResolvedValue(campaign);
+
+      const result = await service.create(createCampaignDto, currentUser);
+
+      const { business_reward_ids, ...expectedData } = createCampaignDto;
+      expect(result).toEqual(
+        expect.objectContaining({
+          ...expectedData,
+          business: expect.objectContaining({ id: "super-business-id" }),
+        }),
+      );
+    });
+
+    it("should prevent a regular Business from creating a Matching Point campaign", async () => {
+      const createCampaignDto: CreateCampaignDto = {
+        total_slots: 100,
+        name: "Matching Point Campaign",
+        campaign_type: "matching_point" as any,
+        campaign_message: "Test Message",
+        start_date: new Date(),
+        end_date: new Date(),
+
+        audience_type: "members" as any,
+        banner_url: "test.jpg",
+        business_reward_ids: ["reward-id"],
+        reward_type: "regular" as any,
+        reward_mode: "points" as any,
+        regular_points_threshold: 100,
+        matching_points_threshold: 100,
+      };
+
+      const currentUser = {
+        id: "regular-business-id",
+        role: Role.Business,
+        isSuperBusiness: false,
+      } as Business;
+
+      await expect(service.create(createCampaignDto, currentUser)).rejects.toThrow(
+        "Only Super Businesses can create Matching Point Campaigns.",
+      );
     });
   });
 
@@ -604,6 +699,7 @@ describe("CampaignService", () => {
 
   describe("claimCampaign", () => {
     it("should allow a business to claim a campaign and generate a unique code", async () => {
+      mockBusinessRewardRepository.find.mockResolvedValue([]);
       const campaign = { id: "campaign-1", business: null } as Campaign;
       const business = { id: "business-id" } as Business;
       const businessCampaign = {
@@ -628,6 +724,7 @@ describe("CampaignService", () => {
         [],
         new Date(),
         new Date(),
+        100,
       );
 
       expect(result.uniqueCode).toBeDefined();
@@ -687,11 +784,14 @@ describe("CampaignService", () => {
       (
         mockPointHistoryRepository.createQueryBuilder as jest.Mock
       ).mockReturnValue({
+        leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         groupBy: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        setParameters: jest.fn().mockReturnThis(),
         getRawOne: jest.fn().mockResolvedValue(analytics),
         getRawMany: jest.fn().mockResolvedValue([]),
       });
