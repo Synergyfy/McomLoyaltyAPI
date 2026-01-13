@@ -46,6 +46,7 @@ import {
 } from "../capability/capability.service";
 import { CapabilitiesGuard } from "../capability/guards/capabilities.guard";
 import { CheckPermission } from "../capability/decorators/check-permission.decorator";
+import { PaginatedCampaignResponseDto } from "./dto/paginated-campaign-response.dto";
 import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
 
 @ApiTags("Campaigns")
@@ -310,6 +311,7 @@ export class CampaignController {
   @ApiResponse({
     status: 200,
     description: "Returns a paginated list of public matching point campaigns.",
+    type: PaginatedCampaignResponseDto,
   })
   findPublicMatchingPointCampaigns(@Query() query: PublicCampaignQueryDto) {
     return this.campaignService.findPublicMatchingPointCampaigns(query);
