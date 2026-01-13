@@ -152,6 +152,25 @@ export class CreateRewardDto {
   is_stamps_enabled?: boolean;
 
   @ApiProperty({
+    description: "Whether matching points are enabled for this reward",
+    example: false,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  is_matching_points_enabled?: boolean;
+
+  @ApiProperty({
+    description: "The matching points required for this reward",
+    example: 500,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  matching_points_required?: number;
+
+  @ApiProperty({
     description: "The emoji to use for stamps",
     example: "☕",
     required: false,
