@@ -1221,6 +1221,132 @@ export class CampaignService {
     return result;
   }
 
+  async findPublicMatchingPointCampaigns(
+    query: PublicCampaignQueryDto,
+  ): Promise<PaginatedCampaignResponseDto> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const sortOrder = query.sort || CampaignSortOrder.DESC;
+    const now = new Date();
+
+    const skip = (page - 1) * limit;
+
+    const qbBusiness = this.businessCampaignRepository
+      .createQueryBuilder("campaign")
+      .leftJoin("campaign.business", "business")
+      .innerJoin("campaign.businessRewards", "businessRewards")
+      .select(["campaign.id", "campaign.created_at"])
+      .where("campaign.disabled = :disabled", { disabled: false })
+      .andWhere("campaign.start_date IS NOT NULL")
+      .andWhere("campaign.end_date IS NOT NULL")
+      .andWhere("campaign.start_date <= :now", { now })
+      .andWhere("campaign.end_date >= :now", { now })
+      .andWhere("campaign.matching_points_threshold > 0")
+      .andWhere("campaign.matching_points_disabled_by_admin = :mpDisabled", { mpDisabled: false });
+
+    if (query.sectorId) {
+      qbBusiness.andWhere("business.sector = :sectorId", {
+        sectorId: query.sectorId,
+      });
+    }
+    if (query.categoryId) {
+      qbBusiness.andWhere("business.category = :categoryId", {
+        categoryId: query.categoryId,
+      });
+    }
+    if (query.subCategoryId) {
+      qbBusiness.andWhere("business.subCategory = :subCategoryId", {
+        subCategoryId: query.subCategoryId,
+      });
+    }
+    if (query.search) {
+      qbBusiness.andWhere("campaign.name ILIKE :search", {
+        search: `%${query.search}%`,
+      });
+    }
+
+    const businessCampaignsRaw = await qbBusiness.getMany();
+
+    // Sort
+    const combined = [
+      ...businessCampaignsRaw.map((c) => ({
+        id: c.id,
+        created_at: c.created_at,
+      })),
+    ];
+
+    combined.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortOrder === CampaignSortOrder.ASC
+        ? dateA - dateB
+        : dateB - dateA;
+    });
+
+    const total = combined.length;
+    const paginatedIds = combined.slice(skip, skip + limit);
+
+    // Fetch Full Entities
+    const businessIds = paginatedIds.map((i) => i.id);
+
+    let businessCampaigns: BusinessCampaign[] = [];
+
+    if (businessIds.length > 0) {
+      businessCampaigns = await this.businessCampaignRepository.find({
+        where: { id: In(businessIds) },
+        relations: [
+          "business",
+          "business.sector",
+          "business.category",
+          "business.subCategory",
+          "businessRewards",
+        ],
+      });
+    }
+
+    // Restore Order
+    const resultMap = new Map<string, any>();
+    businessCampaigns.forEach((c) => resultMap.set(c.id, c));
+
+    const data = paginatedIds
+      .map((item) => resultMap.get(item.id))
+      .filter(Boolean)
+      .map((campaign: any) => {
+        // Flatten Business Info
+        if (campaign.business) {
+          campaign.business.sectorName = campaign.business.sector?.name;
+          campaign.business.categoryName = campaign.business.category?.name;
+          campaign.business.subCategoryName =
+            campaign.business.subCategory?.name;
+
+          delete campaign.business.sector;
+          delete campaign.business.category;
+          delete campaign.business.subCategory;
+          delete campaign.business.password;
+          delete campaign.business.total_points_earned;
+          delete campaign.business.total_points_redeemed;
+          delete campaign.business.stripe_customer_id;
+          delete campaign.business.wallet;
+          delete campaign.business.isEmailVerified;
+        }
+        return campaign;
+      });
+
+    const totalPages = Math.ceil(total / limit);
+    const next = page < totalPages ? Number(page) + 1 : null;
+    const previous = page > 1 ? Number(page) - 1 : null;
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next,
+      previous,
+    };
+  }
+
   async getAnalytics(currentUser: User, query: CampaignAnalyticsQueryDto) {
     const { campaignId } = query;
     const businessId = currentUser.id;

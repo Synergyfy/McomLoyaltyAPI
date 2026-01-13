@@ -304,6 +304,17 @@ export class CampaignController {
     );
   }
 
+  @Get("public/matching-point")
+  @Public()
+  @ApiOperation({ summary: "Get all ongoing public matching point campaigns" })
+  @ApiResponse({
+    status: 200,
+    description: "Returns a paginated list of public matching point campaigns.",
+  })
+  findPublicMatchingPointCampaigns(@Query() query: PublicCampaignQueryDto) {
+    return this.campaignService.findPublicMatchingPointCampaigns(query);
+  }
+
   @Get("all/public")
   @Public()
   @ApiOperation({ summary: "Get all public campaigns" })
