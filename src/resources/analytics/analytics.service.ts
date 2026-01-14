@@ -74,7 +74,7 @@ export class AnalyticsService {
           ids: businessCampaignIds,
         })
         .andWhere("ph.type IN (:...types)", {
-          types: [PointHistoryType.EARN, PointHistoryType.MATCHING],
+          types: [PointHistoryType.EARN],
         })
         .getRawOne();
 

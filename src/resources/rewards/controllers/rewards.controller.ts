@@ -192,49 +192,6 @@ export class RewardsController {
     return this.rewardsService.getUnaddedRewards(user.id, page, limit, search);
   }
 
-  @ApiOperation({
-    summary: "Business: Get matching point rewards created by the business",
-    description: "Accessible by Super Businesses. Returns matching point rewards created by the requesting business.",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Returns a paginated list of matching point rewards.",
-    schema: {
-      example: {
-        data: [
-          {
-            id: "uuid",
-            title: "Matching Reward",
-            description: "A reward redeemable with matching points",
-            image: "https://example.com/image.jpg",
-            matching_points_required: 500,
-            is_matching_points_enabled: true,
-            is_points_enabled: false,
-            is_stamps_enabled: false,
-            status: "active",
-            created_at: "2024-01-01T00:00:00Z",
-          },
-        ],
-        total: 1,
-        page: 1,
-        limit: 10,
-        totalPages: 1,
-        next: null,
-        previous: null,
-      },
-    },
-  })
-  @Roles(Role.Business)
-  @ApiBearerAuth()
-  @Get("business/matching-point-rewards")
-  async getMatchingPointRewards(
-    @CurrentUser() user: any,
-    @Query("page") page: number = 1,
-    @Query("limit") limit: number = 10,
-  ) {
-    return this.rewardsService.getMatchingPointRewards(user.id, page, limit);
-  }
-
   @ApiOperation({ summary: "Business: Create a new reward" })
   @ApiResponse({
     status: 201,

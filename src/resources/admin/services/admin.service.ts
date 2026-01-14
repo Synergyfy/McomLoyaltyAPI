@@ -212,7 +212,7 @@ export class AdminService {
             startOfMonth,
           })
           .andWhere("pointHistory.type IN (:...types)", {
-            types: ["EARN", "MATCHING"],
+            types: ["EARN"],
           })
           .select("SUM(pointHistory.points)", "total")
           .getRawOne();
@@ -245,18 +245,6 @@ export class AdminService {
 
   async getStaffs(businessId: string, page: number, limit: number) {
     return this.staffService.findAll(businessId, page, limit);
-  }
-
-  async toggleMatchingPoints(campaignId: string): Promise<Campaign> {
-    const campaign = await this.campaignRepository.findOne({
-      where: { id: campaignId },
-    });
-    if (!campaign) {
-      throw new NotFoundException("Campaign not found");
-    }
-    campaign.matching_points_disabled_by_admin =
-      !campaign.matching_points_disabled_by_admin;
-    return this.campaignRepository.save(campaign);
   }
 
   // Business Management

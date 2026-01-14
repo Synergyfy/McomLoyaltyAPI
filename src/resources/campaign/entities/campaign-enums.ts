@@ -3,7 +3,6 @@ export enum CampaignType {
   REFERRAL = "referral",
   SOCIAL_OR_EMAIL = "social_or_email",
   SPECIAL_OCCASION = "special_occasion",
-  MATCHING_POINT = "matching_point",
 }
 
 export enum AudienceType {
@@ -13,11 +12,7 @@ export enum AudienceType {
   TARGET_WISHLIST = "target_wishlist",
 }
 
-export enum RewardType {
-  REGULAR = "regular",
-  MATCHING = "matching",
-  BOTH = "both",
-}
+
 
 export enum CampaignRewardMode {
   POINTS = "points",

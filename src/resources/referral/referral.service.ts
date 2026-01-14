@@ -15,6 +15,7 @@ import { ReferralAnalyticsDto } from "./dto/referral-analytics.dto";
 import { Business } from "../business/entities/business.entity";
 import { MatchingPointService } from "../matching-point/services/matching-point.service";
 import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
+import { UserType } from "../matching-point/entities/matching-point-redemption.entity";
 
 @Injectable()
 export class ReferralService {
@@ -146,6 +147,7 @@ export class ReferralService {
         // Award matching points
         const matchingPoints = await this.matchingPointService.addPoints(
           referrer.id,
+          UserType.BUSINESS,
           MatchingPointActivityType.REFERRAL,
           `Referral Completed: ${business.name}`,
         );

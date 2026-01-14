@@ -14,7 +14,6 @@ import { Type } from "class-transformer";
 import {
   CampaignType,
   AudienceType,
-  RewardType,
   CampaignRewardMode,
 } from "../entities/campaign-enums";
 
@@ -65,15 +64,6 @@ export class BaseCampaignDto {
   logo_url?: string;
 
   @ApiProperty({
-    description: "The type of reward for the campaign.",
-    enum: RewardType,
-    default: RewardType.REGULAR,
-  })
-  @IsEnum(RewardType)
-  @IsOptional()
-  reward_type: RewardType;
-
-  @ApiProperty({
     description: "The mode of reward for the campaign.",
     enum: CampaignRewardMode,
     default: CampaignRewardMode.POINTS,
@@ -89,14 +79,6 @@ export class BaseCampaignDto {
   @IsOptional()
   @IsInt()
   regular_points_threshold?: number;
-
-  @ApiProperty({
-    description: "The threshold for matching points.",
-    required: false,
-  })
-  @IsOptional()
-  @IsInt()
-  matching_points_threshold?: number;
 
   @ApiProperty({
     description: "The title of the earn point page.",

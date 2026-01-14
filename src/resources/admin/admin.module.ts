@@ -6,7 +6,6 @@ import { AdminController } from "./controllers/admin.controller";
 import { BusinessModule } from "../business/business.module";
 import { StaffModule } from "../staff/staff.module";
 import { HashModule } from "../../common/hash/hash.module";
-import { MatchingPointsService } from "../participant-campaign-balance/services/matching-points.service";
 import { Participant } from "../participant/entities/participant.entity";
 import { PointHistory } from "../participant-campaign-balance/entities/point-history.entity";
 import { Membership } from "../membership/entities/membership.entity";
@@ -36,7 +35,7 @@ import { AdminBusinessController } from "../business/controllers/admin.business.
     CampaignModule,
     ParticipantModule,
   ],
-  providers: [AdminService, MatchingPointsService],
+  providers: [AdminService],
   controllers: [AdminController, AdminBusinessController],
   exports: [AdminService],
 })

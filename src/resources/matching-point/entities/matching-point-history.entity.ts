@@ -2,15 +2,22 @@ import { Entity, Column, ManyToOne, Index } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { AbstractBaseEntity } from "../../../database/entities/base.entity";
 import { Business } from "../../business/entities/business.entity";
+import { Participant } from "../../participant/entities/participant.entity";
 import { MatchingPointActivityType } from "./matching-point-config.entity";
 
 @Entity("matching_point_history")
 @Index(["business", "created_at"])
+@Index(["participant", "created_at"])
 @Index(["business", "activity_type", "created_at"])
+@Index(["participant", "activity_type", "created_at"])
 export class MatchingPointHistory extends AbstractBaseEntity {
   @ApiProperty({ type: () => Business })
-  @ManyToOne(() => Business, { onDelete: "CASCADE" })
+  @ManyToOne(() => Business, { onDelete: "CASCADE", nullable: true })
   business: Business;
+
+  @ApiProperty({ type: () => Participant })
+  @ManyToOne(() => Participant, { onDelete: "CASCADE", nullable: true })
+  participant: Participant;
 
   @ApiProperty({ description: "Points added or removed" })
   @Column({ type: "int" })

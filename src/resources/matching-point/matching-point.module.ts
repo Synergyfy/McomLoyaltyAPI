@@ -5,6 +5,10 @@ import { MatchingPointService } from "./services/matching-point.service";
 import { MatchingPointConfig } from "./entities/matching-point-config.entity";
 import { MatchingPointHistory } from "./entities/matching-point-history.entity";
 import { Business } from "../business/entities/business.entity";
+import { Participant } from "../participant/entities/participant.entity";
+import { Admin } from "../admin/entities/admin.entity";
+import { MatchingPointReward } from "./entities/matching-point-reward.entity";
+import { MatchingPointRedemption } from "./entities/matching-point-redemption.entity";
 import { MailModule } from "../../mail/mail.module";
 
 @Global()
@@ -14,6 +18,10 @@ import { MailModule } from "../../mail/mail.module";
       MatchingPointConfig,
       MatchingPointHistory,
       Business,
+      Participant,
+      Admin,
+      MatchingPointReward,
+      MatchingPointRedemption,
     ]),
     MailModule,
   ],

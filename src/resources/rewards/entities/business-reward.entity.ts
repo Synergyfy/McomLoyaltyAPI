@@ -68,12 +68,6 @@ export class BusinessReward extends AbstractBaseEntity {
   @Column({ default: false })
   is_stamps_enabled: boolean;
 
-  @Column({ default: false })
-  is_matching_points_enabled: boolean;
-
-  @Column({ nullable: true })
-  matching_points_required: number;
-
   @Column({ nullable: true })
   stamp_emoji: string;
 

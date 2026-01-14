@@ -467,7 +467,7 @@ export class ParticipantService {
       )
       .where("ph.participant_id = :participantId", { participantId })
       .setParameters({
-        earnTypes: [PointHistoryType.EARN, PointHistoryType.MATCHING],
+        earnTypes: [PointHistoryType.EARN],
         redeemType: PointHistoryType.REDEEM,
       })
       .getRawOne();

@@ -56,17 +56,26 @@ export class AdminAnalyticsService {
       where: { type: PointHistoryType.REDEEM },
     });
     const totalBusiness = await this.businessRepository.count();
-    const { totalMatchingPoints } = await this.businessRepository
+    const { totalBusinessMatchingPoints } = await this.businessRepository
       .createQueryBuilder("business")
-      .select("SUM(business.referralPoints)", "totalMatchingPoints")
+      .select("SUM(business.matching_points)", "totalBusinessMatchingPoints")
       .getRawOne();
+
+    const { totalParticipantMatchingPoints } = await this.participantRepository
+      .createQueryBuilder("participant")
+      .select("SUM(participant.matching_points)", "totalParticipantMatchingPoints")
+      .getRawOne();
+
+    const totalMatchingPoints =
+      (parseInt(totalBusinessMatchingPoints, 10) || 0) +
+      (parseInt(totalParticipantMatchingPoints, 10) || 0);
 
     return {
       totalCampaigns,
       totalParticipants,
       totalRedemptions,
       totalBusiness,
-      totalMatchingPoints: parseInt(totalMatchingPoints, 10) || 0,
+      totalMatchingPoints,
     };
   }
 
@@ -346,15 +355,8 @@ export class AdminAnalyticsService {
     const [results, total] = await queryBuilder.getManyAndCount();
 
     const data: PointLogItemDto[] = results.map((log) => {
-      const isMatching = log.type === PointHistoryType.MATCHING;
-      // Map MATCHING to EARN for description as per requirement "description (earn or redeem)"
-      // Assuming MATCHING is a form of earning.
-      let description = log.type.toString();
-      if (isMatching) {
-        description = PointHistoryType.EARN;
-      }
-
-      const type = isMatching ? "Matching" : "Regular";
+      const description = log.type.toString();
+      const type = "Regular";
 
       return {
         name: log.participant ? log.participant.name : "Unknown",

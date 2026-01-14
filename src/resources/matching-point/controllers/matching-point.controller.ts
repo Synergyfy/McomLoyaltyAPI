@@ -3,10 +3,14 @@ import {
   Get,
   Put,
   Post,
+  Patch,
+  Delete,
   Body,
   Query,
   UseGuards,
-  Request,
+  Param,
+  ForbiddenException,
+  ParseUUIDPipe,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -19,18 +23,24 @@ import {
 } from "@nestjs/swagger";
 import { MatchingPointService } from "../services/matching-point.service";
 import {
-  MatchingPointActivityType,
   MatchingPointConfig,
 } from "../entities/matching-point-config.entity";
-import { MatchingPointHistory } from "../entities/matching-point-history.entity";
 import { JwtAuthGuard } from "../../../auth/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { Role } from "../../../common/role.enum";
 import { UpdateMatchingPointConfigDto } from "../dto/update-config.dto";
 import { ManualAdjustmentDto } from "../dto/manual-adjustment.dto";
-import { PaginationDto } from "../../../common/dto/pagination.dto";
 import { GetMatchingPointHistoryDto } from "../dto/get-history.dto";
+import { CreateMatchingPointRewardDto } from "../dto/create-matching-point-reward.dto";
+import { UpdateMatchingPointRewardDto } from "../dto/update-matching-point-reward.dto";
+import { CurrentUser } from "../../../common/decorators/current-user.decorator";
+import { PaginationDto } from "../../../common/dto/pagination.dto";
+import { UserType } from "../entities/matching-point-redemption.entity";
+import { MatchingPointReward } from "../entities/matching-point-reward.entity";
+import { Public } from "../../../common/decorators/public.decorator";
+import { GetMatchingPointRewardsFilterDto } from "../dto/get-rewards-filter.dto";
+import { User } from "../../../common/interfaces/user.interface";
 
 @ApiTags("Matching Points")
 @Controller("matching-points")
@@ -38,7 +48,9 @@ import { GetMatchingPointHistoryDto } from "../dto/get-history.dto";
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: "Unauthorized" })
 export class MatchingPointController {
-  constructor(private readonly matchingPointService: MatchingPointService) {}
+  constructor(private readonly matchingPointService: MatchingPointService) { }
+
+  // --- Configuration (Admin) ---
 
   @Get("config")
   @Roles(Role.Admin)
@@ -50,7 +62,6 @@ export class MatchingPointController {
     description: "List of matching point configurations",
     type: [MatchingPointConfig],
   })
-  @ApiForbiddenResponse({ description: "Forbidden - Admin access required" })
   async getAllConfig() {
     return this.matchingPointService.getConfig();
   }
@@ -64,7 +75,6 @@ export class MatchingPointController {
     description: "The updated configuration",
     type: MatchingPointConfig,
   })
-  @ApiForbiddenResponse({ description: "Forbidden - Admin access required" })
   async updateConfig(@Body() updateConfigDto: UpdateMatchingPointConfigDto) {
     return this.matchingPointService.setConfig(
       updateConfigDto.activity_type,
@@ -76,74 +86,153 @@ export class MatchingPointController {
   @Post("adjust")
   @Roles(Role.Admin)
   @ApiOperation({
-    summary: "Manually adjust matching points for a business (Admin only)",
+    summary: "Manually adjust matching points for a user (Admin only)",
   })
   @ApiBody({ type: ManualAdjustmentDto })
-  @ApiResponse({
-    status: 201,
-    description: "Points adjusted successfully",
-    schema: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-      },
-    },
-  })
-  @ApiForbiddenResponse({ description: "Forbidden - Admin access required" })
   async manualAdjustment(@Body() dto: ManualAdjustmentDto) {
     await this.matchingPointService.manualAdjustment(
-      dto.businessId,
+      dto.userId,
+      dto.userType,
       dto.points,
       dto.description,
     );
     return { success: true, message: "Points adjusted successfully" };
   }
 
-  @Get("history")
-  @Roles(Role.Business)
-  @ApiOperation({ summary: "Get matching point history for current business" })
+  // --- Rewards Management ---
+
+  @Post("rewards")
+  @Roles(Role.Admin, Role.Business)
+  @ApiOperation({ summary: "Create a matching point reward" })
+  @ApiResponse({
+    status: 201,
+    description: "Reward created",
+    type: MatchingPointReward,
+  })
+  async createReward(
+    @Body() createDto: CreateMatchingPointRewardDto,
+    @CurrentUser() user: User,
+  ) {
+    const creatorType = user.role === Role.Admin ? "ADMIN" : "SUPER_BUSINESS";
+    return this.matchingPointService.createReward(
+      createDto,
+      user.id,
+      creatorType,
+    );
+  }
+
+  @Get("rewards/public")
+  @Public()
+  @ApiOperation({ summary: "Get all available matching point rewards" })
   @ApiResponse({
     status: 200,
-    description: "Paginated matching point history",
-    schema: {
-      type: "object",
-      properties: {
-        data: {
-          type: "array",
-          items: { $ref: "#/components/schemas/MatchingPointHistory" },
-        },
-        total: { type: "number" },
-        page: { type: "number" },
-        limit: { type: "number" },
-        totalPages: { type: "number" },
-        next: { type: "number", nullable: true },
-        previous: { type: "number", nullable: true },
-      },
-    },
+    description: "Paginated list of rewards",
   })
-  @ApiForbiddenResponse({ description: "Forbidden - Business access required" })
+  async getPublicRewards(
+    @Query() filterDto: GetMatchingPointRewardsFilterDto,
+    @Query("userType") userType?: UserType, // Optional filter
+  ) {
+    const type = userType || UserType.PARTICIPANT;
+    return this.matchingPointService.getPublicRewards(filterDto, type);
+  }
+
+  @Get("rewards/created")
+  @Roles(Role.Admin, Role.Business)
+  @ApiOperation({ summary: "Get rewards created by the current user" })
+  async getCreatorRewards(
+    @Query() filterDto: GetMatchingPointRewardsFilterDto,
+    @CurrentUser() user: User,
+  ) {
+    const creatorType = user.role === Role.Admin ? "ADMIN" : "BUSINESS";
+    return this.matchingPointService.getCreatorRewards(
+      user.id,
+      creatorType,
+      filterDto,
+    );
+  }
+
+  @Get("rewards/:id")
+  @Public()
+  @ApiOperation({ summary: "Get a specific matching point reward" })
+  async getReward(@Param("id", ParseUUIDPipe) id: string) {
+    return this.matchingPointService.getReward(id);
+  }
+
+  @Patch("rewards/:id")
+  @Roles(Role.Admin, Role.Business)
+  @ApiOperation({ summary: "Update a matching point reward" })
+  async updateReward(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() updateDto: UpdateMatchingPointRewardDto,
+    @CurrentUser() user: User,
+  ) {
+    const role = user.role === Role.Admin ? "ADMIN" : "BUSINESS";
+    return this.matchingPointService.updateReward(id, updateDto, user.id, role);
+  }
+
+  @Delete("rewards/:id")
+  @Roles(Role.Admin, Role.Business)
+  @ApiOperation({ summary: "Delete a matching point reward" })
+  async deleteReward(
+    @Param("id", ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
+    const role = user.role === Role.Admin ? "ADMIN" : "BUSINESS";
+    return this.matchingPointService.deleteReward(id, user.id, role);
+  }
+
+  @Patch("rewards/:id/suspend")
+  @Roles(Role.Admin, Role.Business)
+  @ApiOperation({ summary: "Suspend/Unsuspend a matching point reward" })
+  async toggleSuspendReward(
+    @Param("id", ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
+    const role = user.role === Role.Admin ? "ADMIN" : "BUSINESS";
+    return this.matchingPointService.toggleSuspendReward(
+      id,
+      user.id,
+      role,
+    );
+  }
+
+  // --- Redemption ---
+
+  @Post("rewards/:id/redeem")
+  @Roles(Role.Business, Role.Participant)
+  @ApiOperation({ summary: "Redeem a matching point reward" })
+  async redeemReward(
+    @Param("id", ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
+    const userType =
+      user.role === Role.Business ? UserType.BUSINESS : UserType.PARTICIPANT;
+    return this.matchingPointService.redeemReward(id, user.id, userType);
+  }
+
+  // --- User History & Balance ---
+
+  @Get("history")
+  @Roles(Role.Business, Role.Participant)
+  @ApiOperation({ summary: "Get matching point history" })
   async getHistory(
-    @Request() req,
+    @CurrentUser() user: User,
     @Query() queryDto: GetMatchingPointHistoryDto,
   ) {
-    return this.matchingPointService.getHistory(req.user.id, queryDto);
+    const userType =
+      user.role === Role.Business ? UserType.BUSINESS : UserType.PARTICIPANT;
+    return this.matchingPointService.getHistory(user.id, userType, queryDto);
   }
 
   @Get("balance")
-  @Roles(Role.Business)
-  @ApiOperation({ summary: "Get current matching point balance for business" })
-  @ApiResponse({
-    status: 200,
-    description: "Current matching point balance",
-    schema: {
-      type: "object",
-      properties: {
-        matching_points: { type: "number" },
-      },
-    },
-  })
-  async getBalance(@Request() req) {
-    return this.matchingPointService.getMatchingPointsBalance(req.user.id);
+  @Roles(Role.Business, Role.Participant)
+  @ApiOperation({ summary: "Get current matching point balance" })
+  async getBalance(@CurrentUser() user: User) {
+    const userType =
+      user.role === Role.Business ? UserType.BUSINESS : UserType.PARTICIPANT;
+    return this.matchingPointService.getMatchingPointsBalance(
+      user.id,
+      userType,
+    );
   }
 }

@@ -90,7 +90,7 @@ export class RedemptionService {
     campaignId: string,
     redemptionCode?: string | null,
     sourceDescription?: string,
-    redemptionMethod: "points" | "stamps" | "matching_points" | "auto" = "auto",
+    redemptionMethod: "points" | "stamps" | "auto" = "auto",
     transactionManager?: EntityManager,
     idempotencyKey?: string,
   ): Promise<ParticipantCampaignBalance> {
@@ -209,8 +209,7 @@ export class RedemptionService {
 
       let pointsCost = 0;
       let stampsCost = 0;
-      let matchingPointsCost = 0;
-      let resolvedMethod: "points" | "stamps" | "matching_points" = "points";
+      let resolvedMethod: "points" | "stamps" = "points";
 
       const canUseStamps =
         (businessReward?.is_stamps_enabled ||
@@ -222,12 +221,6 @@ export class RedemptionService {
           (!businessReward && reward?.is_points_enabled)) &&
         (businessReward?.points_required !== null ||
           reward?.max_points !== null);
-
-      const canUseMatchingPoints =
-        (businessReward?.is_matching_points_enabled ||
-          (!businessReward && reward?.is_matching_points_enabled)) &&
-        (businessReward?.matching_points_required ||
-          reward?.matching_points_required) > 0;
 
       const participantCampaignBalance = await manager.findOne(
         ParticipantCampaignBalance,
@@ -255,10 +248,6 @@ export class RedemptionService {
           (businessReward
             ? businessReward.points_required
             : reward?.max_points) || 0;
-        const mpCost =
-          (businessReward
-            ? businessReward.matching_points_required
-            : reward?.matching_points_required) || 0;
 
         if (
           canUseStamps &&
@@ -273,20 +262,12 @@ export class RedemptionService {
         ) {
           resolvedMethod = "points";
           pointsCost = ptsCost;
-        } else if (
-          canUseMatchingPoints &&
-          participant.matching_points >= mpCost
-        ) {
-          resolvedMethod = "matching_points";
-          matchingPointsCost = mpCost;
         } else {
           // If neither is sufficient, we pick one to throw a meaningful error
           if (canUseStamps && stpCost > 0) {
             throw new BadRequestException("Not enough stamps for redemption");
           } else if (canUsePoints) {
             throw new BadRequestException("Not enough points for redemption");
-          } else if (canUseMatchingPoints) {
-            throw new BadRequestException("Not enough matching points for redemption");
           } else {
             throw new BadRequestException(
               "No valid redemption method available for this reward",
@@ -311,20 +292,6 @@ export class RedemptionService {
         }
         if (participantCampaignBalance.stamp_balance < stampsCost) {
           throw new BadRequestException("Not enough stamps");
-        }
-      } else if (redemptionMethod === "matching_points") {
-        resolvedMethod = "matching_points";
-        matchingPointsCost =
-          (businessReward
-            ? businessReward.matching_points_required
-            : reward?.matching_points_required) || 0;
-        if (!canUseMatchingPoints) {
-          throw new BadRequestException(
-            "Matching point redemption is disabled for this reward",
-          );
-        }
-        if (participant.matching_points < matchingPointsCost) {
-          throw new BadRequestException("Not enough matching points");
         }
       } else {
         resolvedMethod = "points";
@@ -383,11 +350,6 @@ export class RedemptionService {
           throw new BadRequestException("Not enough stamps");
         }
         participantCampaignBalance.stamp_balance -= stampsCost;
-      } else if (resolvedMethod === "matching_points") {
-        if (participant.matching_points < matchingPointsCost) {
-          throw new BadRequestException("Not enough matching points");
-        }
-        participant.matching_points -= matchingPointsCost;
       }
 
       let voucherCode: string | undefined;
@@ -434,13 +396,11 @@ export class RedemptionService {
 
       let historyType = PointHistoryType.REDEEM;
       if (resolvedMethod === "stamps") historyType = PointHistoryType.STAMP_REDEEM;
-      if (resolvedMethod === "matching_points") historyType = PointHistoryType.MATCHING_REDEEM;
 
       const pointHistory = this.pointHistoryRepository.create({
         type: historyType,
         points: pointsCost,
         stamps: stampsCost,
-        matching_points: matchingPointsCost,
         participant,
         reward: reward,
         initiated_by_staff: staff,

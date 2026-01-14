@@ -10,7 +10,6 @@ import { BusinessCampaign } from "../resources/campaign/entities/business-campai
 import {
   CampaignType,
   AudienceType,
-  RewardType as CampaignRewardType,
 } from "../resources/campaign/entities/campaign-enums";
 import { Category } from "../resources/category/entities/category.entity";
 import { Deal } from "../resources/deal/entities/deal.entity";
@@ -318,7 +317,6 @@ export class SeederService {
           background_color: "#fff",
           total_points_earned: 0,
           total_points_redeemed: 0,
-          reward_type: CampaignRewardType.REGULAR,
         });
 
         // Create custom rewards for this campaign
@@ -380,7 +378,6 @@ export class SeederService {
         background_color: template.background_color,
         total_points_earned: 0,
         total_points_redeemed: 0,
-        reward_type: template.reward_type,
       });
 
       // Create and link BusinessRewards from template to this BusinessCampaign

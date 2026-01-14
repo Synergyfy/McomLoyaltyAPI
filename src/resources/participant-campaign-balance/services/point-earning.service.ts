@@ -100,30 +100,19 @@ export class PointEarningService {
     campaignId: string,
     points: number,
     sourceDescription?: string,
-    transactionManager?: any, // EntityManager
-    recipientType: "Participant" | "Business" = "Participant",
+    transactionManager?: EntityManager,
     idempotencyKey?: string,
-  ): Promise<Participant | Business> {
+  ): Promise<Participant> {
     // 1. Velocity Check (Outside Transaction for speed, tolerant to race)
     const ONE_MINUTE_AGO = new Date(Date.now() - 60 * 1000);
-    // Determine velocity check entity based on recipient type
-    const velocityWhere =
-      recipientType === "Participant"
-        ? {
-            participant: { id: recipientId },
-            created_at: MoreThan(ONE_MINUTE_AGO),
-          }
-        : {
-            beneficiary_business: { id: recipientId },
-            created_at: MoreThan(ONE_MINUTE_AGO),
-          };
-
     const recentTxCount = await this.pointHistoryRepository.count({
-      where: velocityWhere,
+      where: {
+        participant: { id: recipientId },
+        created_at: MoreThan(ONE_MINUTE_AGO),
+      },
     });
 
     if (recentTxCount >= 10) {
-      // Limit: 10 tx per minute
       throw new BadRequestException(
         "Transaction limit exceeded. Please try again later.",
       );
@@ -136,17 +125,11 @@ export class PointEarningService {
       if (idempotencyKey) {
         const existingHistory = await manager.findOne(PointHistory, {
           where: { actionKey: idempotencyKey },
-          relations: ["participant", "beneficiary_business"],
+          relations: ["participant"],
         });
 
-        if (existingHistory) {
-          if (recipientType === "Participant" && existingHistory.participant) {
-            return existingHistory.participant;
-          }
-          if (recipientType === "Business" && existingHistory.beneficiary_business) {
-            return existingHistory.beneficiary_business;
-          }
-          // If type mismatch or data inconsistent, proceed (or throw, but proceeding is safer if key collision is accidental)
+        if (existingHistory && existingHistory.participant) {
+          return existingHistory.participant;
         }
       }
 
@@ -166,14 +149,12 @@ export class PointEarningService {
 
       const activeCampaign = businessCampaign;
 
-      // Check if business matches
-      if (businessCampaign && businessCampaign.business.id !== business.id) {
+      if (businessCampaign.business.id !== business.id) {
         throw new BadRequestException(
           "This campaign does not belong to the performing business",
         );
       }
 
-      // Check Reward Mode
       const isPointsEnabled =
         businessCampaign.reward_mode === CampaignRewardMode.POINTS ||
         businessCampaign.reward_mode === CampaignRewardMode.BOTH ||
@@ -185,14 +166,12 @@ export class PointEarningService {
         );
       }
 
-      // Check Monthly Points Allowance (Business paying for points)
       await this.capabilityService.checkPermission(
         business.id,
         ActionType.AWARD_POINTS,
         { points },
       );
 
-      // Enforce Monthly Point Limit and Deduction Logic
       const membership = await this.membershipService.findOneByBusinessId(
         business.id,
       );
@@ -200,13 +179,12 @@ export class PointEarningService {
         const monthlyAllowance =
           membership.tier.configuration.quotas.monthlyPointsAllowance;
 
-        // Calculate points used this month
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
 
         const pointsUsedResult = await manager
-          .createQueryBuilder(PointHistory, "pointHistory") // Use manager for consistency
+          .createQueryBuilder(PointHistory, "pointHistory")
           .where("pointHistory.business_id = :businessId", {
             businessId: business.id,
           })
@@ -214,7 +192,7 @@ export class PointEarningService {
             startOfMonth,
           })
           .andWhere("pointHistory.type IN (:...types)", {
-            types: ["EARN", "MATCHING"],
+            types: ["EARN"],
           })
           .select("SUM(pointHistory.points)", "total")
           .getRawOne();
@@ -228,7 +206,6 @@ export class PointEarningService {
           monthlyAllowance - pointsUsed,
         );
 
-        // Notification: 80% Allowance Warning (Prepare, don't send yet)
         const usageRatioBefore = pointsUsed / monthlyAllowance;
         const usageRatioAfter = (pointsUsed + points) / monthlyAllowance;
         if (usageRatioBefore < 0.8 && usageRatioAfter >= 0.8) {
@@ -258,23 +235,18 @@ export class PointEarningService {
         }
 
         let pointsToDeduct = points;
-
-        // 1. Deduct from Monthly Allowance
         if (remainingMonthlyAllowance >= pointsToDeduct) {
-          // Covered by monthly allowance
           pointsToDeduct = 0;
         } else {
           pointsToDeduct -= remainingMonthlyAllowance;
         }
 
-        // 2. Deduct from Legacy Extra Points & Packages
         if (pointsToDeduct > 0) {
           const totalLegacyLimit =
             monthlyAllowance + (business.extraPoints || 0);
           const legacyDeficit = pointsUsed + points - totalLegacyLimit;
 
           if (legacyDeficit > 0) {
-            // We need to cover `legacyDeficit` from packages.
             await this.pointPackageService.deductPoints(
               business.id,
               legacyDeficit,
@@ -284,200 +256,107 @@ export class PointEarningService {
         }
       }
 
-      if (
-        (activeCampaign.reward_type === "matching" ||
-          activeCampaign.reward_type === "both") &&
-        activeCampaign.matching_points_disabled_by_admin
-      ) {
-        throw new BadRequestException(
-          "Matching points awards are currently disabled for this campaign.",
-        );
+      const participant = await manager.findOne(Participant, {
+          where: { id: recipientId },
+          lock: { mode: "pessimistic_write" },
+      });
+      if (!participant) {
+          throw new NotFoundException("Participant not found");
       }
 
-      // Handle Recipient Logic
-      if (recipientType === "Business") {
-        // Verify Business has joined the campaign
-        const isJoined = await manager
-          .createQueryBuilder()
-          .select("1")
-          .from("business_campaign_participants", "bcp")
-          .where("bcp.business_campaign_id = :campaignId", { campaignId })
-          .andWhere("bcp.business_id = :recipientId", { recipientId })
-          .getRawOne();
-
-        if (!isJoined) {
+      if (points > 0) {
+          if (
+          activeCampaign.regular_points_threshold !== null &&
+          activeCampaign.total_points_earned + points >
+              activeCampaign.regular_points_threshold
+          ) {
           throw new BadRequestException(
-            "Recipient Business has not joined this campaign.",
+              "Campaign regular points threshold reached.",
           );
-        }
-
-        const recipientBusiness = await manager.findOne(Business, {
-            where: { id: recipientId },
-            lock: { mode: "pessimistic_write" },
-        });
-
-        if (!recipientBusiness) {
-            throw new NotFoundException("Recipient Business not found");
-        }
-
-        // Business always earns matching points in this context
-        // Check threshold if applicable
-        if (
-          activeCampaign.matching_points_threshold !== null &&
-          activeCampaign.total_matching_points_earned + points >
-            activeCampaign.matching_points_threshold
-        ) {
-          throw new BadRequestException(
-            "Campaign matching points threshold reached.",
-          );
-        }
-
-        recipientBusiness.matching_points = Number(recipientBusiness.matching_points) + points;
-        activeCampaign.total_matching_points_earned += points;
-
-        const matchingPointHistory = this.pointHistoryRepository.create({
-          type: PointHistoryType.MATCHING,
-          points,
-          beneficiary_business: recipientBusiness, // Set beneficiary business
-          initiated_by_staff: staff,
-          business: business, // The Super Business awarding
-          description:
-            sourceDescription ||
-            `Matching points for campaign: ${activeCampaign.name} `,
-          actionKey: idempotencyKey, // Set action key
-        });
-
-        if (businessCampaign) {
-          matchingPointHistory.businessCampaign = businessCampaign;
-          if (businessCampaign.campaign) {
-            matchingPointHistory.campaign = businessCampaign.campaign;
           }
-        }
 
-        await manager.save(matchingPointHistory);
-        await manager.save(recipientBusiness);
-        if (businessCampaign) {
-            await manager.save(BusinessCampaign, businessCampaign);
-        }
+          const whereCondition: any = { 
+              participant: { id: recipientId },
+              businessCampaign: { id: campaignId }
+          };
 
-        return recipientBusiness;
-
-      } else {
-        // Participant Recipient (Original Logic)
-        const participant = await manager.findOne(Participant, {
-            where: { id: recipientId },
-            lock: { mode: "pessimistic_write" },
-        });
-        if (!participant) {
-            throw new NotFoundException("Participant not found");
-        }
-
-        if (
-            activeCampaign.reward_type === "regular" ||
-            activeCampaign.reward_type === "both"
-        ) {
-            if (
-            activeCampaign.regular_points_threshold !== null &&
-            activeCampaign.total_points_earned + points >
-                activeCampaign.regular_points_threshold
-            ) {
-            throw new BadRequestException(
-                "Campaign regular points threshold reached.",
-            );
-            }
-
-            const whereCondition: any = { participant: { id: recipientId } };
-            if (businessCampaign) {
-            whereCondition.businessCampaign = { id: campaignId };
-            }
-
-            let participantCampaignBalance = await manager.findOne(
+          let participantCampaignBalance = await manager.findOne(
             ParticipantCampaignBalance,
             {
                 where: whereCondition,
             },
-            );
+          );
 
-            let isNewJoin = false;
-            if (!participantCampaignBalance) {
+          let isNewJoin = false;
+          if (!participantCampaignBalance) {
             participantCampaignBalance =
                 this.participantCampaignBalanceRepository.create({
                 participant,
                 campaign_balance: 0,
                 });
             isNewJoin = true;
-
-            if (businessCampaign) {
-                participantCampaignBalance.businessCampaign = businessCampaign;
-                if (businessCampaign.campaign) {
+            participantCampaignBalance.businessCampaign = businessCampaign;
+            if (businessCampaign.campaign) {
                 participantCampaignBalance.campaign = businessCampaign.campaign;
-                }
             }
-            }
-            participantCampaignBalance.campaign_balance += points;
+          }
+          participantCampaignBalance.campaign_balance += points;
 
-            // Prepare Notification: Campaign Joined
-            if (isNewJoin) {
+          if (isNewJoin) {
             notificationsToSend.push(async () => {
                 try {
                 await this.notificationService.create(
                     "New Campaign Joined",
-                    `Participant ${participant.name} has joined campaign ${businessCampaign ? businessCampaign.name : "Unknown"}.`,
+                    `Participant ${participant.name} has joined campaign ${businessCampaign.name}.`,
                     NotificationType.CAMPAIGN_JOINED,
                     NotificationRecipientType.BUSINESS,
                     business.id,
                     campaignId,
                 );
 
-                if (businessCampaign && businessCampaign.business) {
-                    await this.mailService.sendBusinessActivityEmail(
-                    businessCampaign.business.email,
-                    "JOIN",
-                    0,
-                    participant.name,
-                    "System",
-                    businessCampaign.name,
-                    "Participant joined the campaign",
-                    );
-                }
+                await this.mailService.sendBusinessActivityEmail(
+                businessCampaign.business.email,
+                "JOIN",
+                0,
+                participant.name,
+                "System",
+                businessCampaign.name,
+                "Participant joined the campaign",
+                );
                 } catch (e) {
                 console.error("Failed to send campaign join notification:", e);
                 }
             });
-            }
+          }
 
-            participant.global_total_points += points;
-            activeCampaign.total_points_earned += points;
+          participant.global_total_points += points;
+          activeCampaign.total_points_earned += points;
 
-            // Update business totals
-            if (businessCampaign.business) {
+          if (businessCampaign.business) {
             businessCampaign.business.total_points_earned += points;
             await manager.save(businessCampaign.business);
-            }
+          }
 
-            await manager.save(participantCampaignBalance);
+          await manager.save(participantCampaignBalance);
 
-            const regularPointHistory = this.pointHistoryRepository.create({
+          const regularPointHistory = this.pointHistoryRepository.create({
             type: PointHistoryType.EARN,
             points,
             participant,
             initiated_by_staff: staff,
             business: business,
             description: sourceDescription,
-            actionKey: idempotencyKey, // Set action key
-            });
+            actionKey: idempotencyKey,
+          });
 
-            if (businessCampaign) {
-            regularPointHistory.businessCampaign = businessCampaign;
-            if (businessCampaign.campaign) {
-                regularPointHistory.campaign = businessCampaign.campaign;
-            }
-            }
+          regularPointHistory.businessCampaign = businessCampaign;
+          if (businessCampaign.campaign) {
+              regularPointHistory.campaign = businessCampaign.campaign;
+          }
 
-            await manager.save(regularPointHistory);
+          await manager.save(regularPointHistory);
 
-            // Prepare Notifications: Point Awarded
-            notificationsToSend.push(async () => {
+          notificationsToSend.push(async () => {
             try {
                 await this.notificationService.create(
                 "Points Awarded",
@@ -487,11 +366,6 @@ export class PointEarningService {
                 business.id,
                 campaignId,
                 );
-            } catch (e) {
-                console.error(e);
-            }
-
-            try {
                 await this.notificationService.create(
                 "Points Received",
                 `You received ${points} points from ${business.name}.`,
@@ -500,13 +374,6 @@ export class PointEarningService {
                 participant.id,
                 campaignId,
                 );
-            } catch (e) {
-                console.error(e);
-            }
-
-            // Emails
-            const businessOwner = businessCampaign.business;
-            try {
                 await this.mailService.sendPointsEarnedEmail(
                 participant.email,
                 points,
@@ -514,113 +381,40 @@ export class PointEarningService {
                 businessCampaign.name,
                 participantCampaignBalance.campaign_balance,
                 );
-            } catch (error) {
-                console.error(
-                "Failed to send points earned email to participant:",
-                error,
-                );
-            }
-
-            if (businessOwner) {
-                try {
                 await this.mailService.sendBusinessActivityEmail(
-                    businessOwner.email,
-                    "EARN",
-                    points,
-                    participant.name,
-                    staff ? staff.name : business.name,
-                    businessCampaign.name,
-                    sourceDescription || "Points Awarded",
+                businessCampaign.business.email,
+                "EARN",
+                points,
+                participant.name,
+                staff ? staff.name : business.name,
+                businessCampaign.name,
+                sourceDescription || "Points Awarded",
                 );
-                } catch (error) {
-                console.error(
-                    "Failed to send activity email to business owner:",
-                    error,
-                );
-                }
+            } catch (error) {
+                console.error("Error sending notifications/emails:", error);
             }
-            });
-        }
-
-        if (
-            activeCampaign.reward_type === "matching" ||
-            activeCampaign.reward_type === "both"
-        ) {
-            if (
-            activeCampaign.matching_points_threshold !== null &&
-            activeCampaign.total_matching_points_earned + points >
-                activeCampaign.matching_points_threshold
-            ) {
-            throw new BadRequestException(
-                "Campaign matching points threshold reached.",
-            );
-            }
-
-            participant.matching_points += points;
-            activeCampaign.total_matching_points_earned += points;
-
-            const matchingPointHistory = this.pointHistoryRepository.create({
-            type: PointHistoryType.MATCHING,
-            points,
-            participant,
-            initiated_by_staff: staff,
-            business: business,
-            description:
-                sourceDescription ||
-                `Matching points for campaign: ${activeCampaign.name} `,
-            actionKey: idempotencyKey, // Set action key
-            });
-
-            if (businessCampaign) {
-            matchingPointHistory.businessCampaign = businessCampaign;
-            if (businessCampaign.campaign) {
-                matchingPointHistory.campaign = businessCampaign.campaign;
-            }
-            }
-
-            await manager.save(matchingPointHistory);
-        }
-
-        await manager.save(participant);
-        if (businessCampaign) {
-            await manager.save(BusinessCampaign, businessCampaign);
-        }
-
-        return participant;
+          });
       }
+
+      await manager.save(participant);
+      await manager.save(BusinessCampaign, businessCampaign);
+
+      return participant;
     };
 
-    let result: Participant | Business;
-
+    let result: Participant;
     if (transactionManager) {
       result = await execute(transactionManager);
     } else {
       result = await this.dataSource.transaction(execute);
-
-      // Post-transaction tasks
       try {
-        let businessId = "";
-        if (performerType === "Business") {
-          businessId = performerId;
-        } else {
-          const staff = await this.staffRepository.findOne({
-            where: { id: performerId },
-            relations: ["business"],
-          });
-          if (staff && staff.business) businessId = staff.business.id;
-        }
-
-        if (businessId) {
-          await this.tierProgressionService.checkAndPromote(businessId);
-        }
+        const { business } = await this.findPerformer(performerId, performerType);
+        await this.tierProgressionService.checkAndPromote(business.id);
       } catch (e) {
         console.error("Error checking promotion:", e);
       }
     }
 
-    // Execute side effects (notifications/emails)
-    // We do this async and don't await to avoid blocking response, or await if critical.
-    // Usually best to not block response if possible, but for consistent UX (errors in logs), we can fire and forget.
     Promise.all(notificationsToSend.map((fn) => fn())).catch((e) =>
       console.error("Notification error", e),
     );
@@ -635,25 +429,21 @@ export class PointEarningService {
     campaignId: string,
     stamps: number = 1,
     sourceDescription?: string,
-    transactionManager?: any,
+    transactionManager?: EntityManager,
     idempotencyKey?: string,
-  ): Promise<any> {
+  ): Promise<ParticipantCampaignBalance> {
     const execute = async (manager: EntityManager) => {
-      // Idempotency Check
       if (idempotencyKey) {
         const existingHistory = await manager.findOne(PointHistory, {
           where: { actionKey: idempotencyKey },
-          relations: ["participant", "beneficiary_business"],
+          relations: ["participant"],
         });
 
-        // Since awardStamps returns participantCampaignBalance usually, we might need to fetch it to return.
-        // Or just return the existing history? The controller returns the result.
-        // Let's try to return consistent data.
         if (existingHistory) {
            const balance = await manager.findOne(ParticipantCampaignBalance, {
              where: { participant: { id: participantId }, businessCampaign: { id: campaignId } }
            });
-           return balance;
+           if (balance) return balance;
         }
       }
 
@@ -669,10 +459,7 @@ export class PointEarningService {
 
       const businessCampaign = await manager.findOne(BusinessCampaign, {
         where: { id: campaignId },
-        relations: [
-          "business",
-          "businessRewards",
-        ],
+        relations: ["business", "campaign", "businessRewards"],
       });
 
       if (!businessCampaign)
@@ -695,7 +482,6 @@ export class PointEarningService {
         );
       }
 
-      // Check Quota and Packages
       try {
         await this.capabilityService.checkPermission(
           business.id,
@@ -704,7 +490,6 @@ export class PointEarningService {
         );
       } catch (e) {
         if (e instanceof ForbiddenException) {
-          // Monthly quota exceeded, deduct from packages
           await this.stampPackageService.deductStamps(
             business.id,
             stamps,
@@ -720,7 +505,6 @@ export class PointEarningService {
         }
       }
 
-      // --- Update Campaign Stamp Balance and Log History ---
       let participantCampaignBalance = await manager.findOne(
         ParticipantCampaignBalance,
         {
@@ -752,7 +536,7 @@ export class PointEarningService {
 
       const stampHistory = this.pointHistoryRepository.create({
         type: PointHistoryType.STAMP_EARN,
-        points: 0, // No points for stamp earn history
+        points: 0,
         stamps: stamps,
         participant,
         initiated_by_staff: staff,
@@ -764,9 +548,7 @@ export class PointEarningService {
       });
 
       await manager.save(PointHistory, stampHistory);
-      // ----------------------------------------------------------
 
-      // Notifications
       try {
         await this.notificationService.create(
           "Stamps Awarded",
@@ -797,7 +579,6 @@ export class PointEarningService {
     }
   }
 
-  // Method A: Staff/Business scans Participant
   async awardPointsByScan(
     performerId: string,
     performerType: "Staff" | "Business",
@@ -806,7 +587,6 @@ export class PointEarningService {
     points: number,
     idempotencyKey?: string,
   ) {
-    // Try finding Participant
     const participant = await this.participantRepository.findOne({
       where: { uniqueCode: recipientCode },
     });
@@ -820,44 +600,20 @@ export class PointEarningService {
             points,
             "Awarded by scan",
             undefined,
-            "Participant",
             idempotencyKey,
         );
     }
 
-    // Try finding Business
-    const business = await this.businessRepository.findOne({
-        where: { uniqueCode: recipientCode },
-    });
-
-    if (business) {
-        return this.awardPoints(
-            performerId,
-            performerType,
-            business.id,
-            campaignId,
-            points,
-            "Awarded by scan",
-            undefined,
-            "Business",
-            idempotencyKey,
-        );
-    }
-
-    throw new NotFoundException("Recipient not found (Participant or Business)");
+    throw new NotFoundException("Participant not found");
   }
 
-  // Method C: Dual Code
   async awardPointsDualScan(
     staffOrBusinessCode: string,
     participantCode: string,
     campaignId: string,
     points: number,
   ) {
-    const { staff, business } =
-      await this.findPerformerByCode(staffOrBusinessCode);
-    
-    // Check Participant
+    const { staff, business } = await this.findPerformerByCode(staffOrBusinessCode);
     const participant = await this.participantRepository.findOne({
         where: { uniqueCode: participantCode },
     });
@@ -872,31 +628,10 @@ export class PointEarningService {
             participant.id,
             campaignId,
             points,
-            "Awarded by dual scan",
-            undefined,
-            "Participant"
+            "Awarded by dual scan"
         );
     }
-
-    // Check Business (Recipient)
-    const recipientBusiness = await this.businessRepository.findOne({
-        where: { uniqueCode: participantCode },
-    });
-
-    if (recipientBusiness) {
-         return this.awardPoints(
-            performerId,
-            performerType,
-            recipientBusiness.id,
-            campaignId,
-            points,
-            "Awarded by dual scan",
-            undefined,
-            "Business"
-        );
-    }
-
-    throw new NotFoundException("Recipient not found");
+    throw new NotFoundException("Participant not found");
   }
 
   async awardStampsByScan(

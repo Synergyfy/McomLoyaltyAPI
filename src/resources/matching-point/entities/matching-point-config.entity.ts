@@ -7,6 +7,7 @@ export enum MatchingPointActivityType {
   REFERRAL = "REFERRAL",
   MEMBERSHIP_PAYMENT = "MEMBERSHIP_PAYMENT",
   MANUAL_ADJUSTMENT = "MANUAL_ADJUSTMENT",
+  REWARD_REDEMPTION = "REWARD_REDEMPTION",
 }
 
 @Entity("matching_point_config")

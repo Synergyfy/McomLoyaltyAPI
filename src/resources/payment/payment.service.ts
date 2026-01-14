@@ -35,6 +35,7 @@ import { In } from "typeorm";
 
 import { MatchingPointService } from "../matching-point/services/matching-point.service";
 import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
+import { UserType } from "../matching-point/entities/matching-point-redemption.entity";
 import { WalletService } from "../wallet/wallet.service";
 import { ReferralService } from "../referral/referral.service";
 
@@ -747,6 +748,7 @@ export class PaymentService {
       if (user.role === "business") {
         await this.matchingPointService.addPoints(
           user.id,
+          UserType.BUSINESS,
           MatchingPointActivityType.MEMBERSHIP_PAYMENT,
           `Membership Payment: ${tier.name} (${planType})`,
         );

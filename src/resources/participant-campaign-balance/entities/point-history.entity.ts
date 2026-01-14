@@ -12,8 +12,6 @@ import { Deal } from "../../deal/entities/deal.entity";
 export enum PointHistoryType {
   EARN = "EARN",
   REDEEM = "REDEEM",
-  MATCHING = "MATCHING",
-  MATCHING_REDEEM = "MATCHING_REDEEM",
   PURCHASED_EXTRA = "PURCHASED_EXTRA",
   STAMP_EARN = "STAMP_EARN",
   STAMP_REDEEM = "STAMP_REDEEM",
@@ -30,9 +28,6 @@ export class PointHistory extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   stamps: number;
-
-  @Column({ nullable: true, default: 0 })
-  matching_points: number;
 
   @ManyToOne(() => Participant, (participant) => participant.pointHistories, {
     nullable: true,
@@ -73,10 +68,6 @@ export class PointHistory extends AbstractBaseEntity {
   @ManyToOne(() => Business)
   @JoinColumn({ name: "business_id" })
   business: Business;
-
-  @ManyToOne(() => Business, { nullable: true })
-  @JoinColumn({ name: "beneficiary_business_id" })
-  beneficiary_business: Business;
 
   @Column({ nullable: true })
   actionKey: string;

@@ -123,29 +123,6 @@ export class CampaignController {
     );
   }
 
-  @Post(":id/join")
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(Role.Business)
-  @ApiOperation({
-    summary: "Join a campaign (for businesses)",
-    description: "Accessible by Business Owners. Allows joining a matching point campaign.",
-  })
-  @ApiResponse({
-    status: 201,
-    description: "Successfully joined the campaign.",
-    type: BusinessCampaign,
-  })
-  @ApiResponse({ status: 401, description: "Unauthorized." })
-  @ApiResponse({ status: 404, description: "Campaign not found." })
-  @ApiResponse({ status: 409, description: "Already joined or conflict." })
-  joinCampaign(
-    @Param("id", ParseUUIDPipe) id: string,
-    @CurrentUser() currentUser: Business,
-  ) {
-    return this.campaignService.joinCampaign(currentUser.id, id);
-  }
-
   @Get()
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
@@ -303,18 +280,6 @@ export class CampaignController {
       currentUser,
       query,
     );
-  }
-
-  @Get("public/matching-point")
-  @Public()
-  @ApiOperation({ summary: "Get all ongoing public matching point campaigns" })
-  @ApiResponse({
-    status: 200,
-    description: "Returns a paginated list of public matching point campaigns.",
-    type: PaginatedCampaignResponseDto,
-  })
-  findPublicMatchingPointCampaigns(@Query() query: PublicCampaignQueryDto) {
-    return this.campaignService.findPublicMatchingPointCampaigns(query);
   }
 
   @Get("all/public")

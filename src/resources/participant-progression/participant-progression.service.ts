@@ -18,6 +18,9 @@ import {
   PointHistoryType,
 } from "../participant-campaign-balance/entities/point-history.entity";
 import { Between, LessThan } from "typeorm";
+import { MatchingPointService } from "../matching-point/services/matching-point.service";
+import { MatchingPointActivityType } from "../matching-point/entities/matching-point-config.entity";
+import { UserType } from "../matching-point/entities/matching-point-redemption.entity";
 
 @Injectable()
 export class ParticipantProgressionService {
@@ -33,6 +36,7 @@ export class ParticipantProgressionService {
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly mailService: MailService,
+    private readonly matchingPointService: MatchingPointService,
   ) { }
 
   // --- Action Triggering ---
@@ -127,36 +131,26 @@ export class ParticipantProgressionService {
       finalPoints = Math.floor(points * participant.currentBadge.multiplier);
     }
 
-    participant.matching_points =
-      (participant.matching_points || 0) + finalPoints;
-    await this.participantRepository.save(participant);
-
-    // Record history
-    const history = this.pointHistoryRepository.create({
-      type: PointHistoryType.MATCHING,
-      points: finalPoints,
-      participant,
-      actionKey,
-      description: reason,
-    });
-    await this.pointHistoryRepository.save(history);
-
-    // Send email for points
-    try {
-      await this.mailService.sendMatchingPointsReceivedEmail(
-        participant.email,
+    // Use MatchingPointService to add points and log history (centralized)
+    // We treat this as MANUAL_ADJUSTMENT type or maybe we need a new type like "PROGRESSION_REWARD"?
+    // For now, let's use MANUAL_ADJUSTMENT or create a new one if possible. 
+    // Or reuse CAMPAIGN_CREATION? No.
+    // Let's use MANUAL_ADJUSTMENT for generic system rewards if config allows, 
+    // BUT addPoints requires a config type.
+    // If I use MatchingPointService.addPoints, it relies on config.
+    // But here the points are DYNAMIC (from action definition), not fixed config.
+    // So I should use manualAdjustment method of MatchingPointService which accepts arbitrary points.
+    
+    await this.matchingPointService.manualAdjustment(
+        participantId,
+        UserType.PARTICIPANT,
         finalPoints,
-        reason,
-        participant.matching_points,
-      );
-    } catch (e) {
-      this.logger.error(
-        `Failed to send matching points email to ${participant.email}`,
-        e,
-      );
-    }
+        reason
+    );
 
-    await this.checkAndPromote(participant);
+    // Reload participant to get updated balance for checkAndPromote?
+    // checkAndPromote fetches participant again inside.
+    await this.checkAndPromote(participantId);
   }
 
   // --- Promotion Logic ---

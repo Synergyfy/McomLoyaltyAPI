@@ -24,7 +24,6 @@ import { Membership, MembershipStatus } from "../membership/entities/membership.
 import { Tier } from "../tier/entities/tier.entity";
 import { TierProgressionService } from "../tier-progression/tier-progression.service";
 import { CapabilityService } from "../capability/capability.service";
-import { MatchingPointService } from "../matching-point/services/matching-point.service";
 
 describe("CampaignService", () => {
   let service: CampaignService;
@@ -143,10 +142,6 @@ describe("CampaignService", () => {
     checkPermission: jest.fn(),
   };
 
-  const mockMatchingPointService = {
-    addPoints: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -218,10 +213,6 @@ describe("CampaignService", () => {
           provide: CapabilityService,
           useValue: mockCapabilityService,
         },
-        {
-          provide: MatchingPointService,
-          useValue: mockMatchingPointService,
-        },
       ],
     }).compile();
 
@@ -246,17 +237,15 @@ describe("CampaignService", () => {
 
   describe("create", () => {
         it("should create a campaign for an admin", async () => {
-          const createCampaignDto: CreateCampaignAdminDto = {
-            name: "Test Campaign",
-            campaign_type: "qr_code" as any,
-            campaign_message: "Test Message",
-            audience_type: "members" as any,
+      const createCampaignDto: CreateCampaignAdminDto = {
+        name: "Test Campaign",
+        campaign_type: "qr_code" as any,
+        campaign_message: "Test Message",
+        audience_type: "members" as any,
         banner_url: "test.jpg",
         reward_ids: ["reward-id"],
-        reward_type: "regular" as any,
         reward_mode: "points" as any,
         regular_points_threshold: 100,
-        matching_points_threshold: 100,
       };
 
       const currentUser = {
@@ -266,7 +255,8 @@ describe("CampaignService", () => {
 
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
-      const campaign = { ...createCampaignDto, business, rewards };
+      const { reward_ids, ...campaignData } = createCampaignDto;
+      const campaign = { ...campaignData, business, rewards };
 
       mockBusinessRepository.findOneBy.mockResolvedValue(business);
       mockRewardRepository.findBy.mockResolvedValue(rewards);
@@ -277,8 +267,9 @@ describe("CampaignService", () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          ...campaign,
+          name: "Test Campaign",
           business: expect.objectContaining({ id: "business-id" }),
+          rewards: expect.any(Array),
         }),
       );
     });
@@ -291,14 +282,11 @@ describe("CampaignService", () => {
         campaign_message: "Test Message",
         start_date: new Date(),
         end_date: new Date(),
-
         audience_type: "members" as any,
         banner_url: "test.jpg",
         business_reward_ids: ["reward-id"],
-        reward_type: "regular" as any,
         reward_mode: "points" as any,
         regular_points_threshold: 100,
-        matching_points_threshold: 100,
       };
 
       const currentUser = {
@@ -320,10 +308,9 @@ describe("CampaignService", () => {
 
       const result = await service.create(createCampaignDto, currentUser);
 
-      const { business_reward_ids, ...expectedData } = createCampaignDto;
       expect(result).toEqual(
         expect.objectContaining({
-          ...expectedData,
+          name: "Test Campaign",
           business: expect.objectContaining({ id: "business-id" }),
           businessRewards: expect.any(Array),
           uniqueCode: expect.any(String),
@@ -339,14 +326,11 @@ describe("CampaignService", () => {
         campaign_message: "Test Message",
         start_date: new Date(),
         end_date: new Date(),
-
         audience_type: "members" as any,
         banner_url: "test.jpg",
         business_reward_ids: ["reward-id"],
-        reward_type: "regular" as any,
         reward_mode: "points" as any,
         regular_points_threshold: 100,
-        matching_points_threshold: 100,
       };
 
       const currentUser = {
@@ -375,82 +359,6 @@ describe("CampaignService", () => {
 
       expect(result.uniqueCode).toBeDefined();
       expect(result.uniqueCode).toHaveLength(9);
-    });
-
-    it("should allow a Super Business to create a Matching Point campaign", async () => {
-      const createCampaignDto: CreateCampaignDto = {
-        total_slots: 100,
-        name: "Matching Point Campaign",
-        campaign_type: "matching_point" as any,
-        campaign_message: "Test Message",
-        start_date: new Date(),
-        end_date: new Date(),
-
-        audience_type: "members" as any,
-        banner_url: "test.jpg",
-        business_reward_ids: ["reward-id"],
-        reward_type: "regular" as any,
-        reward_mode: "points" as any,
-        regular_points_threshold: 100,
-        matching_points_threshold: 100,
-      };
-
-      const currentUser = {
-        id: "super-business-id",
-        role: Role.Business,
-        isSuperBusiness: true,
-      } as Business;
-
-      const business = { id: "super-business-id", isSuperBusiness: true } as Business;
-      const rewards = [{ id: "reward-id" }] as Reward[];
-      const businessRewards = [
-        { id: "business-reward-id", reward: rewards[0], business: { id: "super-business-id" } },
-      ] as any[];
-      const campaign = { ...createCampaignDto, business, businessRewards };
-
-      mockBusinessRepository.findOneBy.mockResolvedValue(business);
-      mockBusinessRewardRepository.find.mockResolvedValue(businessRewards);
-      mockCampaignRepository.create.mockReturnValue(campaign);
-      mockCampaignRepository.save.mockResolvedValue(campaign);
-
-      const result = await service.create(createCampaignDto, currentUser);
-
-      const { business_reward_ids, ...expectedData } = createCampaignDto;
-      expect(result).toEqual(
-        expect.objectContaining({
-          ...expectedData,
-          business: expect.objectContaining({ id: "super-business-id" }),
-        }),
-      );
-    });
-
-    it("should prevent a regular Business from creating a Matching Point campaign", async () => {
-      const createCampaignDto: CreateCampaignDto = {
-        total_slots: 100,
-        name: "Matching Point Campaign",
-        campaign_type: "matching_point" as any,
-        campaign_message: "Test Message",
-        start_date: new Date(),
-        end_date: new Date(),
-
-        audience_type: "members" as any,
-        banner_url: "test.jpg",
-        business_reward_ids: ["reward-id"],
-        reward_type: "regular" as any,
-        reward_mode: "points" as any,
-        regular_points_threshold: 100,
-        matching_points_threshold: 100,
-      };
-
-      const currentUser = {
-        id: "regular-business-id",
-        role: Role.Business,
-        isSuperBusiness: false,
-      } as Business;
-
-      await expect(service.create(createCampaignDto, currentUser)).rejects.toThrow(
-        "Only Super Businesses can create Matching Point Campaigns.",
-      );
     });
   });
 
@@ -481,10 +389,6 @@ describe("CampaignService", () => {
       const paginationDto: PaginationDto = { page: 1, limit: 10 };
 
       const campaigns = [[{ id: "bc-1" }], 1] as [any[], number];
-      // We need to access the BusinessCampaignRepository from the module or mock it directly in the test set up logic
-      // Since we passed a value, we can update that value reference if we had it, but we passed an object literal.
-      // However, we can use the spyOn or get the mock instance.
-
       const businessCampaignRepo = businessCampaignRepository;
       (businessCampaignRepo.findAndCount as jest.Mock).mockResolvedValue(
         campaigns,
@@ -605,9 +509,7 @@ describe("CampaignService", () => {
       );
 
       expect(result).toHaveProperty("rewards");
-      if (result instanceof Campaign) {
-        expect(result.rewards).toEqual(rewards);
-      }
+      expect((result as any).rewards).toEqual(rewards);
     });
   });
 

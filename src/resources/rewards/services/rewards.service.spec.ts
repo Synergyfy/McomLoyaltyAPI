@@ -308,46 +308,4 @@ describe("RewardsService", () => {
       ).rejects.toThrow(ForbiddenException);
     });
   });
-
-  describe("createBusinessReward", () => {
-    it("should throw ForbiddenException if non-super business tries to create matching points reward", async () => {
-      const businessId = "biz-1";
-      const business = { id: businessId, isSuperBusiness: false };
-      
-      mockBusinessRepository.findOne.mockResolvedValue(business);
-      
-      const dto: any = {
-        title: "Matching Reward",
-        is_matching_points_enabled: true,
-        matching_points_required: 100,
-        reward_type: RewardType.VOUCHER,
-      };
-
-      await expect(service.createBusinessReward(businessId, dto)).rejects.toThrow(
-        ForbiddenException,
-      );
-    });
-
-    it("should allow super business to create matching points reward", async () => {
-      const businessId = "biz-super";
-      const business = { id: businessId, isSuperBusiness: true };
-      
-      mockBusinessRepository.findOne.mockResolvedValue(business);
-      // Mock membership to avoid BadRequest
-      mockMembershipRepository.findOne.mockResolvedValue(null);
-      
-      const dto: any = {
-        title: "Matching Reward",
-        is_matching_points_enabled: true,
-        matching_points_required: 100,
-        reward_type: RewardType.VOUCHER,
-      };
-
-      mockBusinessRewardRepository.create.mockReturnValue({ ...dto, business });
-      mockBusinessRewardRepository.save.mockResolvedValue({ ...dto, business, id: "new-reward" });
-
-      const result = await service.createBusinessReward(businessId, dto);
-      expect(result).toBeDefined();
-    });
-  });
 });

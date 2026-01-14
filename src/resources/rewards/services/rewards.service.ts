@@ -114,9 +114,9 @@ export class RewardsService {
       imageToUse = emoji || "🎁";
     }
 
-    if (!rest.max_points && !rest.max_stamps_required && !rest.matching_points_required) {
+    if (!rest.max_points && !rest.max_stamps_required) {
       throw new ForbiddenException(
-        "At least one of max_points, max_stamps_required, or matching_points_required must be provided",
+        "At least one of max_points or max_stamps_required must be provided",
       );
     }
 
@@ -211,20 +211,10 @@ export class RewardsService {
       rest.is_stamps_enabled !== undefined
         ? rest.is_stamps_enabled
         : reward.is_stamps_enabled;
-    const isMatchingPointsEnabled =
-      rest.is_matching_points_enabled !== undefined
-        ? rest.is_matching_points_enabled
-        : reward.is_matching_points_enabled;
 
-    if (isMatchingPointsEnabled && !business.isSuperBusiness) {
-      throw new ForbiddenException(
-        "Only Super Businesses can create matching point rewards.",
-      );
-    }
-
-    if (!isPointsEnabled && !isStampsEnabled && !isMatchingPointsEnabled) {
+    if (!isPointsEnabled && !isStampsEnabled) {
       throw new BadRequestException(
-        "At least one of points, stamps, or matching points must be enabled",
+        "At least one of points or stamps must be enabled",
       );
     }
 
@@ -240,22 +230,12 @@ export class RewardsService {
       );
     }
 
-    if (isMatchingPointsEnabled && !reward.is_matching_points_enabled) {
-      throw new BadRequestException(
-        "Matching points are not enabled for this base reward",
-      );
-    }
-
     const pointRequired = isPointsEnabled
       ? rest.points_required || reward.max_points
       : null;
 
     const stampsRequired = isStampsEnabled
       ? rest.stamps_required || reward.max_stamps_required
-      : null;
-
-    const matchingPointsRequired = isMatchingPointsEnabled
-      ? rest.matching_points_required || reward.matching_points_required
       : null;
 
     if (isPointsEnabled && !pointRequired) {
@@ -267,12 +247,6 @@ export class RewardsService {
     if (isStampsEnabled && !stampsRequired) {
       throw new BadRequestException(
         "Stamps required must be specified if stamps are enabled",
-      );
-    }
-
-    if (isMatchingPointsEnabled && !matchingPointsRequired) {
-      throw new BadRequestException(
-        "Matching points required must be specified if matching points are enabled",
       );
     }
 
@@ -297,10 +271,8 @@ export class RewardsService {
       reward,
       points_required: pointRequired,
       stamps_required: stampsRequired,
-      matching_points_required: matchingPointsRequired,
       is_points_enabled: isPointsEnabled,
       is_stamps_enabled: isStampsEnabled,
-      is_matching_points_enabled: isMatchingPointsEnabled,
       status: (rest as any).status || RewardStatus.ACTIVE,
       reward_type: (rest as any).reward_type || reward.reward_type,
       reward_source: (rest as any).reward_source || reward.reward_source,
@@ -332,13 +304,6 @@ export class RewardsService {
 
     const isPointsEnabled = createBusinessRewardDto.is_points_enabled ?? true;
     const isStampsEnabled = createBusinessRewardDto.is_stamps_enabled ?? false;
-    const isMatchingPointsEnabled = createBusinessRewardDto.is_matching_points_enabled ?? false;
-
-    if (isMatchingPointsEnabled && !business.isSuperBusiness) {
-      throw new ForbiddenException(
-        "Only Super Businesses can create matching point rewards.",
-      );
-    }
 
     if (isPointsEnabled && membership && membership.tier) {
       const maxPoints = membership.tier.configuration.quotas.maxRewardPoints;
@@ -428,10 +393,8 @@ export class RewardsService {
       audience,
       points_required,
       stamps_required,
-      matching_points_required: createBusinessRewardDto.matching_points_required,
       is_points_enabled: isPointsEnabled,
       is_stamps_enabled: isStampsEnabled,
-      is_matching_points_enabled: isMatchingPointsEnabled,
       remaining_quantity: createBusinessRewardDto.quantity,
     });
 
@@ -455,16 +418,6 @@ export class RewardsService {
     if (!businessReward) {
       throw new NotFoundException(
         `BusinessReward with ID ${rewardId} not found`,
-      );
-    }
-
-    if (
-      (updateBusinessRewardDto.is_matching_points_enabled ||
-        updateBusinessRewardDto.matching_points_required) &&
-      !businessReward.business.isSuperBusiness
-    ) {
-      throw new ForbiddenException(
-        "Only Super Businesses can manage matching point rewards.",
       );
     }
 
@@ -606,11 +559,6 @@ export class RewardsService {
         addedRewardIds,
       });
     }
-
-    // Filter out Matching Point Rewards from global list
-    queryBuilder.andWhere("reward.is_matching_points_enabled = :falseVal", {
-      falseVal: false,
-    });
 
     if (search) {
       queryBuilder.andWhere("reward.title ILIKE :search", {
@@ -839,36 +787,5 @@ export class RewardsService {
     return this.businessRewardRepository.count({
       where: { business: { id: businessId }, disabled: false },
     });
-  }
-
-  async getMatchingPointRewards(
-    businessId: string,
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<PaginationResult<BusinessReward>> {
-    const [data, total] = await this.businessRewardRepository.findAndCount({
-      where: {
-        business: { id: businessId },
-        is_matching_points_enabled: true,
-      },
-      relations: ["reward"],
-      order: { created_at: "DESC" },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-
-    const totalPages = Math.ceil(total / limit);
-    const next = page < totalPages ? Number(page) + 1 : null;
-    const previous = page > 1 ? Number(page) - 1 : null;
-
-    return {
-      data,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages,
-      next,
-      previous,
-    };
   }
 }
