@@ -130,10 +130,8 @@ export class MatchingPointController {
   })
   async getPublicRewards(
     @Query() filterDto: GetMatchingPointRewardsFilterDto,
-    @Query("userType") userType?: UserType, // Optional filter
   ) {
-    const type = userType || UserType.PARTICIPANT;
-    return this.matchingPointService.getPublicRewards(filterDto, type);
+    return this.matchingPointService.getPublicRewards(filterDto);
   }
 
   @Get("rewards/created")

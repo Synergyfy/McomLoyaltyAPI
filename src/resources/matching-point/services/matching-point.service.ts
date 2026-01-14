@@ -418,24 +418,13 @@ export class MatchingPointService {
 
   async getPublicRewards(
     filterDto: GetMatchingPointRewardsFilterDto,
-    userType: UserType,
   ) {
     const { page = 1, limit = 10 } = filterDto;
     const skip = (page - 1) * limit;
 
-    const audienceFilter = [TargetAudience.BOTH];
-    if (userType === UserType.BUSINESS) {
-      audienceFilter.push(TargetAudience.BUSINESS_ONLY);
-    } else {
-      audienceFilter.push(TargetAudience.PARTICIPANT_ONLY);
-    }
-
     const qb = this.rewardRepository.createQueryBuilder("reward");
     qb.where("reward.is_suspended = :suspended", { suspended: false });
     qb.andWhere("reward.quantity > 0");
-    qb.andWhere("reward.target_audience IN (:...audiences)", {
-      audiences: audienceFilter,
-    });
 
     const now = new Date();
     qb.andWhere(
