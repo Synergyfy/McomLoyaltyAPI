@@ -149,6 +149,22 @@ export class MatchingPointController {
     );
   }
 
+  @Get("rewards/redeemed")
+  @Roles(Role.Business, Role.Participant)
+  @ApiOperation({ summary: "Get redeemed matching point rewards" })
+  async getRedeemedRewards(
+    @CurrentUser() user: User,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    const userType =
+      user.role === Role.Business ? UserType.BUSINESS : UserType.PARTICIPANT;
+    return this.matchingPointService.getRedeemedRewards(
+      user.id,
+      userType,
+      paginationDto,
+    );
+  }
+
   @Get("rewards/:id")
   @Public()
   @ApiOperation({ summary: "Get a specific matching point reward" })

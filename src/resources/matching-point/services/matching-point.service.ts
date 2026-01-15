@@ -564,4 +564,40 @@ export class MatchingPointService {
       return { message: "Reward redeemed successfully", redemption };
     });
   }
+
+  async getRedeemedRewards(
+    userId: string,
+    userType: UserType,
+    paginationDto: PaginationDto,
+  ) {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (userType === UserType.BUSINESS) {
+      where.business = { id: userId };
+    } else {
+      where.participant = { id: userId };
+    }
+
+    const [data, total] = await this.redemptionRepository.findAndCount({
+      where,
+      relations: ["reward"],
+      order: { created_at: "DESC" },
+      skip,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      next: page < totalPages ? Number(page) + 1 : null,
+      previous: page > 1 ? Number(page) - 1 : null,
+    };
+  }
 }
