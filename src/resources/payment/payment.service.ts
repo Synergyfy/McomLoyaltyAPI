@@ -38,6 +38,7 @@ import { MatchingPointActivityType } from "../matching-point/entities/matching-p
 import { UserType } from "../matching-point/entities/matching-point-redemption.entity";
 import { WalletService } from "../wallet/wallet.service";
 import { ReferralService } from "../referral/referral.service";
+import { CentralIntegrationService } from "./central-integration.service";
 
 @Injectable()
 export class PaymentService {
@@ -64,6 +65,7 @@ export class PaymentService {
     private readonly matchingPointService: MatchingPointService,
     private readonly walletService: WalletService,
     private readonly referralService: ReferralService,
+    private readonly centralIntegrationService: CentralIntegrationService,
   ) {}
 
   async initiateStripePayment(
@@ -202,6 +204,16 @@ export class PaymentService {
       if (paymentIntent.metadata.point_package_ids) {
         const packageIds = paymentIntent.metadata.point_package_ids.split(",");
         await this._awardPackages(user.id, packageIds, paymentIntent.id);
+      }
+
+      // Process Cashback
+      if (user.email) {
+        await this.centralIntegrationService.processCashback(
+          user.email,
+          paymentIntent.amount / 100,
+          'MEMBERSHIP_PURCHASE',
+          paymentIntent.id,
+        );
       }
     }
     return { status: paymentIntent.status };
@@ -1152,6 +1164,16 @@ export class PaymentService {
 
       const amount = paymentIntent.amount / 100;
       await this.walletService.topUpWallet(user.id, amount, paymentIntent.id);
+
+      // Process Cashback
+      if (user.email) {
+        await this.centralIntegrationService.processCashback(
+           user.email,
+           amount,
+           'WALLET_TOPUP',
+           paymentIntent.id,
+        );
+      }
 
       return {
         status: "succeeded",

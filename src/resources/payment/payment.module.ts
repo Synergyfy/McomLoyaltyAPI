@@ -1,6 +1,7 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { PaymentService } from "./payment.service";
 import { PaymentController } from "./payment.controller";
+import { CashbackController } from "./cashback.controller";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Tier } from "../tier/entities/tier.entity";
 import { Membership } from "../membership/entities/membership.entity";
@@ -20,6 +21,7 @@ import { BusinessPointPackage } from "../point-package/entities/business-point-p
 import { StampPackage } from "../stamp/entities/stamp-package.entity";
 import { BusinessStampPackage } from "../stamp/entities/business-stamp-package.entity";
 import { WalletModule } from "../wallet/wallet.module";
+import { CentralIntegrationService } from "./central-integration.service";
 
 @Module({
   imports: [
@@ -41,8 +43,8 @@ import { WalletModule } from "../wallet/wallet.module";
     WalletModule,
     ReferralModule,
   ],
-  controllers: [PaymentController],
-  providers: [PaymentService, StripeService, PaypalService],
-  exports: [PaymentService, StripeService, PaypalService],
+  controllers: [PaymentController, CashbackController],
+  providers: [PaymentService, StripeService, PaypalService, CentralIntegrationService],
+  exports: [PaymentService, StripeService, PaypalService, CentralIntegrationService],
 })
 export class PaymentModule {}
