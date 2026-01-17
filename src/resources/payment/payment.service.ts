@@ -39,6 +39,7 @@ import { UserType } from "../matching-point/entities/matching-point-redemption.e
 import { WalletService } from "../wallet/wallet.service";
 import { ReferralService } from "../referral/referral.service";
 import { CentralIntegrationService } from "./central-integration.service";
+import { CashbackEvent } from "../../common/enums/cashback-event.enum";
 
 @Injectable()
 export class PaymentService {
@@ -211,7 +212,7 @@ export class PaymentService {
         await this.centralIntegrationService.processCashback(
           user.email,
           paymentIntent.amount / 100,
-          'MEMBERSHIP_PURCHASE',
+          CashbackEvent.MEMBERSHIP_PURCHASE,
           paymentIntent.id,
         );
       }
@@ -1170,7 +1171,7 @@ export class PaymentService {
         await this.centralIntegrationService.processCashback(
            user.email,
            amount,
-           'WALLET_TOPUP',
+           CashbackEvent.WALLET_TOPUP,
            paymentIntent.id,
         );
       }
