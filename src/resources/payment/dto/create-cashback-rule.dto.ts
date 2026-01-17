@@ -35,6 +35,32 @@ export class CreateCashbackRuleDto {
   isActive?: boolean;
 }
 
+export class CashbackRuleResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty({ enum: Platform })
+  platform: Platform;
+
+  @ApiProperty()
+  eventType: string;
+
+  @ApiProperty({ enum: RewardType })
+  rewardType: RewardType;
+
+  @ApiProperty()
+  rewardValue: number;
+
+  @ApiProperty()
+  isActive: boolean;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
+
 import { PartialType } from '@nestjs/swagger';
 
 export class UpdateCashbackRuleDto extends PartialType(CreateCashbackRuleDto) {}

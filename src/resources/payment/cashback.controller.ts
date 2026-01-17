@@ -6,7 +6,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SkipMembershipCheck } from '../../common/decorators/skip-membership-check.decorator';
-import { CreateCashbackRuleDto, UpdateCashbackRuleDto } from './dto/create-cashback-rule.dto';
+import { CreateCashbackRuleDto, UpdateCashbackRuleDto, CashbackRuleResponseDto } from './dto/create-cashback-rule.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Cashback')
@@ -51,9 +51,14 @@ export class CashbackController {
   @Public()
   @Get('rules')
   @ApiOperation({ summary: 'List platform cashback rules' })
-  @ApiResponse({ status: 200, description: 'List of rules.' })
-  async getRules() {
-      return this.centralService.getRules('MCOM_LOYALTY');
+  @ApiResponse({ status: 200, description: 'List of rules.', type: [CashbackRuleResponseDto] })
+  async getRules(): Promise<CashbackRuleResponseDto[]> {
+      const rules = await this.centralService.getRules('MCOM_LOYALTY');
+      // Filter out adminId from each rule
+      return rules.map(rule => {
+          const { adminId, ...publicRule } = rule;
+          return publicRule;
+      });
   }
 
   @Post('rules')
