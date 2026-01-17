@@ -1040,6 +1040,21 @@ export class PaymentService {
       }
       const [packageId, packageType] = customId.split("|");
 
+      // Process Cashback
+      if (user.email) {
+        const eventType =
+          packageType === "POINT"
+            ? CashbackEvent.POINT_PACKAGE_PURCHASE
+            : CashbackEvent.STAMP_PACKAGE_PURCHASE;
+
+        await this.centralIntegrationService.processCashback(
+          user.email,
+          amount,
+          eventType,
+          result.id,
+        );
+      }
+
       return {
         status: "succeeded",
         packageId: packageId,
@@ -1064,6 +1079,21 @@ export class PaymentService {
       if (paymentIntent.metadata.businessId !== user.id) {
         throw new BadRequestException(
           "Payment belongs to a different business",
+        );
+      }
+
+      // Process Cashback
+      if (user.email) {
+        const eventType =
+          paymentIntent.metadata.packageType === "POINT"
+            ? CashbackEvent.POINT_PACKAGE_PURCHASE
+            : CashbackEvent.STAMP_PACKAGE_PURCHASE;
+
+        await this.centralIntegrationService.processCashback(
+          user.email,
+          paymentIntent.amount / 100,
+          eventType,
+          paymentIntent.id,
         );
       }
 
