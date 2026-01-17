@@ -87,6 +87,16 @@ export class CentralIntegrationService {
       }
   }
 
+  async getEvents() {
+      try {
+          const response = await axios.get(`${this.centralUrl}/cashback/events`);
+          return response.data;
+      } catch (error) {
+          this.logger.error(`Failed to get events: ${error.message}`);
+          throw error;
+      }
+  }
+
   async updateRule(id: string, updateDto: any) {
       try {
           const response = await axios.patch(`${this.centralUrl}/cashback/rules/${id}`, updateDto);
