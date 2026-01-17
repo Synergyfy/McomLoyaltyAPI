@@ -7,6 +7,7 @@ import { Role } from '../../common/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SkipMembershipCheck } from '../../common/decorators/skip-membership-check.decorator';
 import { CreateCashbackRuleDto, UpdateCashbackRuleDto } from './dto/create-cashback-rule.dto';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Cashback')
 @Controller('cashback')
@@ -47,10 +48,11 @@ export class CashbackController {
     return this.centralService.getHistory({ page, limit, email, sort });
   }
 
-  @Get('user/rules')
-  @ApiOperation({ summary: 'List platform cashback rules (User)' })
+  @Public()
+  @Get('rules')
+  @ApiOperation({ summary: 'List platform cashback rules' })
   @ApiResponse({ status: 200, description: 'List of rules.' })
-  async getUserRules() {
+  async getRules() {
       return this.centralService.getRules('MCOM_LOYALTY');
   }
 
@@ -73,14 +75,6 @@ export class CashbackController {
   @ApiResponse({ status: 200, description: 'List of event type strings.' })
   async getEvents() {
       return this.centralService.getEvents();
-  }
-
-  @Get('rules')
-  @Roles(Role.Admin)
-  @ApiOperation({ summary: 'List all cashback rules (Admin)' })
-  @ApiResponse({ status: 200, description: 'List of rules.' })
-  async getRules() {
-      return this.centralService.getRules('MCOM_LOYALTY');
   }
 
   @Patch('rules/:id')
