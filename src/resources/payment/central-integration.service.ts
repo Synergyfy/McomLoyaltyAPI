@@ -77,9 +77,11 @@ export class CentralIntegrationService {
     }
   }
 
-  async getRules() {
+  async getRules(platform?: string) {
       try {
-          const response = await axios.get(`${this.centralUrl}/cashback/rules`);
+          const params: any = {};
+          if (platform) params.platform = platform;
+          const response = await axios.get(`${this.centralUrl}/cashback/rules`, { params });
           return response.data;
       } catch (error) {
           this.logger.error(`Failed to get rules: ${error.message}`);

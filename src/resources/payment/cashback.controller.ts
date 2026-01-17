@@ -27,16 +27,31 @@ export class CashbackController {
   @Get('history')
   @ApiOperation({ summary: 'Get my cashback history' })
   @ApiResponse({ status: 200, description: 'Returns paginated history.' })
-  async getMyHistory(@CurrentUser() user, @Query('page') page = 1, @Query('limit') limit = 10) {
-    return this.centralService.getHistory({ email: user.email, page, limit });
+  async getMyHistory(@CurrentUser() user, @Query('page') page = 1, @Query('limit') limit = 10, @Query('sort') sort = 'DESC') {
+    return this.centralService.getHistory({ email: user.email, page, limit, sort });
   }
 
   @Get('admin/history')
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Get platform cashback history (Admin)' })
   @ApiResponse({ status: 200, description: 'Returns paginated history.' })
-  async getAdminHistory(@Query('page') page = 1, @Query('limit') limit = 10, @Query('email') email?: string) {
-    return this.centralService.getHistory({ platform: 'MCOM_LOYALTY', page, limit, email });
+  async getAdminHistory(@Query('page') page = 1, @Query('limit') limit = 10, @Query('email') email?: string, @Query('sort') sort = 'DESC') {
+    return this.centralService.getHistory({ platform: 'MCOM_LOYALTY', page, limit, email, sort });
+  }
+
+  @Get('admin/global-history')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Get global cashback history (Admin)' })
+  @ApiResponse({ status: 200, description: 'Returns paginated history.' })
+  async getGlobalHistory(@Query('page') page = 1, @Query('limit') limit = 10, @Query('email') email?: string, @Query('sort') sort = 'DESC') {
+    return this.centralService.getHistory({ page, limit, email, sort });
+  }
+
+  @Get('user/rules')
+  @ApiOperation({ summary: 'List platform cashback rules (User)' })
+  @ApiResponse({ status: 200, description: 'List of rules.' })
+  async getUserRules() {
+      return this.centralService.getRules('MCOM_LOYALTY');
   }
 
   @Post('rules')
@@ -65,7 +80,7 @@ export class CashbackController {
   @ApiOperation({ summary: 'List all cashback rules (Admin)' })
   @ApiResponse({ status: 200, description: 'List of rules.' })
   async getRules() {
-      return this.centralService.getRules();
+      return this.centralService.getRules('MCOM_LOYALTY');
   }
 
   @Patch('rules/:id')
