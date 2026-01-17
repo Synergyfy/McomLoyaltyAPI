@@ -53,6 +53,7 @@ export class CashbackController {
   }
 
   @Get('events')
+  @Roles(Role.Admin)
   @ApiOperation({ summary: 'List all valid cashback event types' })
   @ApiResponse({ status: 200, description: 'List of event type strings.' })
   async getEvents() {
