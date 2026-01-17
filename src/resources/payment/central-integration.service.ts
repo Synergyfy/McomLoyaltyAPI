@@ -67,6 +67,16 @@ export class CentralIntegrationService {
     }
   }
 
+  async getHistory(query: any) {
+    try {
+      const response = await axios.get(`${this.centralUrl}/cashback/history`, { params: query });
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to get cashback history: ${error.message}`);
+      return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+    }
+  }
+
   async getRules() {
       try {
           const response = await axios.get(`${this.centralUrl}/cashback/rules`);

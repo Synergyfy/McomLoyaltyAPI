@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { CentralIntegrationService } from './central-integration.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -22,6 +22,21 @@ export class CashbackController {
   async getBalance(@CurrentUser() user) {
     // Assuming user entity has email. If not, handle accordingly.
     return { balance: await this.centralService.getCashbackBalance(user.email) };
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get my cashback history' })
+  @ApiResponse({ status: 200, description: 'Returns paginated history.' })
+  async getMyHistory(@CurrentUser() user, @Query('page') page = 1, @Query('limit') limit = 10) {
+    return this.centralService.getHistory({ email: user.email, page, limit });
+  }
+
+  @Get('admin/history')
+  @Roles(Role.Admin)
+  @ApiOperation({ summary: 'Get platform cashback history (Admin)' })
+  @ApiResponse({ status: 200, description: 'Returns paginated history.' })
+  async getAdminHistory(@Query('page') page = 1, @Query('limit') limit = 10, @Query('email') email?: string) {
+    return this.centralService.getHistory({ platform: 'MCOM_LOYALTY', page, limit, email });
   }
 
   @Post('rules')
