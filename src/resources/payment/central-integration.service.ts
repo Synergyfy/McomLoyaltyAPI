@@ -4,7 +4,7 @@ import axios from 'axios';
 @Injectable()
 export class CentralIntegrationService {
   private readonly logger = new Logger(CentralIntegrationService.name);
-  private readonly centralUrl = process.env.MCOM_CENTRAL_URL || 'http://localhost:3000/api/v1/cashback';
+  private readonly centralUrl = process.env.MCOM_CENTRAL_URL || 'http://localhost:3000/api/v1';
 
   async processCashback(
     userEmail: string,
@@ -24,7 +24,7 @@ export class CentralIntegrationService {
       this.logger.log(`Sending cashback request to central: ${JSON.stringify(payload)}`);
       
       // In a real scenario, we would use HttpService (Axios) to call mcom_central
-      await axios.post(`${this.centralUrl}/process`, payload);
+      await axios.post(`${this.centralUrl}/cashback/process`, payload);
       
       return { success: true };
     } catch (error) {
@@ -48,7 +48,7 @@ export class CentralIntegrationService {
             rewardValue,
             adminId
         };
-        await axios.post(`${this.centralUrl}/rules`, payload);
+        await axios.post(`${this.centralUrl}/cashback/rules`, payload);
         this.logger.log(`Created cashback rule on central: ${JSON.stringify(payload)}`);
         return { success: true };
       } catch (error) {
@@ -59,7 +59,7 @@ export class CentralIntegrationService {
 
   async getCashbackBalance(userEmail: string): Promise<number> {
     try {
-      const response = await axios.get(`${this.centralUrl}/balance`, { params: { email: userEmail } });
+      const response = await axios.get(`${this.centralUrl}/cashback/balance`, { params: { email: userEmail } });
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to get cashback balance: ${error.message}`);
@@ -69,7 +69,7 @@ export class CentralIntegrationService {
 
   async getRules() {
       try {
-          const response = await axios.get(`${this.centralUrl}/rules`);
+          const response = await axios.get(`${this.centralUrl}/cashback/rules`);
           return response.data;
       } catch (error) {
           this.logger.error(`Failed to get rules: ${error.message}`);
@@ -79,7 +79,7 @@ export class CentralIntegrationService {
 
   async updateRule(id: string, updateDto: any) {
       try {
-          const response = await axios.patch(`${this.centralUrl}/rules/${id}`, updateDto);
+          const response = await axios.patch(`${this.centralUrl}/cashback/rules/${id}`, updateDto);
           return response.data;
       } catch (error) {
           this.logger.error(`Failed to update rule: ${error.message}`);
@@ -89,7 +89,7 @@ export class CentralIntegrationService {
 
   async deleteRule(id: string) {
       try {
-          const response = await axios.delete(`${this.centralUrl}/rules/${id}`);
+          const response = await axios.delete(`${this.centralUrl}/cashback/rules/${id}`);
           return response.data;
       } catch (error) {
           this.logger.error(`Failed to delete rule: ${error.message}`);
