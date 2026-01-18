@@ -102,7 +102,7 @@ export interface TierConfig {
   // Pricing overrides for variants
   monthly_price?: number;
   annual_price?: number;
-  quaterly_price?: number;
+  quarterly_price?: number;
   stripe_monthly_price_id?: string;
   stripe_quarterly_price_id?: string;
   stripe_annual_price_id?: string;

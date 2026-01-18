@@ -57,7 +57,7 @@ export class Tier extends AbstractBaseEntity {
 
   @ApiProperty({ description: "Quarterly price", example: 129.99 })
   @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
-  quaterly_price: number;
+  quarterly_price: number;
 
   @ApiProperty({
     description: "List of features",

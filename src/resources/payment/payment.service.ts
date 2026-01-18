@@ -628,7 +628,7 @@ export class PaymentService {
       return tier.annual_price;
     }
     if (planType === PlanType.QUARTERLY) {
-      return tier.quaterly_price;
+      return tier.quarterly_price;
     }
     return tier.monthly_price;
   }
@@ -1039,6 +1039,7 @@ export class PaymentService {
         );
       }
       const [packageId, packageType] = customId.split("|");
+      const amount = parseFloat(purchaseUnit.amount?.value || "0");
 
       // Process Cashback
       if (user.email) {

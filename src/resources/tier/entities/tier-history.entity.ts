@@ -16,7 +16,7 @@ export class TierHistory extends AbstractBaseEntity {
   annual_price: number;
 
   @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
-  quaterly_price: number;
+  quarterly_price: number;
 
   @Column("simple-array")
   features: string[];

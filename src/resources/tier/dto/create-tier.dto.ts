@@ -75,7 +75,7 @@ export class CreateTierDto {
   @IsNotEmpty()
   @ValidateIf((o) => !o.type || o.type === TierType.STANDARD)
   @IsNumber()
-  quaterly_price: number;
+  quarterly_price: number;
 
   @ApiProperty({
     description: "A list of features included in the tier.",
