@@ -91,7 +91,7 @@ export class CentralIntegrationService {
 
   async getEvents() {
       try {
-          const response = await axios.get(`${this.centralUrl}/cashback/events`);
+          const response = await axios.get(`${this.centralUrl}/cashback/events`, { params: { platform: 'MCOM_LOYALTY' } });
           return response.data;
       } catch (error) {
           this.logger.error(`Failed to get events: ${error.message}`);
