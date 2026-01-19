@@ -32,7 +32,12 @@ export class TierService {
 
   private async createHistory(tier: Tier, admin: Admin) {
     const history = this.tierHistoryRepository.create({
-      ...tier,
+      name: tier.name,
+      monthly_price: tier.monthly_price,
+      quarterly_price: tier.quarterly_price,
+      annual_price: tier.annual_price,
+      features: tier.features,
+      status: tier.status,
       tier,
       admin,
     });

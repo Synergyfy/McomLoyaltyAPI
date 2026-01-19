@@ -82,10 +82,10 @@ export class CentralIntegrationService {
           const params: any = {};
           if (platform) params.platform = platform;
           const response = await axios.get(`${this.centralUrl}/cashback/rules`, { params });
-          return response.data;
+          return response.data || [];
       } catch (error) {
-          this.logger.error(`Failed to get rules: ${error.message}`);
-          throw error;
+          this.logger.error(`Failed to get rules from central: ${error.message}`);
+          return []; // Return empty array to prevent 500 error on public endpoint
       }
   }
 
