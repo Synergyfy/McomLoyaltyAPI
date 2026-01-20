@@ -76,7 +76,7 @@ export class BusinessService {
     private readonly mailService: MailService,
     private readonly walletService: WalletService,
     private readonly stampPackageService: StampPackageService,
-  ) { }
+  ) {}
 
   private async generateAffiliateCode(): Promise<string> {
     let affiliateCode: string;
@@ -547,18 +547,24 @@ export class BusinessService {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const totalStampsAwardedResult = await this.pointHistoryRepository.sum("stamps", {
-      business: { id: businessId },
-      type: PointHistoryType.STAMP_EARN,
-      created_at: MoreThanOrEqual(startOfMonth),
-    });
+    const totalStampsAwardedResult = await this.pointHistoryRepository.sum(
+      "stamps",
+      {
+        business: { id: businessId },
+        type: PointHistoryType.STAMP_EARN,
+        created_at: MoreThanOrEqual(startOfMonth),
+      },
+    );
     const totalStampsAwarded = totalStampsAwardedResult || 0;
 
-    const packageStampsSpentResult = await this.pointHistoryRepository.sum("stamps", {
-      business: { id: businessId },
-      type: PointHistoryType.BUSINESS_STAMP_SPENT,
-      created_at: MoreThanOrEqual(startOfMonth),
-    });
+    const packageStampsSpentResult = await this.pointHistoryRepository.sum(
+      "stamps",
+      {
+        business: { id: businessId },
+        type: PointHistoryType.BUSINESS_STAMP_SPENT,
+        created_at: MoreThanOrEqual(startOfMonth),
+      },
+    );
     const packageStampsSpent = packageStampsSpentResult || 0;
 
     // Allowance used is total awarded minus what was covered by packages

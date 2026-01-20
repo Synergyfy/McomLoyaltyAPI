@@ -6,28 +6,28 @@ import { ApiProperty } from "@nestjs/swagger";
 
 @Entity("training_videos")
 export class TrainingVideo extends AbstractBaseEntity {
-    @ApiProperty()
-    @Column()
-    title: string;
+  @ApiProperty()
+  @Column()
+  title: string;
 
-    @ApiProperty({ enum: TargetAudience })
-    @Column({ type: "enum", enum: TargetAudience })
-    target_audience: TargetAudience;
+  @ApiProperty({ enum: TargetAudience })
+  @Column({ type: "enum", enum: TargetAudience })
+  target_audience: TargetAudience;
 
-    @ApiProperty()
-    @Column("text")
-    description: string;
+  @ApiProperty()
+  @Column("text")
+  description: string;
 
-    @ApiProperty()
-    @Column()
-    video_url: string;
+  @ApiProperty()
+  @Column()
+  video_url: string;
 
-    @ApiProperty({ required: false })
-    @Column({ nullable: true })
-    cover_image: string;
+  @ApiProperty({ required: false })
+  @Column({ nullable: true })
+  cover_image: string;
 
-    @ApiProperty({ type: () => Tier, isArray: true })
-    @ManyToMany(() => Tier)
-    @JoinTable({ name: "training_video_tiers" })
-    targetTiers: Tier[];
+  @ApiProperty({ type: () => Tier, isArray: true })
+  @ManyToMany(() => Tier)
+  @JoinTable({ name: "training_video_tiers" })
+  targetTiers: Tier[];
 }

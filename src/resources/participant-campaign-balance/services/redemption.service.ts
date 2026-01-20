@@ -102,10 +102,13 @@ export class RedemptionService {
         });
 
         if (existingHistory) {
-           const balance = await manager.findOne(ParticipantCampaignBalance, {
-             where: { participant: { id: participantId }, businessCampaign: { id: campaignId } }
-           });
-           return balance;
+          const balance = await manager.findOne(ParticipantCampaignBalance, {
+            where: {
+              participant: { id: participantId },
+              businessCampaign: { id: campaignId },
+            },
+          });
+          return balance;
         }
       }
 
@@ -395,7 +398,8 @@ export class RedemptionService {
       }
 
       let historyType = PointHistoryType.REDEEM;
-      if (resolvedMethod === "stamps") historyType = PointHistoryType.STAMP_REDEEM;
+      if (resolvedMethod === "stamps")
+        historyType = PointHistoryType.STAMP_REDEEM;
 
       const pointHistory = this.pointHistoryRepository.create({
         type: historyType,

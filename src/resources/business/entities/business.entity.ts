@@ -1,4 +1,12 @@
-import { Entity, Column, ManyToOne, OneToMany, Index, OneToOne, ManyToMany } from "typeorm";
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  Index,
+  OneToOne,
+  ManyToMany,
+} from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude } from "class-transformer";
 import { AbstractBaseEntity } from "../../../database/entities/base.entity";
@@ -251,6 +259,9 @@ export class Business extends AbstractBaseEntity {
   @OneToMany(() => Network, (network) => network.business)
   network: Network[];
 
-  @ManyToMany(() => BusinessCampaign, (campaign) => campaign.participatingBusinesses)
+  @ManyToMany(
+    () => BusinessCampaign,
+    (campaign) => campaign.participatingBusinesses,
+  )
   joinedCampaigns: BusinessCampaign[];
 }

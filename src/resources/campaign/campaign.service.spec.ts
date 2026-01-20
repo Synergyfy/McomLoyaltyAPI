@@ -19,7 +19,10 @@ import { Staff } from "../staff/entities/staff.entity";
 import { WishlistAggregate } from "../wishlist/entities/wishlist-aggregate.entity";
 import { WishlistItem } from "../wishlist/entities/wishlist-item.entity";
 import { MailService } from "src/mail/mail.service";
-import { Membership, MembershipStatus } from "../membership/entities/membership.entity";
+import {
+  Membership,
+  MembershipStatus,
+} from "../membership/entities/membership.entity";
 
 import { Tier } from "../tier/entities/tier.entity";
 import { TierProgressionService } from "../tier-progression/tier-progression.service";
@@ -124,11 +127,12 @@ describe("CampaignService", () => {
   const mockMembershipRepository = {
     findOne: jest.fn(),
     find: jest.fn().mockResolvedValue([
-      { status: MembershipStatus.ACTIVE, expires_at: new Date(Date.now() + 10000000) }
+      {
+        status: MembershipStatus.ACTIVE,
+        expires_at: new Date(Date.now() + 10000000),
+      },
     ]),
   };
-
-
 
   const mockTierRepository = {
     findOneBy: jest.fn(),
@@ -236,7 +240,7 @@ describe("CampaignService", () => {
   });
 
   describe("create", () => {
-        it("should create a campaign for an admin", async () => {
+    it("should create a campaign for an admin", async () => {
       const createCampaignDto: CreateCampaignAdminDto = {
         name: "Test Campaign",
         campaign_type: "qr_code" as any,
@@ -297,7 +301,11 @@ describe("CampaignService", () => {
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
       const businessRewards = [
-        { id: "business-reward-id", reward: rewards[0], business: { id: "business-id" } },
+        {
+          id: "business-reward-id",
+          reward: rewards[0],
+          business: { id: "business-id" },
+        },
       ] as any[];
       const campaign = { ...createCampaignDto, business, businessRewards };
 
@@ -341,7 +349,11 @@ describe("CampaignService", () => {
       const business = { id: "business-id" } as Business;
       const rewards = [{ id: "reward-id" }] as Reward[];
       const businessRewards = [
-        { id: "business-reward-id", reward: rewards[0], business: { id: "business-id" } },
+        {
+          id: "business-reward-id",
+          reward: rewards[0],
+          business: { id: "business-id" },
+        },
       ] as any[];
       const campaign = {
         ...createCampaignDto,

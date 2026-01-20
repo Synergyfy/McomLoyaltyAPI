@@ -62,12 +62,14 @@ import {
   ActionType,
 } from "../capability/capability.service";
 import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
-import { Membership, MembershipStatus } from "../membership/entities/membership.entity";
+import {
+  Membership,
+  MembershipStatus,
+} from "../membership/entities/membership.entity";
 import { ParticipantCampaignBalance } from "../participant-campaign-balance/entities/participant-campaign-balance.entity";
 
 @Injectable()
 export class CampaignService {
-
   constructor(
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
@@ -100,8 +102,7 @@ export class CampaignService {
     private readonly tierProgressionService: TierProgressionService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-  ) {
-  }
+  ) {}
 
   async create(
     createCampaignDto: CreateCampaignDto | CreateCampaignAdminDto,
@@ -169,12 +170,20 @@ export class CampaignService {
       const { business_reward_ids, ...campaignData } =
         createCampaignDto as CreateCampaignDto;
 
-      if (campaignData.total_slots === undefined || campaignData.total_slots === null) {
-        throw new BadRequestException("Total slots must be defined for a business campaign.");
+      if (
+        campaignData.total_slots === undefined ||
+        campaignData.total_slots === null
+      ) {
+        throw new BadRequestException(
+          "Total slots must be defined for a business campaign.",
+        );
       }
 
       if (campaignData.end_date) {
-        await this.validateCampaignEndDate(currentUser.id, campaignData.end_date);
+        await this.validateCampaignEndDate(
+          currentUser.id,
+          campaignData.end_date,
+        );
       }
 
       // Business creating a campaign -> BusinessCampaign
@@ -556,11 +565,7 @@ export class CampaignService {
   ): Promise<Campaign | BusinessCampaign> {
     const businessCampaign = await this.businessCampaignRepository.findOne({
       where: { id },
-      relations: [
-        "business",
-        "campaign",
-        "businessRewards",
-      ],
+      relations: ["business", "campaign", "businessRewards"],
     });
 
     if (businessCampaign) {
@@ -719,21 +724,30 @@ export class CampaignService {
       }
 
       // --- Business Logic Restrictions ---
-      if (currentUser.role === Role.Business && campaign instanceof BusinessCampaign) {
+      if (
+        currentUser.role === Role.Business &&
+        campaign instanceof BusinessCampaign
+      ) {
         const now = new Date();
         const isExpired = new Date(campaign.end_date) < now;
 
         if (campaignData.end_date) {
-          await this.validateCampaignEndDate(currentUser.id, campaignData.end_date);
+          await this.validateCampaignEndDate(
+            currentUser.id,
+            campaignData.end_date,
+          );
         }
 
         if (campaignData.remaining_slots !== undefined) {
-          throw new BadRequestException("Businesses cannot edit remaining_slots directly.");
+          throw new BadRequestException(
+            "Businesses cannot edit remaining_slots directly.",
+          );
         }
 
-        const participantCount = await this.participantCampaignBalanceRepository.count({
-          where: { businessCampaign: { id } },
-        });
+        const participantCount =
+          await this.participantCampaignBalanceRepository.count({
+            where: { businessCampaign: { id } },
+          });
         const hasParticipants = participantCount > 0;
 
         if (campaignData.total_slots !== undefined) {
@@ -749,7 +763,9 @@ export class CampaignService {
           if (campaignData.start_date) {
             const nextStartDate = new Date(campaignData.start_date);
             if (nextStartDate < now) {
-              throw new BadRequestException("New start date must not be in the past.");
+              throw new BadRequestException(
+                "New start date must not be in the past.",
+              );
             }
           }
         } else {
@@ -777,13 +793,17 @@ export class CampaignService {
     }
 
     // Capture old total slots for sync
-    const oldTotalSlots = campaign instanceof BusinessCampaign ? campaign.total_slots : 0;
+    const oldTotalSlots =
+      campaign instanceof BusinessCampaign ? campaign.total_slots : 0;
 
     Object.assign(campaign, campaignData);
 
     if (campaign instanceof BusinessCampaign) {
       if (campaignData.total_slots !== undefined) {
-        if (campaign.remaining_slots === null || campaign.remaining_slots === undefined) {
+        if (
+          campaign.remaining_slots === null ||
+          campaign.remaining_slots === undefined
+        ) {
           campaign.remaining_slots = campaignData.total_slots;
         } else {
           // Sync remaining_slots if total_slots changed
@@ -850,9 +870,10 @@ export class CampaignService {
       throw new NotFoundException("Business campaign not found");
     }
 
-    const participantCount = await this.participantCampaignBalanceRepository.count({
-      where: { businessCampaign: { id } },
-    });
+    const participantCount =
+      await this.participantCampaignBalanceRepository.count({
+        where: { businessCampaign: { id } },
+      });
 
     const now = new Date();
     const isExpired = new Date(businessCampaign.end_date) < now;
@@ -1023,10 +1044,10 @@ export class CampaignService {
     const page = query.page || 1;
     const limit = query.limit || 10;
     const sort = query.sort || CampaignSortOrder.DESC;
-    const sectorId = query.sectorId || '';
-    const categoryId = query.categoryId || '';
-    const subCategoryId = query.subCategoryId || '';
-    const search = query.search || '';
+    const sectorId = query.sectorId || "";
+    const categoryId = query.categoryId || "";
+    const subCategoryId = query.subCategoryId || "";
+    const search = query.search || "";
 
     const skip = (page - 1) * limit;
     const sortOrder = query.sort || CampaignSortOrder.DESC;
@@ -1242,7 +1263,9 @@ export class CampaignService {
     }
 
     if (total_slots === undefined || total_slots === null) {
-      throw new BadRequestException("Total slots must be defined when claiming a campaign.");
+      throw new BadRequestException(
+        "Total slots must be defined when claiming a campaign.",
+      );
     }
 
     // Optional: Check if the number of rewards exceeds the template's reward count?
@@ -1358,7 +1381,7 @@ export class CampaignService {
     const redemptionRate =
       analytics.total_participants > 0
         ? (analytics.total_rewards_redeemed / analytics.total_participants) *
-        100
+          100
         : 0;
 
     return {
@@ -1550,7 +1573,9 @@ export class CampaignService {
     if (campaign instanceof BusinessCampaign) {
       return campaign.businessRewards ? campaign.businessRewards.length : 0;
     }
-    return (campaign as Campaign).rewards ? (campaign as Campaign).rewards.length : 0;
+    return (campaign as Campaign).rewards
+      ? (campaign as Campaign).rewards.length
+      : 0;
   }
 
   async countTotalCampaigns(userId: string): Promise<number> {
@@ -1621,7 +1646,9 @@ export class CampaignService {
   }
 
   private async validateCampaignEndDate(businessId: string, endDate: Date) {
-    const business = await this.businessRepository.findOneBy({ id: businessId });
+    const business = await this.businessRepository.findOneBy({
+      id: businessId,
+    });
     if (business && business.isSuperBusiness) return;
 
     const activeMemberships = await this.membershipRepository.find({

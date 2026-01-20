@@ -46,4 +46,4 @@ import { Membership } from "../membership/entities/membership.entity";
   providers: [CampaignService],
   exports: [CampaignService],
 })
-export class CampaignModule { }
+export class CampaignModule {}

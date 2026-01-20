@@ -96,7 +96,7 @@ export class SeederService {
     private readonly couponRepository: Repository<Coupon>,
     @InjectRepository(PaymentHistory)
     private readonly paymentHistoryRepository: Repository<PaymentHistory>,
-  ) { }
+  ) {}
 
   async seed() {
     await this.clearDatabase();
@@ -424,7 +424,7 @@ export class SeederService {
           participants[Math.floor(Math.random() * participants.length)];
         const bizCampaign =
           allBusinessCampaigns[
-          Math.floor(Math.random() * allBusinessCampaigns.length)
+            Math.floor(Math.random() * allBusinessCampaigns.length)
           ];
 
         // Check if already joined

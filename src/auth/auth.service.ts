@@ -52,7 +52,7 @@ export class AuthService {
     @InjectRepository(Network)
     private readonly networkRepository: Repository<Network>,
     private readonly progressionService: ParticipantProgressionService,
-  ) { }
+  ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.userService.findOne(email);

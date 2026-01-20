@@ -1052,7 +1052,12 @@ export class GroupCircleService {
       .getMany();
   }
 
-  async findOneNetwork(id: string, userId: string, email: string, role: string) {
+  async findOneNetwork(
+    id: string,
+    userId: string,
+    email: string,
+    role: string,
+  ) {
     const networkIds = await this.resolveNetworkIds(userId, email, role);
     const circle = await this.circleRepo.findOne({
       where: { id },
@@ -1086,9 +1091,9 @@ export class GroupCircleService {
     const senderMember = circle.members.find((m) =>
       networkIds.includes(m.network.id),
     );
-    
+
     if (!senderMember)
-        throw new BadRequestException("You are not a member of this circle");
+      throw new BadRequestException("You are not a member of this circle");
 
     let type = GroupMessageType.GROUP;
     let recipientName = null;

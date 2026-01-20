@@ -37,9 +37,7 @@ import { CreateSuperBusinessDto } from "../dto/create-super-business.dto";
 @UseGuards(RolesGuard)
 @Roles(Role.Admin)
 export class AdminController {
-  constructor(
-    private readonly adminService: AdminService,
-  ) {}
+  constructor(private readonly adminService: AdminService) {}
 
   @Public()
   @Post("signup")

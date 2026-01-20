@@ -63,7 +63,10 @@ export class AdminAnalyticsService {
 
     const { totalParticipantMatchingPoints } = await this.participantRepository
       .createQueryBuilder("participant")
-      .select("SUM(participant.matching_points)", "totalParticipantMatchingPoints")
+      .select(
+        "SUM(participant.matching_points)",
+        "totalParticipantMatchingPoints",
+      )
       .getRawOne();
 
     const totalMatchingPoints =

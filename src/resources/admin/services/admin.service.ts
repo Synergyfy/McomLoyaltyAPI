@@ -50,7 +50,7 @@ export class AdminService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     @InjectRepository(Membership)
     private readonly membershipRepository: Repository<Membership>,
-  ) { }
+  ) {}
 
   async createSuperBusiness(createSuperBusinessDto: CreateSuperBusinessDto) {
     return this.businessService.create(createSuperBusinessDto, true);

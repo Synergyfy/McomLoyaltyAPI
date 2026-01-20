@@ -513,13 +513,13 @@ export class QrPlaquesService {
 
     if (role === "Network") {
       if (!email) return [];
-      
+
       const networks = await this.networkRepository.find({
         where: { email: email },
       });
       networkIds = networks.map((n) => n.id);
     }
-    
+
     if (networkIds.length === 0) return [];
 
     return this.qrPlaqueRepository.find({

@@ -32,7 +32,7 @@ export class BusinessCampaignController {
   constructor(
     private readonly campaignService: CampaignService,
     private readonly capabilityService: CapabilityService,
-  ) { }
+  ) {}
 
   @Get("claimable")
   @ApiOperation({ summary: "Get all claimable campaigns for a business" })

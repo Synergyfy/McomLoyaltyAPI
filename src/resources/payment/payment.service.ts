@@ -1200,10 +1200,10 @@ export class PaymentService {
       // Process Cashback
       if (user.email) {
         await this.centralIntegrationService.processCashback(
-           user.email,
-           amount,
-           CashbackEvent.WALLET_TOPUP,
-           paymentIntent.id,
+          user.email,
+          amount,
+          CashbackEvent.WALLET_TOPUP,
+          paymentIntent.id,
         );
       }
 

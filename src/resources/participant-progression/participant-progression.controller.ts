@@ -33,7 +33,7 @@ import { ParticipantProgressionResponseDto } from "./dto/participant-progression
 export class ParticipantProgressionController {
   constructor(
     private readonly progressionService: ParticipantProgressionService,
-  ) { }
+  ) {}
 
   // --- Badges ---
 
@@ -128,7 +128,9 @@ export class ParticipantProgressionController {
 
   @Get("my-progression")
   @Roles(Role.Participant)
-  @ApiOperation({ summary: "Get the current participant's progression details" })
+  @ApiOperation({
+    summary: "Get the current participant's progression details",
+  })
   @ApiResponse({
     status: 200,
     description: "Returns detailed badge progression and requirements.",

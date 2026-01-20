@@ -6,7 +6,14 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Like, In, SelectQueryBuilder, DataSource, EntityManager } from "typeorm";
+import {
+  Repository,
+  Like,
+  In,
+  SelectQueryBuilder,
+  DataSource,
+  EntityManager,
+} from "typeorm";
 import {
   MatchingPointConfig,
   MatchingPointActivityType,
@@ -51,7 +58,7 @@ export class MatchingPointService {
     private readonly adminRepository: Repository<Admin>,
     private readonly mailService: MailService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     // Seed configs
@@ -173,9 +180,12 @@ export class MatchingPointService {
           lock: { mode: "pessimistic_write" },
         });
         if (!participant) {
-          throw new NotFoundException(`Participant with ID ${userId} not found`);
+          throw new NotFoundException(
+            `Participant with ID ${userId} not found`,
+          );
         }
-        participant.matching_points = (participant.matching_points || 0) + points;
+        participant.matching_points =
+          (participant.matching_points || 0) + points;
         if (participant.matching_points < 0) participant.matching_points = 0;
         await manager.save(participant);
         balanceAfter = participant.matching_points;
@@ -194,12 +204,19 @@ export class MatchingPointService {
 
       // Async side effect
       if (points > 0) {
-        this.mailService.sendMatchingPointsReceivedEmail(
-          email,
-          points,
-          description,
-          balanceAfter,
-        ).catch(e => this.logger.error(`Failed to send matching points email to ${email}`, e.stack));
+        this.mailService
+          .sendMatchingPointsReceivedEmail(
+            email,
+            points,
+            description,
+            balanceAfter,
+          )
+          .catch((e) =>
+            this.logger.error(
+              `Failed to send matching points email to ${email}`,
+              e.stack,
+            ),
+          );
       }
 
       return balanceAfter;
@@ -314,13 +331,8 @@ export class MatchingPointService {
 
     // Check ownership
     if (userRole === "BUSINESS") {
-      if (
-        !reward.creatorBusiness ||
-        reward.creatorBusiness.id !== userId
-      ) {
-        throw new ForbiddenException(
-          "You can only edit rewards you created.",
-        );
+      if (!reward.creatorBusiness || reward.creatorBusiness.id !== userId) {
+        throw new ForbiddenException("You can only edit rewards you created.");
       }
     }
 
@@ -342,7 +354,9 @@ export class MatchingPointService {
 
     if (userRole === "BUSINESS") {
       if (!reward.creatorBusiness || reward.creatorBusiness.id !== userId) {
-        throw new ForbiddenException("You can only delete rewards you created.");
+        throw new ForbiddenException(
+          "You can only delete rewards you created.",
+        );
       }
     }
 
@@ -363,7 +377,9 @@ export class MatchingPointService {
 
     if (userRole === "BUSINESS") {
       if (!reward.creatorBusiness || reward.creatorBusiness.id !== userId) {
-        throw new ForbiddenException("You can only suspend rewards you created.");
+        throw new ForbiddenException(
+          "You can only suspend rewards you created.",
+        );
       }
     }
 
@@ -416,9 +432,7 @@ export class MatchingPointService {
     return qb;
   }
 
-  async getPublicRewards(
-    filterDto: GetMatchingPointRewardsFilterDto,
-  ) {
+  async getPublicRewards(filterDto: GetMatchingPointRewardsFilterDto) {
     const { page = 1, limit = 10 } = filterDto;
     const skip = (page - 1) * limit;
 
@@ -431,9 +445,12 @@ export class MatchingPointService {
       "(reward.start_datetime IS NULL OR reward.start_datetime <= :now)",
       { now },
     );
-    qb.andWhere("(reward.end_datetime IS NULL OR reward.end_datetime >= :now)", {
-      now,
-    });
+    qb.andWhere(
+      "(reward.end_datetime IS NULL OR reward.end_datetime >= :now)",
+      {
+        now,
+      },
+    );
 
     this.applyRewardFilters(qb, filterDto);
 
@@ -515,7 +532,9 @@ export class MatchingPointService {
 
       const now = new Date();
       if (reward.start_datetime && reward.start_datetime > now) {
-        throw new BadRequestException("Reward is not yet available for redemption");
+        throw new BadRequestException(
+          "Reward is not yet available for redemption",
+        );
       }
       if (reward.end_datetime && reward.end_datetime < now) {
         throw new BadRequestException("Reward has expired");
@@ -556,7 +575,9 @@ export class MatchingPointService {
       if (userType === UserType.BUSINESS) {
         redemption.business = await manager.findOneBy(Business, { id: userId });
       } else {
-        redemption.participant = await manager.findOneBy(Participant, { id: userId });
+        redemption.participant = await manager.findOneBy(Participant, {
+          id: userId,
+        });
       }
 
       await manager.save(redemption);

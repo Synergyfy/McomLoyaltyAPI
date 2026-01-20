@@ -12,8 +12,6 @@ export enum AudienceType {
   TARGET_WISHLIST = "target_wishlist",
 }
 
-
-
 export enum CampaignRewardMode {
   POINTS = "points",
   STAMPS = "stamps",

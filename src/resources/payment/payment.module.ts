@@ -44,7 +44,17 @@ import { CentralIntegrationService } from "./central-integration.service";
     ReferralModule,
   ],
   controllers: [PaymentController, CashbackController],
-  providers: [PaymentService, StripeService, PaypalService, CentralIntegrationService],
-  exports: [PaymentService, StripeService, PaypalService, CentralIntegrationService],
+  providers: [
+    PaymentService,
+    StripeService,
+    PaypalService,
+    CentralIntegrationService,
+  ],
+  exports: [
+    PaymentService,
+    StripeService,
+    PaypalService,
+    CentralIntegrationService,
+  ],
 })
 export class PaymentModule {}

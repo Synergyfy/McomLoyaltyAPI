@@ -35,7 +35,8 @@ export class AwardPointsDto {
   points: number;
 
   @ApiProperty({
-    description: "Unique key to ensure idempotency (prevent duplicates on retry)",
+    description:
+      "Unique key to ensure idempotency (prevent duplicates on retry)",
     required: false,
     example: "uuid-v4-string",
   })
@@ -43,4 +44,3 @@ export class AwardPointsDto {
   @IsOptional()
   idempotencyKey?: string;
 }
-

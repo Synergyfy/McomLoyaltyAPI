@@ -4,7 +4,7 @@ import { Deal } from "./deal.entity";
 
 @Entity("deal_analytics")
 export class DealAnalytics extends AbstractBaseEntity {
-  @ManyToOne(() => Deal, (deal) => deal.analytics, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Deal, (deal) => deal.analytics, { onDelete: "CASCADE" })
   @JoinColumn({ name: "deal_id" })
   deal: Deal;
 

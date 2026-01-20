@@ -38,7 +38,7 @@ import { Public } from "../../common/decorators/public.decorator";
 @ApiBearerAuth()
 @Controller("deals")
 export class DealController {
-  constructor(private readonly dealService: DealService) { }
+  constructor(private readonly dealService: DealService) {}
 
   @Post()
   @Roles(Role.Admin, Role.Business)
@@ -86,8 +86,11 @@ export class DealController {
   @Roles(Role.Business)
   @ApiOperation({ summary: "Get analytics for a specific deal" })
   @ApiResponse({ status: 200, type: DealAnalyticsDto })
-  getDealAnalytics(@Param("id", ParseUUIDPipe) id: string, @CurrentUser() user: User) {
-      return this.dealService.getDealAnalytics(id, user);
+  getDealAnalytics(
+    @Param("id", ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.dealService.getDealAnalytics(id, user);
   }
 
   @Get(":id")
@@ -183,68 +186,41 @@ export class DealController {
     );
   }
 
-      @Public()
-
-      @Post("public/analytics/time")
-
-      @ApiOperation({ summary: "Record time spent on a deal page" })
-
-      @ApiResponse({ status: 200, description: "Time recorded successfully" })
-
-      recordTimeSpent(@Body() body: RecordTimeSpentDto) {
-
-          return this.dealService.recordTimeSpent(body.analyticsId, body.durationSeconds);
-
-      }
-
-  
-
-    @Public()
-
-    @Get("public/all")
-
-    @ApiOperation({ summary: "Get all public deals" })
-
-    @ApiResponse({
-
-      status: 200,
-
-      description: "Return a paginated list of public deals.",
-
-    })
-
-    findAllPublic(@Query() filterDealDto: FilterDealDto) {
-
-      return this.dealService.findAllPublic(filterDealDto);
-
-    }
-
-  
-
-    @Public()
-
-    @Get("public/:id")
-
-    @ApiOperation({ summary: "Get a public deal by ID" })
-
-    @ApiResponse({ status: 200, description: "Return the deal." })
-
-    @ApiResponse({ status: 404, description: "Deal not found." })
-
-    findOnePublic(
-
-      @Param("id", ParseUUIDPipe) id: string,
-
-      @Ip() ip: string,
-
-      @Headers('user-agent') userAgent: string,
-
-    ) {
-
-      return this.dealService.findOnePublic(id, ip, userAgent);
-
-    }
-
+  @Public()
+  @Post("public/analytics/time")
+  @ApiOperation({ summary: "Record time spent on a deal page" })
+  @ApiResponse({ status: 200, description: "Time recorded successfully" })
+  recordTimeSpent(@Body() body: RecordTimeSpentDto) {
+    return this.dealService.recordTimeSpent(
+      body.analyticsId,
+      body.durationSeconds,
+    );
   }
 
-  
+  @Public()
+  @Get("public/all")
+  @ApiOperation({ summary: "Get all public deals" })
+  @ApiResponse({
+    status: 200,
+
+    description: "Return a paginated list of public deals.",
+  })
+  findAllPublic(@Query() filterDealDto: FilterDealDto) {
+    return this.dealService.findAllPublic(filterDealDto);
+  }
+
+  @Public()
+  @Get("public/:id")
+  @ApiOperation({ summary: "Get a public deal by ID" })
+  @ApiResponse({ status: 200, description: "Return the deal." })
+  @ApiResponse({ status: 404, description: "Deal not found." })
+  findOnePublic(
+    @Param("id", ParseUUIDPipe) id: string,
+
+    @Ip() ip: string,
+
+    @Headers("user-agent") userAgent: string,
+  ) {
+    return this.dealService.findOnePublic(id, ip, userAgent);
+  }
+}

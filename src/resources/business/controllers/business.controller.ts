@@ -33,7 +33,7 @@ import { ReferralStatsResponseDto } from "../dto/referral-stats-response.dto";
 @Controller("business")
 @ApiBearerAuth()
 export class BusinessController {
-  constructor(private readonly businessService: BusinessService) { }
+  constructor(private readonly businessService: BusinessService) {}
 
   @Public()
   @Post("signup")

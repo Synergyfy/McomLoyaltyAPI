@@ -22,9 +22,7 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import { MatchingPointService } from "../services/matching-point.service";
-import {
-  MatchingPointConfig,
-} from "../entities/matching-point-config.entity";
+import { MatchingPointConfig } from "../entities/matching-point-config.entity";
 import { JwtAuthGuard } from "../../../auth/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
@@ -48,7 +46,7 @@ import { User } from "../../../common/interfaces/user.interface";
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: "Unauthorized" })
 export class MatchingPointController {
-  constructor(private readonly matchingPointService: MatchingPointService) { }
+  constructor(private readonly matchingPointService: MatchingPointService) {}
 
   // --- Configuration (Admin) ---
 
@@ -128,9 +126,7 @@ export class MatchingPointController {
     status: 200,
     description: "Paginated list of rewards",
   })
-  async getPublicRewards(
-    @Query() filterDto: GetMatchingPointRewardsFilterDto,
-  ) {
+  async getPublicRewards(@Query() filterDto: GetMatchingPointRewardsFilterDto) {
     return this.matchingPointService.getPublicRewards(filterDto);
   }
 
@@ -203,11 +199,7 @@ export class MatchingPointController {
     @CurrentUser() user: User,
   ) {
     const role = user.role === Role.Admin ? "ADMIN" : "BUSINESS";
-    return this.matchingPointService.toggleSuspendReward(
-      id,
-      user.id,
-      role,
-    );
+    return this.matchingPointService.toggleSuspendReward(id, user.id, role);
   }
 
   // --- Redemption ---

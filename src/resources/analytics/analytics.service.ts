@@ -23,7 +23,7 @@ export class AnalyticsService {
     private readonly participantRepository: Repository<Participant>,
     @InjectRepository(BusinessCampaign)
     private readonly businessCampaignRepository: Repository<BusinessCampaign>,
-  ) { }
+  ) {}
 
   async getGeneralAnalytics(user: User): Promise<GeneralAnalyticsDto> {
     const businessId = user.id;
@@ -32,7 +32,10 @@ export class AnalyticsService {
     // Fetch BusinessCampaigns directly
     const businessCampaigns = await this.businessCampaignRepository.find({
       where: { business: { id: businessId } },
-      relations: ["participantCampaignBalances", "participantCampaignBalances.participant"],
+      relations: [
+        "participantCampaignBalances",
+        "participantCampaignBalances.participant",
+      ],
     });
 
     const totalCampaigns = businessCampaigns.length;
@@ -95,26 +98,28 @@ export class AnalyticsService {
     const totalRewardsRedeemed =
       businessCampaignIds.length > 0
         ? await this.pointHistoryRepository.count({
-          where: {
-            businessCampaign: { id: In(businessCampaignIds) },
-            type: PointHistoryType.REDEEM,
-          },
-        })
+            where: {
+              businessCampaign: { id: In(businessCampaignIds) },
+              type: PointHistoryType.REDEEM,
+            },
+          })
         : 0;
 
     const activeCampaignsWithCustomerCounts = activeCampaigns.map((bc) => ({
       name: bc.name,
-      customerCount: bc.participantCampaignBalances ? bc.participantCampaignBalances.length : 0,
+      customerCount: bc.participantCampaignBalances
+        ? bc.participantCampaignBalances.length
+        : 0,
     }));
 
     const lastTenActivities =
       businessCampaignIds.length > 0
         ? await this.pointHistoryRepository.find({
-          where: { businessCampaign: { id: In(businessCampaignIds) } },
-          order: { created_at: "DESC" },
-          take: 10,
-          relations: ["participant", "businessCampaign"],
-        })
+            where: { businessCampaign: { id: In(businessCampaignIds) } },
+            order: { created_at: "DESC" },
+            take: 10,
+            relations: ["participant", "businessCampaign"],
+          })
         : [];
 
     return {

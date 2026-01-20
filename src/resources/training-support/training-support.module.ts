@@ -12,28 +12,28 @@ import { HelpCenterArticleController } from "./controllers/help-center-article.c
 import { TrainingGuideController } from "./controllers/training-guide.controller";
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            TrainingVideo,
-            HelpCenterArticle,
-            TrainingGuide,
-            Tier,
-        ]),
-    ],
-    controllers: [
-        TrainingVideoController,
-        HelpCenterArticleController,
-        TrainingGuideController,
-    ],
-    providers: [
-        TrainingVideoService,
-        HelpCenterArticleService,
-        TrainingGuideService,
-    ],
-    exports: [
-        TrainingVideoService,
-        HelpCenterArticleService,
-        TrainingGuideService,
-    ],
+  imports: [
+    TypeOrmModule.forFeature([
+      TrainingVideo,
+      HelpCenterArticle,
+      TrainingGuide,
+      Tier,
+    ]),
+  ],
+  controllers: [
+    TrainingVideoController,
+    HelpCenterArticleController,
+    TrainingGuideController,
+  ],
+  providers: [
+    TrainingVideoService,
+    HelpCenterArticleService,
+    TrainingGuideService,
+  ],
+  exports: [
+    TrainingVideoService,
+    HelpCenterArticleService,
+    TrainingGuideService,
+  ],
 })
-export class TrainingSupportModule { }
+export class TrainingSupportModule {}

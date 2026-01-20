@@ -52,7 +52,7 @@ import { TierAnalyticsResponseDto } from "./dto/tier-analytics-response.dto";
 @ApiTags("Campaigns")
 @Controller("campaigns")
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) { }
+  constructor(private readonly campaignService: CampaignService) {}
 
   @Post()
   @ApiBearerAuth()
@@ -160,7 +160,10 @@ export class CampaignController {
     @CurrentUser() currentUser: Business,
     @Query() paginationDto: PaginationDto,
   ) {
-    return this.campaignService.findJoinedCampaigns(currentUser.id, paginationDto);
+    return this.campaignService.findJoinedCampaigns(
+      currentUser.id,
+      paginationDto,
+    );
   }
 
   @Get("business/:businessId")

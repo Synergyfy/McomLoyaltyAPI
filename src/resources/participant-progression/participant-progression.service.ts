@@ -37,7 +37,7 @@ export class ParticipantProgressionService {
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly mailService: MailService,
     private readonly matchingPointService: MatchingPointService,
-  ) { }
+  ) {}
 
   // --- Action Triggering ---
 
@@ -133,19 +133,19 @@ export class ParticipantProgressionService {
 
     // Use MatchingPointService to add points and log history (centralized)
     // We treat this as MANUAL_ADJUSTMENT type or maybe we need a new type like "PROGRESSION_REWARD"?
-    // For now, let's use MANUAL_ADJUSTMENT or create a new one if possible. 
+    // For now, let's use MANUAL_ADJUSTMENT or create a new one if possible.
     // Or reuse CAMPAIGN_CREATION? No.
-    // Let's use MANUAL_ADJUSTMENT for generic system rewards if config allows, 
+    // Let's use MANUAL_ADJUSTMENT for generic system rewards if config allows,
     // BUT addPoints requires a config type.
     // If I use MatchingPointService.addPoints, it relies on config.
     // But here the points are DYNAMIC (from action definition), not fixed config.
     // So I should use manualAdjustment method of MatchingPointService which accepts arbitrary points.
-    
+
     await this.matchingPointService.manualAdjustment(
-        participantId,
-        UserType.PARTICIPANT,
-        finalPoints,
-        reason
+      participantId,
+      UserType.PARTICIPANT,
+      finalPoints,
+      reason,
     );
 
     // Reload participant to get updated balance for checkAndPromote?

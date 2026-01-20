@@ -6,28 +6,28 @@ import { ApiProperty } from "@nestjs/swagger";
 
 @Entity("help_center_articles")
 export class HelpCenterArticle extends AbstractBaseEntity {
-    @ApiProperty()
-    @Column()
-    title: string;
+  @ApiProperty()
+  @Column()
+  title: string;
 
-    @ApiProperty()
-    @Column()
-    category: string;
+  @ApiProperty()
+  @Column()
+  category: string;
 
-    @ApiProperty()
-    @Column("text")
-    content: string;
+  @ApiProperty()
+  @Column("text")
+  content: string;
 
-    @ApiProperty()
-    @Column("text")
-    short_description: string;
+  @ApiProperty()
+  @Column("text")
+  short_description: string;
 
-    @ApiProperty({ enum: TargetAudience })
-    @Column({ type: "enum", enum: TargetAudience })
-    target_audience: TargetAudience;
+  @ApiProperty({ enum: TargetAudience })
+  @Column({ type: "enum", enum: TargetAudience })
+  target_audience: TargetAudience;
 
-    @ApiProperty({ type: () => Tier, isArray: true })
-    @ManyToMany(() => Tier)
-    @JoinTable({ name: "help_center_article_tiers" })
-    targetTiers: Tier[];
+  @ApiProperty({ type: () => Tier, isArray: true })
+  @ManyToMany(() => Tier)
+  @JoinTable({ name: "help_center_article_tiers" })
+  targetTiers: Tier[];
 }

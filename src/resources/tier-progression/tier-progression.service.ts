@@ -35,7 +35,7 @@ export class TierProgressionService {
     private readonly pointHistoryService: PointHistoryService,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
-  ) { }
+  ) {}
 
   async checkAndPromote(userId: string): Promise<void> {
     const membership = await this.membershipService.findOneByBusinessId(userId);
@@ -241,7 +241,7 @@ export class TierProgressionService {
     // Calculate days active
     const daysActive = Math.floor(
       (Date.now() - new Date(membershipStartDate).getTime()) /
-      (1000 * 60 * 60 * 24),
+        (1000 * 60 * 60 * 24),
     );
 
     // Check profile completion (ignore KYC)

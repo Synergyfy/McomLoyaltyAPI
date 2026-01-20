@@ -15,7 +15,10 @@ export class UpdateCampaignDto extends PartialType(CreateCampaignDto) {
   @IsUUID("all", { each: true })
   business_reward_ids?: string[];
 
-  @ApiProperty({ description: "The remaining number of slots available for the campaign.", required: false })
+  @ApiProperty({
+    description: "The remaining number of slots available for the campaign.",
+    required: false,
+  })
   @IsOptional()
   @IsInt()
   remaining_slots?: number;

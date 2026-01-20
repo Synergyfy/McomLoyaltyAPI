@@ -52,10 +52,12 @@ export class BusinessCampaign extends AbstractBaseEntity {
   @JoinTable({
     name: "business_campaign_rewards",
     joinColumn: { name: "business_campaign_id", referencedColumnName: "id" },
-    inverseJoinColumn: { name: "business_reward_id", referencedColumnName: "id" },
+    inverseJoinColumn: {
+      name: "business_reward_id",
+      referencedColumnName: "id",
+    },
   })
   businessRewards: BusinessReward[];
-
 
   @ManyToMany(() => Deal, (deal) => deal.businessCampaigns)
   @JoinTable({
@@ -73,7 +75,10 @@ export class BusinessCampaign extends AbstractBaseEntity {
   })
   participatingBusinesses: Business[];
 
-  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.businessCampaign)
+  @OneToMany(
+    () => PointHistory,
+    (pointHistory) => pointHistory.businessCampaign,
+  )
   pointHistories: PointHistory[];
 
   // --- Campaign Override Fields ---

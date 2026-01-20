@@ -53,12 +53,14 @@ export class TierService {
     }
 
     try {
-        const tier = this.tierRepository.create(createTierDto);
-        const savedTier = await this.tierRepository.save(tier);
-        await this.createHistory(savedTier, admin);
-        return savedTier;
+      const tier = this.tierRepository.create(createTierDto);
+      const savedTier = await this.tierRepository.save(tier);
+      await this.createHistory(savedTier, admin);
+      return savedTier;
     } catch (error) {
-        throw new InternalServerErrorException(`Failed to create tier: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to create tier: ${error.message}`,
+      );
     }
   }
 
@@ -87,16 +89,16 @@ export class TierService {
     }
 
     try {
-        await this.tierRepository.update(id, updateTierDto);
-        const updatedTier = await this.findOne(id);
-        await this.createHistory(updatedTier, admin);
-        return updatedTier;
+      await this.tierRepository.update(id, updateTierDto);
+      const updatedTier = await this.findOne(id);
+      await this.createHistory(updatedTier, admin);
+      return updatedTier;
     } catch (error) {
-        throw new InternalServerErrorException(`Failed to update tier: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to update tier: ${error.message}`,
+      );
     }
   }
-
-
 
   async updateProgression(
     id: string,

@@ -6,10 +6,10 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/role.enum";
 import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
 } from "@nestjs/swagger";
 
 @ApiTags("Tier Progression")
@@ -17,18 +17,19 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class TierProgressionController {
-    constructor(private readonly progressionService: TierProgressionService) { }
+  constructor(private readonly progressionService: TierProgressionService) {}
 
-    @Get("my-progression")
-    @Roles(Role.Business)
-    @ApiOperation({ summary: "Get the current business's progression details" })
-    @ApiResponse({
-        status: 200,
-        description: "Returns detailed progression metrics and next level requirements.",
-        type: BusinessProgressionResponseDto,
-    })
-    @ApiResponse({ status: 404, description: "Membership not found." })
-    async getMyProgression(@Req() req) {
-        return this.progressionService.getDetailedProgression(req.user.id);
-    }
+  @Get("my-progression")
+  @Roles(Role.Business)
+  @ApiOperation({ summary: "Get the current business's progression details" })
+  @ApiResponse({
+    status: 200,
+    description:
+      "Returns detailed progression metrics and next level requirements.",
+    type: BusinessProgressionResponseDto,
+  })
+  @ApiResponse({ status: 404, description: "Membership not found." })
+  async getMyProgression(@Req() req) {
+    return this.progressionService.getDetailedProgression(req.user.id);
+  }
 }

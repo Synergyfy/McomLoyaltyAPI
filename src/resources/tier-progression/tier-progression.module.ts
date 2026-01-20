@@ -26,4 +26,4 @@ import { TierProgressionController } from "./tier-progression.controller";
   providers: [TierProgressionService],
   exports: [TierProgressionService],
 })
-export class TierProgressionModule { }
+export class TierProgressionModule {}

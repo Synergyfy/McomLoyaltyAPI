@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
+import { Injectable, Logger } from "@nestjs/common";
+import axios from "axios";
 
 @Injectable()
 export class CentralIntegrationService {
   private readonly logger = new Logger(CentralIntegrationService.name);
-  private readonly centralUrl = process.env.MCOM_CENTRAL_URL || 'http://localhost:3000/api/v1';
+  private readonly centralUrl =
+    process.env.MCOM_CENTRAL_URL || "http://localhost:3000/api/v1";
 
   async processCashback(
     userEmail: string,
@@ -15,17 +16,19 @@ export class CentralIntegrationService {
     try {
       const payload = {
         userEmail,
-        platform: 'MCOM_LOYALTY',
+        platform: "MCOM_LOYALTY",
         eventType,
         amountPaid,
         transactionReference,
       };
-      
-      this.logger.log(`Sending cashback request to central: ${JSON.stringify(payload)}`);
-      
+
+      this.logger.log(
+        `Sending cashback request to central: ${JSON.stringify(payload)}`,
+      );
+
       // In a real scenario, we would use HttpService (Axios) to call mcom_central
       await axios.post(`${this.centralUrl}/cashback/process`, payload);
-      
+
       return { success: true };
     } catch (error) {
       this.logger.error(`Failed to process cashback: ${error.message}`);
@@ -36,30 +39,34 @@ export class CentralIntegrationService {
 
   async createCashbackRule(
     eventType: string,
-    rewardType: 'FIXED' | 'PERCENTAGE',
+    rewardType: "FIXED" | "PERCENTAGE",
     rewardValue: number,
     adminId: string,
   ) {
-      try {
-        const payload = {
-            platform: 'MCOM_LOYALTY',
-            eventType,
-            rewardType,
-            rewardValue,
-            adminId
-        };
-        await axios.post(`${this.centralUrl}/cashback/rules`, payload);
-        this.logger.log(`Created cashback rule on central: ${JSON.stringify(payload)}`);
-        return { success: true };
-      } catch (error) {
-          this.logger.error(`Failed to create cashback rule: ${error.message}`);
-          throw error;
-      }
+    try {
+      const payload = {
+        platform: "MCOM_LOYALTY",
+        eventType,
+        rewardType,
+        rewardValue,
+        adminId,
+      };
+      await axios.post(`${this.centralUrl}/cashback/rules`, payload);
+      this.logger.log(
+        `Created cashback rule on central: ${JSON.stringify(payload)}`,
+      );
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to create cashback rule: ${error.message}`);
+      throw error;
+    }
   }
 
   async getCashbackBalance(userEmail: string): Promise<number> {
     try {
-      const response = await axios.get(`${this.centralUrl}/cashback/balance`, { params: { email: userEmail } });
+      const response = await axios.get(`${this.centralUrl}/cashback/balance`, {
+        params: { email: userEmail },
+      });
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to get cashback balance: ${error.message}`);
@@ -69,53 +76,67 @@ export class CentralIntegrationService {
 
   async getHistory(query: any) {
     try {
-      const response = await axios.get(`${this.centralUrl}/cashback/history`, { params: query });
+      const response = await axios.get(`${this.centralUrl}/cashback/history`, {
+        params: query,
+      });
       return response.data;
     } catch (error) {
       this.logger.error(`Failed to get cashback history: ${error.message}`);
-      return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
+      return {
+        data: [],
+        meta: { total: 0, page: 1, limit: 10, totalPages: 0 },
+      };
     }
   }
 
   async getRules(platform?: string) {
-      try {
-          const params: any = {};
-          if (platform) params.platform = platform;
-          const response = await axios.get(`${this.centralUrl}/cashback/rules`, { params });
-          return response.data || [];
-      } catch (error) {
-          this.logger.error(`Failed to get rules from central: ${error.message}`);
-          return []; // Return empty array to prevent 500 error on public endpoint
-      }
+    try {
+      const params: any = {};
+      if (platform) params.platform = platform;
+      const response = await axios.get(`${this.centralUrl}/cashback/rules`, {
+        params,
+      });
+      return response.data || [];
+    } catch (error) {
+      this.logger.error(`Failed to get rules from central: ${error.message}`);
+      return []; // Return empty array to prevent 500 error on public endpoint
+    }
   }
 
   async getEvents() {
-      try {
-          const response = await axios.get(`${this.centralUrl}/cashback/events`, { params: { platform: 'MCOM_LOYALTY' } });
-          return response.data;
-      } catch (error) {
-          this.logger.error(`Failed to get events: ${error.message}`);
-          throw error;
-      }
+    try {
+      const response = await axios.get(`${this.centralUrl}/cashback/events`, {
+        params: { platform: "MCOM_LOYALTY" },
+      });
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to get events: ${error.message}`);
+      throw error;
+    }
   }
 
   async updateRule(id: string, updateDto: any) {
-      try {
-          const response = await axios.patch(`${this.centralUrl}/cashback/rules/${id}`, updateDto);
-          return response.data;
-      } catch (error) {
-          this.logger.error(`Failed to update rule: ${error.message}`);
-          throw error;
-      }
+    try {
+      const response = await axios.patch(
+        `${this.centralUrl}/cashback/rules/${id}`,
+        updateDto,
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to update rule: ${error.message}`);
+      throw error;
+    }
   }
 
   async deleteRule(id: string) {
-      try {
-          const response = await axios.delete(`${this.centralUrl}/cashback/rules/${id}`);
-          return response.data;
-      } catch (error) {
-          this.logger.error(`Failed to delete rule: ${error.message}`);
-          throw error;
-      }
+    try {
+      const response = await axios.delete(
+        `${this.centralUrl}/cashback/rules/${id}`,
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Failed to delete rule: ${error.message}`);
+      throw error;
+    }
   }
 }

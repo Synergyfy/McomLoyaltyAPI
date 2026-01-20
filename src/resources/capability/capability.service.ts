@@ -18,7 +18,10 @@ import { MembershipStatus } from "../membership/entities/membership.entity";
 import { RewardsService } from "../rewards/services/rewards.service";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Between } from "typeorm";
-import { PointHistory, PointHistoryType } from "../participant-campaign-balance/entities/point-history.entity";
+import {
+  PointHistory,
+  PointHistoryType,
+} from "../participant-campaign-balance/entities/point-history.entity";
 import { Staff } from "../staff/entities/staff.entity";
 import { BusinessService } from "../business/services/business.service";
 import moment from "moment";

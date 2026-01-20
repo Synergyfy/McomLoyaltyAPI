@@ -34,7 +34,7 @@ export class AdminBusinessController {
     private readonly businessService: BusinessService,
     private readonly staffService: StaffService,
     private readonly adminService: AdminService,
-  ) { }
+  ) {}
 
   @Get()
   @ApiOperation({ summary: "Get all businesses (admin only)" })

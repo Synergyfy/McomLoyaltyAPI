@@ -1,10 +1,4 @@
-import {
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsString,
-  IsUUID,
-} from "class-validator";
+import { IsEnum, IsInt, IsNotEmpty, IsString, IsUUID } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { UserType } from "../entities/matching-point-redemption.entity";
 

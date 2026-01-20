@@ -44,7 +44,7 @@ export class ParticipantService {
     private readonly otpService: OtpService,
     private readonly progressionService: ParticipantProgressionService,
     private readonly referralService: ReferralService,
-  ) { }
+  ) {}
 
   async signup(createParticipantDto: CreateParticipantDto) {
     const { name, email, password, confirmPassword, campaignId } =
@@ -163,7 +163,9 @@ export class ParticipantService {
           businessCampaign.total_slots !== undefined
         ) {
           if (businessCampaign.remaining_slots <= 0) {
-            throw new BadRequestException("No more slots available for this campaign");
+            throw new BadRequestException(
+              "No more slots available for this campaign",
+            );
           }
         }
 

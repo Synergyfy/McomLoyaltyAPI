@@ -26,9 +26,7 @@ import { PointHistory } from "../participant-campaign-balance/entities/point-his
     forwardRef(() => ParticipantCampaignBalanceModule),
     PaymentModule,
   ],
-  controllers: [
-    StampPackageController,
-  ],
+  controllers: [StampPackageController],
   providers: [StampPackageService],
   exports: [StampPackageService],
 })
