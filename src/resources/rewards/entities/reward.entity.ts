@@ -7,6 +7,7 @@ import { Sector } from "../../sector/entities/sector.entity";
 import { Tier } from "../../tier/entities/tier.entity";
 import { BusinessCampaign } from "../../campaign/entities/business-campaign.entity";
 import { PointHistory } from "../../participant-campaign-balance/entities/point-history.entity";
+import { BusinessReward } from "./business-reward.entity";
 
 import { RewardSource } from "../enums/reward-source.enum";
 
@@ -72,9 +73,11 @@ export class Reward extends AbstractBaseEntity {
   })
   tiers: Tier[];
 
-
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.reward)
   pointHistories: PointHistory[];
+
+  @OneToMany(() => BusinessReward, (businessReward) => businessReward.reward)
+  businessRewards: BusinessReward[];
 
   @Column()
   value: number;
@@ -102,4 +105,9 @@ export class Reward extends AbstractBaseEntity {
 
   @Column({ default: false })
   disabled: boolean;
+
+  business_claimed_count?: number;
+  total_redemptions_count?: number;
+  total_points_redeemed?: number;
+  total_stamps_redeemed?: number;
 }

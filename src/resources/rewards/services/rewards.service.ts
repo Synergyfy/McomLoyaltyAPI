@@ -67,7 +67,7 @@ export class RewardsService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(SubCategory)
     private readonly subCategoryRepository: Repository<SubCategory>,
-  ) { }
+  ) {}
 
   async createReward(createRewardDto: CreateRewardDto): Promise<Reward> {
     const {
@@ -425,7 +425,7 @@ export class RewardsService {
       updateBusinessRewardDto.stamps_required &&
       businessReward.reward &&
       updateBusinessRewardDto.stamps_required >
-      businessReward.reward.max_stamps_required
+        businessReward.reward.max_stamps_required
     ) {
       throw new ForbiddenException(
         `Stamps required cannot exceed the maximum stamps set by admin (${businessReward.reward.max_stamps_required} stamps).`,
@@ -595,9 +595,56 @@ export class RewardsService {
       rewardType,
       audience,
       sortBy = SortBy.NEWEST,
+      includeStats,
     } = filterDto;
 
     const queryBuilder = this.rewardRepository.createQueryBuilder("reward");
+
+    if (includeStats) {
+      // 1. Business Claim Count
+      queryBuilder.addSelect((subQuery) => {
+        return subQuery
+          .select("COUNT(br.id)", "count")
+          .from(BusinessReward, "br")
+          .where("br.reward_id = reward.id");
+      }, "business_claimed_count");
+
+      // 2. Redemption Count
+      queryBuilder.addSelect((subQuery) => {
+        return subQuery
+          .select("COUNT(ph.id)", "count")
+          .from(PointHistory, "ph")
+          .innerJoin("ph.businessReward", "br")
+          .where("br.reward_id = reward.id")
+          .andWhere("ph.type IN (:...types)", {
+            types: [PointHistoryType.REDEEM, PointHistoryType.STAMP_REDEEM],
+          });
+      }, "total_redemptions_count");
+
+      // 3. Points Redeemed
+      queryBuilder.addSelect((subQuery) => {
+        return subQuery
+          .select("COALESCE(SUM(ph.points), 0)", "sum")
+          .from(PointHistory, "ph")
+          .innerJoin("ph.businessReward", "br")
+          .where("br.reward_id = reward.id")
+          .andWhere("ph.type IN (:...types)", {
+            types: [PointHistoryType.REDEEM, PointHistoryType.STAMP_REDEEM],
+          });
+      }, "total_points_redeemed");
+
+      // 4. Stamps Redeemed
+      queryBuilder.addSelect((subQuery) => {
+        return subQuery
+          .select("COALESCE(SUM(ph.stamps), 0)", "sum")
+          .from(PointHistory, "ph")
+          .innerJoin("ph.businessReward", "br")
+          .where("br.reward_id = reward.id")
+          .andWhere("ph.type IN (:...types)", {
+            types: [PointHistoryType.REDEEM, PointHistoryType.STAMP_REDEEM],
+          });
+      }, "total_stamps_redeemed");
+    }
 
     if (search) {
       queryBuilder.andWhere(
@@ -634,10 +681,41 @@ export class RewardsService {
       queryBuilder.orderBy("reward.points_required", "DESC");
     }
 
-    const [data, total] = await queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
+    let data: Reward[];
+    let total: number;
+
+    if (includeStats) {
+      const { entities, raw } = await queryBuilder
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getRawAndEntities();
+
+      total = await queryBuilder.getCount();
+
+      data = entities.map((entity) => {
+        const rawResult = raw.find((r) => r.reward_id === entity.id);
+        if (rawResult) {
+          entity.business_claimed_count = Number(
+            rawResult.business_claimed_count || 0,
+          );
+          entity.total_redemptions_count = Number(
+            rawResult.total_redemptions_count || 0,
+          );
+          entity.total_points_redeemed = Number(
+            rawResult.total_points_redeemed || 0,
+          );
+          entity.total_stamps_redeemed = Number(
+            rawResult.total_stamps_redeemed || 0,
+          );
+        }
+        return entity;
+      });
+    } else {
+      [data, total] = await queryBuilder
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
+    }
 
     return {
       data,

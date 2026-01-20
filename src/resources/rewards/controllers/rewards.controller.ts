@@ -90,7 +90,7 @@ export class RewardsController {
   @ApiBearerAuth()
   @Get("admin/rewards")
   async getRewards(@Query() filterDto: GetRewardsFilterDto) {
-    return this.rewardsService.getRewards(filterDto);
+    return this.rewardsService.getRewards({ ...filterDto, includeStats: true });
   }
 
   @ApiOperation({ summary: "Admin: Update a reward" })

@@ -150,4 +150,13 @@ export class GetRewardsFilterDto {
   @IsOptional()
   @IsEnum(RewardType)
   rewardType?: RewardType;
+
+  @ApiPropertyOptional({
+    description: "Include admin statistics (claim count, redemption stats)",
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  includeStats?: boolean;
 }
