@@ -44,4 +44,13 @@ export class CreateBusinessDto {
   @IsString()
   @IsOptional()
   referralCode?: string;
+
+  @ApiProperty({
+    description: "Code for pre-provisioned rewards (e.g. Free Tier Access).",
+    example: "PROV-123-XYZ",
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  provisionCode?: string;
 }

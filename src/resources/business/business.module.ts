@@ -23,6 +23,9 @@ import { OtpModule } from "../otp/otp.module";
 import { MailModule } from "src/mail/mail.module";
 import { WalletModule } from "../wallet/wallet.module";
 import { StampModule } from "../stamp/stamp.module";
+import { ProvisionModule } from "../provision/provision.module";
+import { MembershipModule } from "../membership/membership.module";
+import { MatchingPointModule } from "../matching-point/matching-point.module";
 
 @Module({
   imports: [
@@ -48,6 +51,9 @@ import { StampModule } from "../stamp/stamp.module";
     MailModule,
     WalletModule,
     StampModule,
+    ProvisionModule,
+    MembershipModule,
+    MatchingPointModule
   ],
   providers: [BusinessService],
   controllers: [BusinessController, AffiliateController],

@@ -45,6 +45,9 @@ import { OtpService } from "../../otp/otp.service";
 import { MailService } from "../../../mail/mail.service";
 import { WalletService } from "../../wallet/wallet.service";
 import { StampPackageService } from "../../stamp/services/stamp-package.service";
+import { ProvisionService } from "../../provision/provision.service";
+import { ProvisionType } from "../../provision/entities/provision.entity";
+import { MembershipService } from "../../membership/membership.service";
 
 @Injectable()
 export class BusinessService {
@@ -76,6 +79,8 @@ export class BusinessService {
     private readonly mailService: MailService,
     private readonly walletService: WalletService,
     private readonly stampPackageService: StampPackageService,
+    private readonly provisionService: ProvisionService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   private async generateAffiliateCode(): Promise<string> {
@@ -100,10 +105,17 @@ export class BusinessService {
       throw new ConflictException("Email already exists");
     }
 
+    if (createBusinessDto.provisionCode) {
+        const provision = await this.provisionService.findByCode(createBusinessDto.provisionCode);
+        if (!provision) throw new BadRequestException("Invalid provision code");
+        if (provision.isRedeemed) throw new BadRequestException("Provision code already redeemed");
+        if (new Date() > provision.expiresAt) throw new BadRequestException("Provision code expired");
+    }
+
     const hashedPassword = await this.hashService.hashPassword(
       createBusinessDto.password,
     );
-    const { confirmPassword, referralCode, ...rest } = createBusinessDto;
+    const { confirmPassword, referralCode, provisionCode, ...rest } = createBusinessDto;
 
     let referrer: Business;
     if (referralCode) {
@@ -130,6 +142,21 @@ export class BusinessService {
 
     // Create Business Wallet
     await this.walletService.createWallet(newBusiness);
+
+    // Handle Provision Code
+    if (provisionCode) {
+        try {
+            const provision = await this.provisionService.validateAndMarkRedeemed(provisionCode, newBusiness.id);
+            if (provision.type === ProvisionType.TIER_ACCESS) {
+                const { tierId, durationDays } = provision.payload;
+                await this.membershipService.grantAccess(newBusiness.id, tierId, durationDays, 'PROVISION');
+            }
+        } catch (e) {
+            console.error("Failed to redeem provision code for new business", e);
+            // Swallow error to not break sign up flow, but user won't get reward.
+            // In a real system we might retry or alert support.
+        }
+    }
 
     if (referrer) {
       // Create Business-to-Business Referral

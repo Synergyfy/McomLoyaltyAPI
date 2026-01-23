@@ -56,6 +56,7 @@ import { LibraryAssetsModule } from "./resources/library-assets/library-assets.m
 import { MallIntegrationModule } from "./resources/mall-integration/mall-integration.module";
 import { WalletModule } from "./resources/wallet/wallet.module";
 import { TrainingSupportModule } from "./resources/training-support/training-support.module";
+import { ProvisionModule } from "./resources/provision/provision.module";
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { TrainingSupportModule } from "./resources/training-support/training-sup
     SeederModule,
     MailModule,
     BusinessModule,
+    ProvisionModule,
     SectorModule,
     CategoryModule,
     SubcategoryModule,

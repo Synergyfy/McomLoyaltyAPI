@@ -209,4 +209,27 @@ export class MembershipService {
     await this.membershipRepository.save(membership);
     return membership;
   }
+
+  async grantAccess(businessId: string, tierId: string, durationDays: number, source: string) {
+      const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+      if (!tier) throw new NotFoundException('Tier not found');
+  
+      const startsAt = new Date();
+      const expiresAt = new Date();
+      expiresAt.setDate(startsAt.getDate() + durationDays);
+  
+      const membership = this.membershipRepository.create({
+        business: { id: businessId } as Business,
+        tier,
+        plan_type: PlanType.MONTHLY, // Default or generic
+        starts_at: startsAt,
+        expires_at: expiresAt,
+        status: MembershipStatus.ACTIVE,
+        is_trial: false, // It's a granted access, not a trial
+        payment_provider: PaymentProvider.STRIPE, // Placeholder or add 'SYSTEM'/'VOUCHER' to enum if possible. Using Stripe/Manual for now.
+        transaction_id: `VOUCHER-${source}`
+      });
+  
+      return this.membershipRepository.save(membership);
+  }
 }
