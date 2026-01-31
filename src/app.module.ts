@@ -57,6 +57,7 @@ import { MallIntegrationModule } from "./resources/mall-integration/mall-integra
 import { WalletModule } from "./resources/wallet/wallet.module";
 import { TrainingSupportModule } from "./resources/training-support/training-support.module";
 import { ProvisionModule } from "./resources/provision/provision.module";
+import { HelpRequestsModule } from "./resources/help-requests/help-requests.module";
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { ProvisionModule } from "./resources/provision/provision.module";
     UserModule,
     WalletModule,
     MallIntegrationModule,
+    HelpRequestsModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [commissionConfig],
