@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from "@nestjs/common";
+import { Injectable, ConflictException, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { nanoid } from "nanoid";
@@ -16,7 +16,7 @@ export class StaffService {
     @InjectRepository(PointHistory)
     private readonly pointHistoryRepository: Repository<PointHistory>,
     private readonly hashService: HashService,
-  ) {}
+  ) { }
 
   async create(
     createStaffDto: CreateStaffDto,
@@ -72,12 +72,14 @@ export class StaffService {
         updateStaffDto.password,
       );
     }
-    const where: any = { id };
-    if (businessId) {
-      where.business = { id: businessId };
+
+    const staff = await this.findOne(id, businessId);
+    if (!staff) {
+      throw new NotFoundException("Staff not found");
     }
-    await this.staffRepository.update(where, updateStaffDto);
-    return this.findOne(id, businessId);
+
+    const updatedStaff = this.staffRepository.merge(staff, updateStaffDto);
+    return this.staffRepository.save(updatedStaff);
   }
 
   async remove(id: string, businessId: string): Promise<void> {

@@ -4,12 +4,20 @@ import { IsPasswordMatching } from "../../../common/decorators/validation/is-pas
 
 export class CreateBusinessDto {
   @ApiProperty({
-    description: "The legal name of the business.",
-    example: "The Gourmet Kitchen",
+    description: "The first name of the business owner.",
+    example: "John",
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  firstName: string;
+
+  @ApiProperty({
+    description: "The last name of the business owner.",
+    example: "Doe",
+  })
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
 
   @ApiProperty({
     description: "The contact email for the business.",

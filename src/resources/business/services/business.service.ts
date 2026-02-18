@@ -81,7 +81,7 @@ export class BusinessService {
     private readonly stampPackageService: StampPackageService,
     private readonly provisionService: ProvisionService,
     private readonly membershipService: MembershipService,
-  ) {}
+  ) { }
 
   private async generateAffiliateCode(): Promise<string> {
     let affiliateCode: string;
@@ -106,10 +106,10 @@ export class BusinessService {
     }
 
     if (createBusinessDto.provisionCode) {
-        const provision = await this.provisionService.findByCode(createBusinessDto.provisionCode);
-        if (!provision) throw new BadRequestException("Invalid provision code");
-        if (provision.isRedeemed) throw new BadRequestException("Provision code already redeemed");
-        if (new Date() > provision.expiresAt) throw new BadRequestException("Provision code expired");
+      const provision = await this.provisionService.findByCode(createBusinessDto.provisionCode);
+      if (!provision) throw new BadRequestException("Invalid provision code");
+      if (provision.isRedeemed) throw new BadRequestException("Provision code already redeemed");
+      if (new Date() > provision.expiresAt) throw new BadRequestException("Provision code expired");
     }
 
     const hashedPassword = await this.hashService.hashPassword(
@@ -145,17 +145,17 @@ export class BusinessService {
 
     // Handle Provision Code
     if (provisionCode) {
-        try {
-            const provision = await this.provisionService.validateAndMarkRedeemed(provisionCode, newBusiness.id);
-            if (provision.type === ProvisionType.TIER_ACCESS) {
-                const { tierId, durationDays } = provision.payload;
-                await this.membershipService.grantAccess(newBusiness.id, tierId, durationDays, 'PROVISION');
-            }
-        } catch (e) {
-            console.error("Failed to redeem provision code for new business", e);
-            // Swallow error to not break sign up flow, but user won't get reward.
-            // In a real system we might retry or alert support.
+      try {
+        const provision = await this.provisionService.validateAndMarkRedeemed(provisionCode, newBusiness.id);
+        if (provision.type === ProvisionType.TIER_ACCESS) {
+          const { tierId, durationDays } = provision.payload;
+          await this.membershipService.grantAccess(newBusiness.id, tierId, durationDays, 'PROVISION');
         }
+      } catch (e) {
+        console.error("Failed to redeem provision code for new business", e);
+        // Swallow error to not break sign up flow, but user won't get reward.
+        // In a real system we might retry or alert support.
+      }
     }
 
     if (referrer) {
@@ -768,7 +768,15 @@ export class BusinessService {
     id: string,
     updateBusinessProfileDto: UpdateBusinessProfileDto,
   ): Promise<Business> {
-    await this.businessRepository.update(id, updateBusinessProfileDto);
+    const business = await this.findById(id);
+    if (!business) {
+      throw new NotFoundException("Business not found");
+    }
+    const updatedBusiness = this.businessRepository.merge(
+      business,
+      updateBusinessProfileDto,
+    );
+    await this.businessRepository.save(updatedBusiness);
     return this.getOwnProfile(id);
   }
 

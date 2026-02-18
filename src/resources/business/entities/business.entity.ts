@@ -6,6 +6,8 @@ import {
   Index,
   OneToOne,
   ManyToMany,
+  BeforeInsert,
+  BeforeUpdate,
 } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude } from "class-transformer";
@@ -30,9 +32,25 @@ import { BusinessWallet } from "../../wallet/entities/business-wallet.entity";
 
 @Entity("businesses")
 export class Business extends AbstractBaseEntity {
+  @ApiProperty({ description: "The first name of the business owner", required: false })
+  @Column({ nullable: true })
+  firstName: string;
+
+  @ApiProperty({ description: "The last name of the business owner", required: false })
+  @Column({ nullable: true })
+  lastName: string;
+
   @ApiProperty({ description: "The name of the business" })
   @Column()
   name: string;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  updateName() {
+    if (this.firstName || this.lastName) {
+      this.name = `${this.firstName || ""} ${this.lastName || ""}`.trim();
+    }
+  }
 
   @OneToOne(() => BusinessWallet, (wallet) => wallet.business, {
     cascade: true,

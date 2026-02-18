@@ -3,13 +3,22 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class UpdateStaffDto {
   @ApiProperty({
-    description: "The name of the staff member.",
+    description: "The first name of the staff member.",
     required: false,
-    example: "Johnathan Doe",
+    example: "John",
   })
   @IsString()
   @IsOptional()
-  name?: string;
+  firstName?: string;
+
+  @ApiProperty({
+    description: "The last name of the staff member.",
+    required: false,
+    example: "Doe",
+  })
+  @IsString()
+  @IsOptional()
+  lastName?: string;
 
   @ApiProperty({
     description: "The email address of the staff member.",

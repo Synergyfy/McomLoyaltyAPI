@@ -10,12 +10,20 @@ import { IsPasswordMatching } from "../../../common/decorators/validation/is-pas
 
 export class CreateStaffDto {
   @ApiProperty({
-    description: "The name of the staff member.",
-    example: "John Doe",
+    description: "The first name of the staff member.",
+    example: "John",
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  firstName: string;
+
+  @ApiProperty({
+    description: "The last name of the staff member.",
+    example: "Doe",
+  })
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
 
   @ApiProperty({
     description: "The email address of the staff member.",

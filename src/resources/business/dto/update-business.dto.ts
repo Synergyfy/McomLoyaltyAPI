@@ -10,10 +10,15 @@ import {
 import { ApiProperty } from "@nestjs/swagger";
 
 export class UpdateBusinessDto {
-  @ApiProperty({ description: "The name of the business", required: false })
+  @ApiProperty({ description: "The first name of the business owner", required: false })
   @IsString()
   @IsOptional()
-  name?: string;
+  firstName?: string;
+
+  @ApiProperty({ description: "The last name of the business owner", required: false })
+  @IsString()
+  @IsOptional()
+  lastName?: string;
 
   @ApiProperty({ description: "The email of the business", required: false })
   @IsEmail()
