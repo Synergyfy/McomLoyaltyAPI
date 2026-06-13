@@ -20,7 +20,8 @@
     "test:e2e": "NODE_ENV=test dotenv -e .env.test -- jest --config ./test/jest-e2e.json --runInBand",
     "migration:generate": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts",
     "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
-    "seed": "ts-node -r tsconfig-paths/register src/seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/seed.ts",
+    "seed:taxonomy": "ts-node -r tsconfig-paths/register src/seed-taxonomy.ts"
   },
   "dependencies": {
     "@googleapis/mybusinessaccountmanagement": "^5.0.1",

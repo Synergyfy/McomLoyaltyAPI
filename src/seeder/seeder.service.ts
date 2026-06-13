@@ -32,7 +32,7 @@ import {
   QrPlaque,
   QrPlaqueStatus,
 } from "../resources/qr-plaques/entities/qr-plaque.entity";
-import { Membership } from "../resources/membership/entities/membership.entity";
+import { Membership, MembershipStatus, PlanType } from "../resources/membership/entities/membership.entity";
 import { Tier } from "../resources/tier/entities/tier.entity";
 import { Coupon } from "../resources/coupon/entities/coupon.entity";
 import { RewardType } from "../resources/rewards/enums/reward-type.enum";
@@ -41,13 +41,20 @@ import { RewardSource } from "../resources/rewards/enums/reward-source.enum";
 import { RewardAudience } from "../resources/rewards/enums/reward-audience.enum";
 import { RewardStatus } from "../resources/rewards/enums/reward-status.enum";
 import { TierStatus } from "../resources/tier/entities/tier-status.enum";
-import { MembershipStatus } from "../resources/membership/entities/membership.entity";
 import {
   PaymentHistory,
   PaymentProvider,
   PaymentStatus,
 } from "../resources/payment-history/entities/payment-history.entity";
 import { ReferralStatus } from "../resources/referral/entities/referral.entity";
+
+interface TaxonomySector {
+  sector: string;
+  categories: {
+    name: string;
+    subcategories: string[];
+  }[];
+}
 
 @Injectable()
 export class SeederService {
@@ -101,21 +108,111 @@ export class SeederService {
   async seed() {
     await this.clearDatabase();
 
-    const sectors = await this.sectorRepository.save([
-      { name: "Technology" },
-      { name: "Retail" },
-      { name: "Hospitality" },
-    ]);
-    const categories = await this.categoryRepository.save([
-      { name: "Software", sector: sectors[0] },
-      { name: "Fashion", sector: sectors[1] },
-      { name: "Dining", sector: sectors[2] },
-    ]);
-    const subcategories = await this.subCategoryRepository.save([
-      { name: "Web Development", category: categories[0] },
-      { name: "Clothing", category: categories[1] },
-      { name: "Restaurants", category: categories[2] },
-    ]);
+    const taxonomyData: TaxonomySector[] = [
+      {
+        sector: "Food & Beverage",
+        categories: [
+          {
+            name: "Restaurants & Dining",
+            subcategories: ["Fine Dining", "Fast Food", "Casual Dining", "Cafes & Bakeries", "Buffets"],
+          },
+          {
+            name: "Specialty Food & Drink",
+            subcategories: ["Desserts & Ice Cream", "Juice Bars & Smoothies", "Wineries & Breweries", "Tea Rooms"],
+          },
+        ],
+      },
+      {
+        sector: "Retail & Shopping",
+        categories: [
+          {
+            name: "Apparel & Fashion",
+            subcategories: ["Men's Clothing", "Women's Clothing", "Kids & Baby Wear", "Footwear", "Accessories & Jewelry"],
+          },
+          {
+            name: "Electronics & Gadgets",
+            subcategories: ["Mobile Phones & Accessories", "Computers & Laptops", "Home Appliances", "Audio & Video"],
+          },
+          {
+            name: "Home & Living",
+            subcategories: ["Furniture", "Home Decor", "Kitchenware", "Bedding & Bath"],
+          },
+          {
+            name: "Beauty & Personal Care",
+            subcategories: ["Cosmetics", "Skincare", "Fragrances", "Hair Care Products"],
+          },
+        ],
+      },
+      {
+        sector: "Health & Wellness",
+        categories: [
+          {
+            name: "Fitness & Sports",
+            subcategories: ["Gyms & Fitness Centers", "Yoga & Pilates Studios", "Sports Equipment", "Personal Training"],
+          },
+          {
+            name: "Medical & Pharmacy",
+            subcategories: ["Pharmacies", "Dental Clinics", "Opticians & Eyewear", "Chiropractic & Physical Therapy"],
+          },
+          {
+            name: "Spa & Relaxation",
+            subcategories: ["Massage Therapy", "Day Spas", "Wellness Retreats"],
+          },
+        ],
+      },
+      {
+        sector: "Entertainment & Leisure",
+        categories: [
+          {
+            name: "Amusements & Activities",
+            subcategories: ["Movie Theaters", "Bowling Alleys", "Arcades & Gaming Zones", "Theme Parks"],
+          },
+          {
+            name: "Arts & Culture",
+            subcategories: ["Museum & Galleries", "Theaters & Concert Halls", "Music & Art Classes"],
+          },
+        ],
+      },
+      {
+        sector: "Services",
+        categories: [
+          {
+            name: "Automotive Services",
+            subcategories: ["Car Wash & Detailing", "Auto Repair & Maintenance", "Tire Shops"],
+          },
+          {
+            name: "Personal Services",
+            subcategories: ["Hair Salons & Barbers", "Nail Salons", "Dry Cleaning & Laundry", "Pet Grooming"],
+          },
+        ],
+      },
+    ];
+
+    const sectors: Sector[] = [];
+    const categories: Category[] = [];
+    const subcategories: SubCategory[] = [];
+
+    for (const item of taxonomyData) {
+      const sector = await this.sectorRepository.save({ name: item.sector });
+      sectors.push(sector);
+
+      for (const catItem of item.categories) {
+        const category = await this.categoryRepository.save({
+          name: catItem.name,
+          sector: sector,
+        });
+        categories.push(category);
+
+        for (const subName of catItem.subcategories) {
+          const subCategory = await this.subCategoryRepository.save({
+            name: subName,
+            category: category,
+          });
+          subcategories.push(subCategory);
+        }
+      }
+    }
+
     const hashedPassword = await bcrypt.hash("password", 10);
 
     const admins = await this.adminRepository.save([
@@ -133,6 +230,7 @@ export class SeederService {
         monthly_price: 10,
         quarterly_price: 25,
         annual_price: 90,
+        features: ["Basic analytics", "1 active campaign", "Up to 100 participants"],
       },
       {
         name: "Silver",
@@ -140,6 +238,7 @@ export class SeederService {
         monthly_price: 20,
         quarterly_price: 50,
         annual_price: 180,
+        features: ["Advanced analytics", "5 active campaigns", "Up to 1000 participants"],
       },
       {
         name: "Gold",
@@ -147,6 +246,7 @@ export class SeederService {
         monthly_price: 30,
         quarterly_price: 75,
         annual_price: 270,
+        features: ["Premium analytics", "Unlimited campaigns", "Unlimited participants"],
       },
     ]);
 
@@ -179,18 +279,19 @@ export class SeederService {
     for (const [index, business] of businesses.entries()) {
       const tier = tiers[index % tiers.length];
       const membership = await this.membershipRepository.save({
-        user_id: business.id,
-        user_type: "business",
+        business: business,
         tier: tier,
         status: MembershipStatus.ACTIVE,
-        start_date: this.getDateDaysAgo(30),
-        end_date: this.getDateDaysAgo(-335),
+        plan_type: PlanType.MONTHLY,
+        starts_at: this.getDateDaysAgo(30),
+        expires_at: this.getDateDaysAgo(-335),
       });
       await this.paymentHistoryRepository.save({
-        user_id: business.id,
+        user: business,
+        user_type: "business",
         membership: membership,
         amount: tier.monthly_price,
-        provider: PaymentProvider.STRIPE,
+        payment_provider: PaymentProvider.STRIPE,
         status: PaymentStatus.SUCCEEDED,
         transaction_id: nanoid(10),
       });
@@ -198,12 +299,20 @@ export class SeederService {
 
     // Create QR Plaques (No Scans)
     const qrPlaques = await this.qrPlaqueRepository.save(
-      Array.from({ length: 20 }, (_, i) => ({
-        code: nanoid(9),
-        status: QrPlaqueStatus.ACTIVE,
-        assignedPartner: partners[i % partners.length],
-        assignedBusiness: businesses[i % businesses.length],
-      })),
+      Array.from({ length: 20 }, (_, i) => {
+        const code = nanoid(9).toUpperCase();
+        return {
+          uniqueCode: code,
+          code: code,
+          name: `Plaque ${i + 1}`,
+          description: `Description for Plaque ${i + 1}`,
+          actionText: "Scan to Earn",
+          contentUrl: `https://mcom.example.com/plaque/${code}`,
+          status: QrPlaqueStatus.ACTIVE,
+          assignedPartner: partners[i % partners.length],
+          assignedBusiness: businesses[i % businesses.length],
+        };
+      }),
     );
 
     // Create Referrals
@@ -540,6 +649,141 @@ export class SeederService {
     console.log("Seeding completed successfully!");
   }
 
+  async seedTaxonomy(): Promise<void> {
+    const taxonomyData: TaxonomySector[] = [
+      {
+        sector: "Food & Beverage",
+        categories: [
+          {
+            name: "Restaurants & Dining",
+            subcategories: ["Fine Dining", "Fast Food", "Casual Dining", "Cafes & Bakeries", "Buffets"],
+          },
+          {
+            name: "Specialty Food & Drink",
+            subcategories: ["Desserts & Ice Cream", "Juice Bars & Smoothies", "Wineries & Breweries", "Tea Rooms"],
+          },
+        ],
+      },
+      {
+        sector: "Retail & Shopping",
+        categories: [
+          {
+            name: "Apparel & Fashion",
+            subcategories: ["Men's Clothing", "Women's Clothing", "Kids & Baby Wear", "Footwear", "Accessories & Jewelry"],
+          },
+          {
+            name: "Electronics & Gadgets",
+            subcategories: ["Mobile Phones & Accessories", "Computers & Laptops", "Home Appliances", "Audio & Video"],
+          },
+          {
+            name: "Home & Living",
+            subcategories: ["Furniture", "Home Decor", "Kitchenware", "Bedding & Bath"],
+          },
+          {
+            name: "Beauty & Personal Care",
+            subcategories: ["Cosmetics", "Skincare", "Fragrances", "Hair Care Products"],
+          },
+        ],
+      },
+      {
+        sector: "Health & Wellness",
+        categories: [
+          {
+            name: "Fitness & Sports",
+            subcategories: ["Gyms & Fitness Centers", "Yoga & Pilates Studios", "Sports Equipment", "Personal Training"],
+          },
+          {
+            name: "Medical & Pharmacy",
+            subcategories: ["Pharmacies", "Dental Clinics", "Opticians & Eyewear", "Chiropractic & Physical Therapy"],
+          },
+          {
+            name: "Spa & Relaxation",
+            subcategories: ["Massage Therapy", "Day Spas", "Wellness Retreats"],
+          },
+        ],
+      },
+      {
+        sector: "Entertainment & Leisure",
+        categories: [
+          {
+            name: "Amusements & Activities",
+            subcategories: ["Movie Theaters", "Bowling Alleys", "Arcades & Gaming Zones", "Theme Parks"],
+          },
+          {
+            name: "Arts & Culture",
+            subcategories: ["Museum & Galleries", "Theaters & Concert Halls", "Music & Art Classes"],
+          },
+        ],
+      },
+      {
+        sector: "Services",
+        categories: [
+          {
+            name: "Automotive Services",
+            subcategories: ["Car Wash & Detailing", "Auto Repair & Maintenance", "Tire Shops"],
+          },
+          {
+            name: "Personal Services",
+            subcategories: ["Hair Salons & Barbers", "Nail Salons", "Dry Cleaning & Laundry", "Pet Grooming"],
+          },
+        ],
+      },
+    ];
+
+    console.log("Seeding taxonomy (Sectors, Categories, Subcategories)...");
+
+    for (const item of taxonomyData) {
+      let sector = await this.sectorRepository.findOne({
+        where: { name: item.sector },
+      });
+
+      if (!sector) {
+        sector = await this.sectorRepository.save({ name: item.sector });
+        console.log(`Created Sector: ${sector.name}`);
+      }
+
+      for (const catItem of item.categories) {
+        let category = await this.categoryRepository.findOne({
+          where: { name: catItem.name },
+          relations: ["sector"],
+        });
+
+        if (!category) {
+          category = await this.categoryRepository.save({
+            name: catItem.name,
+            sector: sector,
+          });
+          console.log(`Created Category: ${category.name} in Sector: ${sector.name}`);
+        } else if (category.sector?.id !== sector.id) {
+          category.sector = sector;
+          category = await this.categoryRepository.save(category);
+          console.log(`Updated Category: ${category.name} to Sector: ${sector.name}`);
+        }
+
+        for (const subName of catItem.subcategories) {
+          let subCategory = await this.subCategoryRepository.findOne({
+            where: { name: subName },
+            relations: ["category"],
+          });
+
+          if (!subCategory) {
+            subCategory = await this.subCategoryRepository.save({
+              name: subName,
+              category: category,
+            });
+            console.log(`Created Subcategory: ${subCategory.name} in Category: ${category.name}`);
+          } else if (subCategory.category?.id !== category.id) {
+            subCategory.category = category;
+            subCategory = await this.subCategoryRepository.save(subCategory);
+            console.log(`Updated Subcategory: ${subCategory.name} to Category: ${category.name}`);
+          }
+        }
+      }
+    }
+
+    console.log("Taxonomy seeding completed successfully!");
+  }
+
   private getDateDaysAgo(days: number): Date {
     const date = new Date();
     date.setDate(date.getDate() - days);
@@ -569,7 +813,7 @@ export class SeederService {
       "qr_plaques",
       "membership",
       "tier",
-      "payment_histories",
+      "payment_history",
       "coupon",
       "business_campaign_rewards", // join tables
       "campaign_target_tiers",

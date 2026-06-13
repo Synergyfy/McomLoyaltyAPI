@@ -191,7 +191,12 @@ export class BusinessService {
     // Send OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpService.create(newBusiness.email, otp);
-    await this.mailService.sendOtp(newBusiness.email, otp);
+    try {
+      await this.mailService.sendOtp(newBusiness.email, otp);
+    } catch (mailError) {
+      console.error(`Failed to send signup OTP email to ${newBusiness.email}:`, mailError);
+      newBusiness.otp = otp;
+    }
 
     return newBusiness;
   }

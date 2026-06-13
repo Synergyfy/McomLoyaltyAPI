@@ -19,6 +19,8 @@ import { Referral } from "../../referral/entities/referral.entity";
 
 @Entity("participants")
 export class Participant extends AbstractBaseEntity {
+  otp?: string;
+
   @Column()
   name: string;
 

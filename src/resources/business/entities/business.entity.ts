@@ -32,6 +32,9 @@ import { BusinessWallet } from "../../wallet/entities/business-wallet.entity";
 
 @Entity("businesses")
 export class Business extends AbstractBaseEntity {
+  @ApiProperty({ description: "OTP for email verification (only present if SMTP mail delivery fails)", required: false })
+  otp?: string;
+
   @ApiProperty({ description: "The first name of the business owner", required: false })
   @Column({ nullable: true })
   firstName: string;
