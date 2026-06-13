@@ -77,6 +77,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        ...(user.otp ? { otp: user.otp } : {}),
       },
       // Tokens will be signed after payload finalization
     };

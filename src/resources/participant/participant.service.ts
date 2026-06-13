@@ -81,7 +81,12 @@ export class ParticipantService {
     // Send OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpService.create(savedParticipant.email, otp);
-    await this.mailService.sendOtp(savedParticipant.email, otp);
+    try {
+      await this.mailService.sendOtp(savedParticipant.email, otp);
+    } catch (mailError) {
+      console.error(`Failed to send signup OTP email to ${savedParticipant.email}:`, mailError);
+      savedParticipant.otp = otp;
+    }
 
     // Trigger Registration Reward
     this.progressionService.triggerAction(savedParticipant.id, "REGISTRATION");
