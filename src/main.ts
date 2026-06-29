@@ -9,10 +9,14 @@ import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 import { CamelCaseInterceptor } from "./interceptors/camel-case.interceptor";
+import { ExpressAdapter } from "@nestjs/platform-express";
+import express from "express";
+
+const expressApp = express();
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
     logger: ["error", "warn", "log", "debug", "verbose"],
   });
 
@@ -57,9 +61,15 @@ async function bootstrap() {
     },
   });
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-  logger.log(`Application is running on: http://localhost:${port}`);
+  if (process.env.VERCEL) {
+    await app.init();
+  } else {
+    const port = process.env.PORT ?? 3000;
+    await app.listen(port);
+    logger.log(`Application is running on: http://localhost:${port}`);
+  }
 }
 
 bootstrap();
+
+export default expressApp;
