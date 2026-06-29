@@ -17,8 +17,8 @@ const dataSource = new DataSource({
   entities: [path.resolve(__dirname, "..") + "/**/*.entity{.ts,.js}"],
   //migrations: [process.env.DB_MIGRATIONS],
   migrations: [path.join(__dirname, "./migrations/*.ts")],
-  migrationsRun: true,
-  synchronize: false,
+  migrationsRun: false,
+  synchronize: true,
   // migrationsTableName: 'migrations',
   //   ssl: process.env.DB_SSL === 'true',
   // Reduce connection footprint when using pgBouncer (Session mode limits pool size)

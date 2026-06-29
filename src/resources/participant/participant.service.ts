@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -28,6 +29,8 @@ import { ReferralService } from "../referral/referral.service";
 
 @Injectable()
 export class ParticipantService {
+  private readonly logger = new Logger(ParticipantService.name);
+
   constructor(
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
@@ -81,6 +84,9 @@ export class ParticipantService {
     // Send OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     await this.otpService.create(savedParticipant.email, otp);
+    this.logger.log(
+      `[SIGNUP OTP] Email: ${savedParticipant.email} | OTP: ${otp}`,
+    );
     try {
       await this.mailService.sendOtp(savedParticipant.email, otp);
     } catch (mailError) {
