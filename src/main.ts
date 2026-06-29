@@ -14,7 +14,11 @@ import express from "express";
 
 const expressApp = express();
 
+let isInitialized = false;
+
 async function bootstrap() {
+  if (isInitialized) return;
+
   const logger = new Logger("Bootstrap");
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp), {
     logger: ["error", "warn", "log", "debug", "verbose"],
@@ -68,8 +72,15 @@ async function bootstrap() {
     await app.listen(port);
     logger.log(`Application is running on: http://localhost:${port}`);
   }
+
+  isInitialized = true;
 }
 
-bootstrap();
+if (!process.env.VERCEL) {
+  bootstrap();
+}
 
-export default expressApp;
+export default async (req: any, res: any) => {
+  await bootstrap();
+  expressApp(req, res);
+};
