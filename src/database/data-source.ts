@@ -18,9 +18,8 @@ const dataSource = new DataSource({
   //migrations: [process.env.DB_MIGRATIONS],
   migrations: [path.join(__dirname, "./migrations/*.ts")],
   migrationsRun: false,
-  synchronize: true,
-  // migrationsTableName: 'migrations',
-  //   ssl: process.env.DB_SSL === 'true',
+  synchronize: process.env.NODE_ENV !== "production" && !process.env.VERCEL,
+  ssl: process.env.NODE_ENV === 'production' || process.env.VERCEL ? { rejectUnauthorized: false } : false,
   // Reduce connection footprint when using pgBouncer (Session mode limits pool size)
   // These are passed to the underlying 'pg' Pool
   // extra: {

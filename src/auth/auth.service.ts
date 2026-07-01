@@ -20,6 +20,7 @@ import {
   MembershipStatus,
 } from "../resources/membership/entities/membership.entity";
 import { Repository } from "typeorm";
+import { nanoid } from "nanoid";
 import { PartnerService } from "../resources/partner/partner.service";
 import { Business } from "../resources/business/entities/business.entity";
 import { Staff } from "../resources/staff/entities/staff.entity";
@@ -374,16 +375,50 @@ export class AuthService {
 
   async ssoLogin(token: string) {
     try {
-      const secret = process.env.SSO_SECRET || "shared-sso-secret-key-123";
+      const secret = process.env.SSO_SECRET || "shared-sso-secret";
       const payload = this.jwtService.verify(token, { secret });
 
       if (payload.iss !== "mcom-loyalty" || payload.aud !== "mcom-mall") {
         throw new UnauthorizedException("Invalid SSO Token Issuer/Audience");
       }
 
-      const user = await this.userService.findOne(payload.email);
+      const email = payload.email;
+      let user = await this.userService.findOne(email);
       if (!user) {
-        throw new UnauthorizedException("User not found");
+        // Just-in-Time (JIT) Provisioning
+        const role = payload.role?.toLowerCase();
+        const password = Math.random().toString(36).slice(-10) + 'Aa1!';
+        const fullName = payload.name || 'Loyalty User';
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || 'SSO';
+        const lastName = nameParts.slice(1).join(' ') || 'User';
+
+        if (role === 'business') {
+          // Provision Business Profile
+          const newBusiness = await this.businessService.create({
+            firstName,
+            lastName,
+            email,
+            password: password,
+            confirmPassword: password,
+          });
+
+          // Sync additional contact details from token payload
+          newBusiness.phone = payload.phoneNumber || null;
+          newBusiness.address = payload.address || null;
+          newBusiness.postalCode = payload.postcode || null;
+          user = await this.businessRepository.save(newBusiness);
+        } else {
+          // Provision Participant (Customer)
+          const hashedPassword = await this.hashService.hashPassword(password);
+          const newParticipant = this.participantRepository.create({
+            name: fullName,
+            email,
+            password: hashedPassword,
+            uniqueCode: nanoid(9),
+          });
+          user = await this.participantRepository.save(newParticipant);
+        }
       }
 
       return this.login(user);
