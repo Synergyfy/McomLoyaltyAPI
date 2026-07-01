@@ -95,6 +95,18 @@ if (!process.env.VERCEL) {
 }
 
 export default async (req: any, res: any) => {
+  // Set CORS headers for Vercel deployment
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization,x-business-id,x-participant-id,Origin,X-Requested-With,X-CSRF-Token,Accept-Version,Content-Length,Content-MD5,Date,X-Api-Version');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
   await bootstrap();
   expressApp(req, res);
 };
