@@ -18,7 +18,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import {
   Membership,
   MembershipStatus,
+  PlanType,
 } from "../resources/membership/entities/membership.entity";
+import { Tier } from "../resources/tier/entities/tier.entity";
+import { PaymentProvider } from "../resources/payment-history/entities/payment-history.entity";
 import { Repository } from "typeorm";
 import { nanoid } from "nanoid";
 import { PartnerService } from "../resources/partner/partner.service";
@@ -407,7 +410,34 @@ export class AuthService {
           newBusiness.phone = payload.phoneNumber || null;
           newBusiness.address = payload.address || null;
           newBusiness.postalCode = payload.postcode || null;
+          newBusiness.isEmailVerified = true;
           user = await this.businessRepository.save(newBusiness);
+
+          // Provision default Bronze membership for SSO-provisioned business
+          try {
+            const tierRepository = this.membershipRepository.manager.getRepository(Tier);
+            const bronzeTier = await tierRepository.findOne({ where: { name: "Bronze" } });
+            if (bronzeTier) {
+              const startsAt = new Date();
+              const expiresAt = new Date();
+              expiresAt.setFullYear(startsAt.getFullYear() + 10); // Grant 10 years active access
+              
+              const membership = this.membershipRepository.create({
+                business: { id: user.id } as Business,
+                tier: bronzeTier,
+                plan_type: PlanType.MONTHLY,
+                starts_at: startsAt,
+                expires_at: expiresAt,
+                status: MembershipStatus.ACTIVE,
+                is_trial: false,
+                payment_provider: PaymentProvider.STRIPE,
+                transaction_id: "SSO-PROVISION",
+              });
+              await this.membershipRepository.save(membership);
+            }
+          } catch (e) {
+            console.error("Failed to provision default membership for SSO user", e);
+          }
         } else {
           // Provision Participant (Customer)
           const hashedPassword = await this.hashService.hashPassword(password);
@@ -416,8 +446,53 @@ export class AuthService {
             email,
             password: hashedPassword,
             uniqueCode: nanoid(9),
+            isEmailVerified: true,
           });
           user = await this.participantRepository.save(newParticipant);
+        }
+      } else {
+        // If the user already existed but email verification status in DB is false, verify it now since they successfully authenticated via SSO.
+        let changed = false;
+        if (!user.isEmailVerified) {
+          user.isEmailVerified = true;
+          changed = true;
+        }
+
+        // Also make sure they have a membership if they are a Business and have none
+        if (user.role === Role.Business) {
+          try {
+            const existingMembership = await this.membershipRepository.findOne({
+              where: { business: { id: user.id } }
+            });
+            if (!existingMembership) {
+              const tierRepository = this.membershipRepository.manager.getRepository(Tier);
+              const bronzeTier = await tierRepository.findOne({ where: { name: "Bronze" } });
+              if (bronzeTier) {
+                const startsAt = new Date();
+                const expiresAt = new Date();
+                expiresAt.setFullYear(startsAt.getFullYear() + 10);
+                
+                const membership = this.membershipRepository.create({
+                  business: { id: user.id } as Business,
+                  tier: bronzeTier,
+                  plan_type: PlanType.MONTHLY,
+                  starts_at: startsAt,
+                  expires_at: expiresAt,
+                  status: MembershipStatus.ACTIVE,
+                  is_trial: false,
+                  payment_provider: PaymentProvider.STRIPE,
+                  transaction_id: "SSO-PROVISION",
+                });
+                await this.membershipRepository.save(membership);
+              }
+            }
+          } catch (e) {
+            console.error("Failed to check or provision default membership for existing SSO user", e);
+          }
+        }
+
+        if (changed) {
+          await this.userService.save(user);
         }
       }
 
