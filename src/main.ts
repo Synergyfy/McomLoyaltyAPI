@@ -14,6 +14,20 @@ import express from "express";
 
 const expressApp = express();
 
+// Handle CORS preflight requests immediately
+expressApp.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization,x-business-id,x-participant-id,Origin,X-Requested-With');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(204).send();
+    return;
+  }
+  next();
+});
+
 let isInitialized = false;
 
 async function bootstrap() {
